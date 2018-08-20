@@ -38,6 +38,7 @@ pub struct BreakoutState {
     /// paddle position describes the center of the paddle.
     pub paddle: Body2D,
     pub paddle_width: f64,
+    pub paddle_speed: f64,
     pub bricks: Vec<Brick>,
 }
 
@@ -49,29 +50,32 @@ impl BreakoutState {
         let mut ball = Body2D::new_pos((w as f64) / 2.0, (h as f64) / 2.0);
         ball.velocity = Vec2D::from_polar(4.0, 0.5);
 
+
         let num_bricks_across = 12;
         let num_bricks_deep = 5;
         let xs = (w as f64) / (num_bricks_across as f64);
         let ys = 12.0;
+        let roof_space = ys * 3.0;
         let bsize = Vec2D::new(xs, ys);
         for x in 0..num_bricks_across {
             for y in 0..num_bricks_deep {
-                let bpos = Vec2D::new(x as f64 * xs, y as f64 * ys) ;
+                let bpos = Vec2D::new(x as f64 * xs, y as f64 * ys + roof_space) ;
                 bricks.push(Brick::new(bpos, bsize.clone(), y+1));
             }
         }
 
         BreakoutState { 
             game_over: false,
-            ball: ball,
+            ball,
             points: 0,
             ball_radius: 4.0,
             paddle: Body2D::new_pos((w as f64) / 2.0, (h as f64) - 30.0),
             paddle_width: 32.0,
+            paddle_speed: 4.0,
             bricks
         }
     }
-    
+
     /// Mutably update the game state with a given time-step.
     pub fn update_mut(&mut self, time_step: f64, buttons: &[Input]) {
         // Update positions.
@@ -85,9 +89,9 @@ impl BreakoutState {
         let right = buttons.contains(&Input::Right);
 
         if left {
-            self.paddle.velocity.x = -3.0;
+            self.paddle.velocity.x = -self.paddle_speed;
         } else if right {
-            self.paddle.velocity.x = 3.0;
+            self.paddle.velocity.x = self.paddle_speed;
         } else {
             self.paddle.velocity.x = 0.0;
         }
@@ -116,27 +120,27 @@ impl BreakoutState {
         }
 
         // check living bricks:
-        let ball_bounce_x = Vec2D::new(self.ball.position.x, self.ball.position.y + self.ball.velocity.y.signum() * self.ball_radius);
-        let ball_bounce_y = Vec2D::new(self.ball.position.y, self.ball.position.x + self.ball.velocity.x.signum() * self.ball_radius);
-        
+        let ball_bounce_y = Vec2D::new(self.ball.position.x, self.ball.position.y + self.ball.velocity.y.signum() * self.ball_radius);
+        let ball_bounce_x = Vec2D::new(self.ball.position.x + self.ball.velocity.x.signum() * self.ball_radius, self.ball.position.y);
+
         for brick in self.bricks.iter_mut().filter(|b| b.alive) {
             let mut hit = false;
             if brick.contains(&ball_bounce_x) {
                 hit = true;
                 self.ball.velocity.x *= -1.0;
             } else if brick.contains(&ball_bounce_y) {
+                hit = true;
                 self.ball.velocity.y *= -1.0;
             }
             if hit {
                 brick.alive = false;
                 self.points += brick.points;
-                eprintln!("Hit brick, points={}", self.points)
                 break;
             }
         }
 
+        // bounce right wall?
         if self.ball.velocity.x > 0.0 {
-            // bounce right wall?
             if self.ball.position.x + self.ball_radius > game_width {
                 self.ball.velocity.x *= -1.0;
             }
