@@ -28,6 +28,7 @@ impl Body2D {
 }
 
 /// Think NES-style controls: directions, and two buttons.
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
 pub enum Input {
     Left,
     Right,

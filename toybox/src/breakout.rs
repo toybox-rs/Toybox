@@ -71,6 +71,17 @@ impl BreakoutState {
 
         let game_width = GAME_SIZE.0 as f64;
         let game_height = GAME_SIZE.1 as f64;
+
+        let left = buttons.contains(&Input::Left);
+        let right = buttons.contains(&Input::Right);
+
+        if left {
+            self.paddle.velocity.x = -3.0;
+        } else if right {
+            self.paddle.velocity.x = 3.0;
+        } else {
+            self.paddle.velocity.x = 0.0;
+        }
         
         // Handle collisions:
         if self.ball.velocity.y > 0.0 {
@@ -80,7 +91,7 @@ impl BreakoutState {
             if self.ball.position.y + self.ball_radius > game_height {
                 // TODO, lose
                 self.game_over = true;
-                eprintln!("Press any key, e.g., SPACE to reset the game!")
+                eprintln!("Press any key, e.g., SPACE to reset the game!");
             }
 
         } else {
