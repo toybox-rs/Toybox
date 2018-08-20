@@ -27,6 +27,8 @@ impl Body2D {
     }
 }
 
+pub mod breakout;
+
 enum Drawable {
     Rectangle(u32, u32, u32, u32),
     Circle(u32, u32, u32),
