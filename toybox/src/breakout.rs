@@ -1,5 +1,6 @@
 use super::vec2d::Vec2D;
 use super::Body2D;
+use super::Input;
 
 pub const GAME_SIZE: (i32,i32) = (240, 240);
 
@@ -22,6 +23,7 @@ impl Brick {
 
 #[derive(Debug, Clone)]
 pub struct BreakoutState {
+    pub game_over: bool,
     /// ball position describes the center of the ball.
     pub ball: Body2D,
     pub ball_radius: f64,
@@ -52,6 +54,7 @@ impl BreakoutState {
         }
 
         BreakoutState { 
+            game_over: false,
             ball: ball,
             ball_radius: 4.0,
             paddle: Body2D::new_pos((w as f64) / 2.0, (h as f64) - 30.0),
@@ -59,8 +62,9 @@ impl BreakoutState {
             bricks
         }
     }
+    
     /// Mutably update the game state with a given time-step.
-    pub fn update_mut(&mut self, time_step: f64) {
+    pub fn update_mut(&mut self, time_step: f64, buttons: &[Input]) {
         // Update positions.
         self.ball.integrate_mut(time_step);
         self.paddle.integrate_mut(time_step);
@@ -75,7 +79,8 @@ impl BreakoutState {
             // check lose?
             if self.ball.position.y + self.ball_radius > game_height {
                 // TODO, lose
-                self.ball.velocity.y *= -1.0;
+                self.game_over = true;
+                eprintln!("Press any key, e.g., SPACE to reset the game!")
             }
 
         } else {

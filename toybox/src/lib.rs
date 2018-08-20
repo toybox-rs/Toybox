@@ -27,4 +27,14 @@ impl Body2D {
     }
 }
 
+/// Think NES-style controls: directions, and two buttons.
+pub enum Input {
+    Left,
+    Right,
+    Up,
+    Down,
+    Button1,
+    Button2
+}
+
 pub mod breakout;
