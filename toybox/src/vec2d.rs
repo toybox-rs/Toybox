@@ -1,6 +1,6 @@
 /// This represents a point or a size or a velocity in 2 dimensions.
 /// We use f64 for internal representations but we can get integer coordinates upon request for drawing.
-#[derive(Debug,PartialEq,Clone)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Vec2D {
     pub x: f64,
     pub y: f64,
@@ -21,10 +21,10 @@ impl Vec2D {
     }
 
     pub fn magnitude(&self) -> f64 {
-        (self.x*self.x + self.y*self.y).sqrt()
+        (self.x * self.x + self.y * self.y).sqrt()
     }
     pub fn magnitude_squared(&self) -> f64 {
-        (self.x*self.x + self.y*self.y)
+        (self.x * self.x + self.y * self.y)
     }
 
     /// Get the angle of this vector in radians.
@@ -74,10 +74,10 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut ball = Vec2D::new(7.0,3.0);
-        let velocity = Vec2D::new(4.0,4.0);
+        let mut ball = Vec2D::new(7.0, 3.0);
+        let velocity = Vec2D::new(4.0, 4.0);
         let pos = ball.translate(&velocity);
-        assert_eq!(pos, Vec2D::new(11.0,7.0));
+        assert_eq!(pos, Vec2D::new(11.0, 7.0));
         assert_eq!(velocity.magnitude(), (32.0 as f64).sqrt())
     }
 }

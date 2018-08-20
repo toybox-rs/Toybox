@@ -2,7 +2,7 @@ use super::vec2d::Vec2D;
 use super::Body2D;
 use super::Input;
 
-pub const GAME_SIZE: (i32,i32) = (240, 240);
+pub const GAME_SIZE: (i32, i32) = (240, 240);
 
 #[derive(Debug, Clone)]
 pub struct Brick {
@@ -19,12 +19,19 @@ pub struct Brick {
 
 impl Brick {
     pub fn new(position: Vec2D, size: Vec2D, points: u32) -> Brick {
-        Brick { position, size, points, alive: true }
+        Brick {
+            position,
+            size,
+            points,
+            alive: true,
+        }
     }
 
     pub fn contains(&self, point: &Vec2D) -> bool {
-        point.y >= self.position.y && point.y <= (self.position.y + self.size.y) &&
-        point.x >= self.position.x && point.x <= (self.position.x + self.size.x)
+        point.y >= self.position.y
+            && point.y <= (self.position.y + self.size.y)
+            && point.x >= self.position.x
+            && point.x <= (self.position.x + self.size.x)
     }
 }
 
@@ -45,11 +52,10 @@ pub struct BreakoutState {
 impl BreakoutState {
     /// Create a new game of breakout.
     pub fn new() -> BreakoutState {
-        let (w,h) = GAME_SIZE;
+        let (w, h) = GAME_SIZE;
         let mut bricks = Vec::new();
         let mut ball = Body2D::new_pos((w as f64) / 2.0, (h as f64) / 2.0);
         ball.velocity = Vec2D::from_polar(4.0, 0.5);
-
 
         let num_bricks_across = 12;
         let num_bricks_deep = 5;
@@ -59,12 +65,12 @@ impl BreakoutState {
         let bsize = Vec2D::new(xs, ys);
         for x in 0..num_bricks_across {
             for y in 0..num_bricks_deep {
-                let bpos = Vec2D::new(x as f64 * xs, y as f64 * ys + roof_space) ;
-                bricks.push(Brick::new(bpos, bsize.clone(), y+1));
+                let bpos = Vec2D::new(x as f64 * xs, y as f64 * ys + roof_space);
+                bricks.push(Brick::new(bpos, bsize.clone(), y + 1));
             }
         }
 
-        BreakoutState { 
+        BreakoutState {
             game_over: false,
             ball,
             points: 0,
@@ -72,7 +78,7 @@ impl BreakoutState {
             paddle: Body2D::new_pos((w as f64) / 2.0, (h as f64) - 30.0),
             paddle_width: 32.0,
             paddle_speed: 4.0,
-            bricks
+            bricks,
         }
     }
 
@@ -95,12 +101,14 @@ impl BreakoutState {
         } else {
             self.paddle.velocity.x = 0.0;
         }
-        
+
         // Handle collisions:
         if self.ball.velocity.y > 0.0 {
             // check paddle:
-            let paddle_ball_same_x = (self.ball.position.x - self.paddle.position.x).abs() < self.ball_radius + self.paddle_width/2.0;
-            let paddle_ball_same_y = self.paddle.position.y - self.ball.position.y < self.ball_radius;
+            let paddle_ball_same_x = (self.ball.position.x - self.paddle.position.x).abs()
+                < self.ball_radius + self.paddle_width / 2.0;
+            let paddle_ball_same_y =
+                self.paddle.position.y - self.ball.position.y < self.ball_radius;
             if (paddle_ball_same_x && paddle_ball_same_y) {
                 self.ball.velocity.y *= -1.0;
             }
@@ -111,7 +119,6 @@ impl BreakoutState {
                 self.game_over = true;
                 eprintln!("Press any key, e.g., SPACE to reset the game!");
             }
-
         } else {
             // bounce ceiling?
             if self.ball.position.y - self.ball_radius < 0.0 {
@@ -120,8 +127,14 @@ impl BreakoutState {
         }
 
         // check living bricks:
-        let ball_bounce_y = Vec2D::new(self.ball.position.x, self.ball.position.y + self.ball.velocity.y.signum() * self.ball_radius);
-        let ball_bounce_x = Vec2D::new(self.ball.position.x + self.ball.velocity.x.signum() * self.ball_radius, self.ball.position.y);
+        let ball_bounce_y = Vec2D::new(
+            self.ball.position.x,
+            self.ball.position.y + self.ball.velocity.y.signum() * self.ball_radius,
+        );
+        let ball_bounce_x = Vec2D::new(
+            self.ball.position.x + self.ball.velocity.x.signum() * self.ball_radius,
+            self.ball.position.y,
+        );
 
         for brick in self.bricks.iter_mut().filter(|b| b.alive) {
             let mut hit = false;
@@ -149,7 +162,6 @@ impl BreakoutState {
             if self.ball.position.x - self.ball_radius < 0.0 {
                 self.ball.velocity.x *= -1.0;
             }
-
         }
     }
 }

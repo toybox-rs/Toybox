@@ -3,7 +3,7 @@ use std::f64;
 mod vec2d;
 pub use vec2d::Vec2D;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct Body2D {
     pub position: Vec2D,
     pub velocity: Vec2D,
@@ -12,13 +12,13 @@ pub struct Body2D {
 
 impl Body2D {
     pub fn new_pos(x: f64, y: f64) -> Body2D {
-        Body2D::new_detailed(x,y,0.0,0.0,0.0,0.0)
+        Body2D::new_detailed(x, y, 0.0, 0.0, 0.0, 0.0)
     }
-    pub fn new_detailed(x: f64, y: f64, vx: f64, vy: f64, ax: f64, ay: f64) -> Body2D { 
+    pub fn new_detailed(x: f64, y: f64, vx: f64, vy: f64, ax: f64, ay: f64) -> Body2D {
         Body2D {
-            position: Vec2D::new(x,y), 
-            velocity: Vec2D::new(vx, vy), 
-            acceleration: Vec2D::new(ax, ay) 
+            position: Vec2D::new(x, y),
+            velocity: Vec2D::new(vx, vy),
+            acceleration: Vec2D::new(ax, ay),
         }
     }
     pub fn integrate_mut(&mut self, time_step: f64) {
@@ -28,14 +28,14 @@ impl Body2D {
 }
 
 /// Think NES-style controls: directions, and two buttons.
-#[derive(Debug,Clone,Copy,PartialEq,Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Input {
     Left,
     Right,
     Up,
     Down,
     Button1,
-    Button2
+    Button2,
 }
 
 pub mod breakout;
