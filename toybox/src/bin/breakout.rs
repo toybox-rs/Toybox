@@ -43,6 +43,7 @@ impl State for BreakoutGame {
                         .with_color(Color::indigo()));
         let (ball_x, ball_y) = self.state.ball.position.pixels();
         let ball_r = self.state.ball_radius as i32;
+
         window.draw(&Draw::circle(Circle::new(ball_x, ball_y, ball_r))
                         .with_color(Color::white()));
 
@@ -52,6 +53,6 @@ impl State for BreakoutGame {
     }
 }
 fn main() {
-    let (w,h) = GameSize;
+    let (w,h) = GAME_SIZE;
     run::<BreakoutGame>(WindowBuilder::new("Breakout", w as u32, h as u32));
 }

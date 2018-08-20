@@ -28,13 +28,3 @@ impl Body2D {
 }
 
 pub mod breakout;
-
-enum Drawable {
-    Rectangle(u32, u32, u32, u32),
-    Circle(u32, u32, u32),
-}
-
-trait GameVisualOutput {
-    fn game_size() -> Vec2D;
-    fn display_list() -> Vec<Drawable>;
-}
