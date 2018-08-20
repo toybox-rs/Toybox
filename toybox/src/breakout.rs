@@ -87,6 +87,11 @@ impl BreakoutState {
         if self.ball.velocity.y > 0.0 {
             // ball is "falling", check floor, paddle, bricks
 
+            // check paddle:
+            if self.paddle.position.y - self.ball.position.y < self.ball_radius {
+                self.ball.velocity.y *= -1.0;
+            }
+
             // check lose?
             if self.ball.position.y + self.ball_radius > game_height {
                 // TODO, lose
