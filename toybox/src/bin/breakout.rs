@@ -65,7 +65,8 @@ impl State for BreakoutGame {
         if self.state.game_over {
             window.present();
 
-            if (buttons.len() > 0) {
+            // Any key starts a new game.
+            if !buttons.is_empty() {
                 self.state = BreakoutState::new();
             }
             return;

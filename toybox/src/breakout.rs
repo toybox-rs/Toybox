@@ -49,23 +49,30 @@ pub struct BreakoutState {
     pub bricks: Vec<Brick>,
 }
 
+impl Default for BreakoutState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BreakoutState {
     /// Create a new game of breakout.
     pub fn new() -> BreakoutState {
         let (w, h) = GAME_SIZE;
         let mut bricks = Vec::new();
-        let mut ball = Body2D::new_pos((w as f64) / 2.0, (h as f64) / 2.0);
+        let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
         ball.velocity = Vec2D::from_polar(4.0, 0.5);
 
         let num_bricks_across = 12;
         let num_bricks_deep = 5;
-        let xs = (w as f64) / (num_bricks_across as f64);
+        let xs = f64::from(w) / f64::from(num_bricks_across);
         let ys = 12.0;
         let roof_space = ys * 3.0;
         let bsize = Vec2D::new(xs, ys);
         for x in 0..num_bricks_across {
+            let x = f64::from(x);
             for y in 0..num_bricks_deep {
-                let bpos = Vec2D::new(x as f64 * xs, y as f64 * ys + roof_space);
+                let bpos = Vec2D::new(x * xs, f64::from(y) * ys + roof_space);
                 bricks.push(Brick::new(bpos, bsize.clone(), y + 1));
             }
         }
@@ -75,7 +82,7 @@ impl BreakoutState {
             ball,
             points: 0,
             ball_radius: 4.0,
-            paddle: Body2D::new_pos((w as f64) / 2.0, (h as f64) - 30.0),
+            paddle: Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) - 30.0),
             paddle_width: 32.0,
             paddle_speed: 4.0,
             bricks,
@@ -88,8 +95,8 @@ impl BreakoutState {
         self.ball.integrate_mut(time_step);
         self.paddle.integrate_mut(time_step);
 
-        let game_width = GAME_SIZE.0 as f64;
-        let game_height = GAME_SIZE.1 as f64;
+        let game_width = f64::from(GAME_SIZE.0);
+        let game_height = f64::from(GAME_SIZE.1);
 
         let left = buttons.contains(&Input::Left);
         let right = buttons.contains(&Input::Right);
@@ -109,7 +116,7 @@ impl BreakoutState {
                 < self.ball_radius + self.paddle_width / 2.0;
             let paddle_ball_same_y =
                 self.paddle.position.y - self.ball.position.y < self.ball_radius;
-            if (paddle_ball_same_x && paddle_ball_same_y) {
+            if paddle_ball_same_x && paddle_ball_same_y {
                 self.ball.velocity.y *= -1.0;
             }
 
