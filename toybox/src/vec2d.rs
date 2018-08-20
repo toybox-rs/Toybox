@@ -23,6 +23,9 @@ impl Vec2D {
     pub fn magnitude(&self) -> f64 {
         (self.x*self.x + self.y*self.y).sqrt()
     }
+    pub fn magnitude_squared(&self) -> f64 {
+        (self.x*self.x + self.y*self.y)
+    }
 
     /// Get the angle of this vector in radians.
     pub fn angle(&self) -> f64 {

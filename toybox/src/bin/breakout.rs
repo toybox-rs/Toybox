@@ -69,7 +69,7 @@ impl State for BreakoutGame {
             return;
         }
 
-        for brick in &self.state.bricks {
+        for brick in self.state.bricks.iter().filter(|b| b.alive) {
             let (x,y) = brick.position.pixels();
             let (w,h) = brick.size.pixels();
             window.draw(&Draw::rectangle(Rectangle::new(x,y,w-1,h-1))

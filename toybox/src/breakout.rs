@@ -12,18 +12,26 @@ pub struct Brick {
     pub size: Vec2D,
     /// This is the number of points for a brick.
     pub points: u32,
+    /// This starts as true and moves to false when hit.
+    pub alive: bool,
     // todo, color?
 }
 
 impl Brick {
     pub fn new(position: Vec2D, size: Vec2D, points: u32) -> Brick {
-        Brick { position, size, points }
+        Brick { position, size, points, alive: true }
+    }
+
+    pub fn contains(&self, point: &Vec2D) -> bool {
+        point.y >= self.position.y && point.y <= (self.position.y + self.size.y) &&
+        point.x >= self.position.x && point.x <= (self.position.x + self.size.x)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct BreakoutState {
     pub game_over: bool,
+    pub points: u32,
     /// ball position describes the center of the ball.
     pub ball: Body2D,
     pub ball_radius: f64,
@@ -56,6 +64,7 @@ impl BreakoutState {
         BreakoutState { 
             game_over: false,
             ball: ball,
+            points: 0,
             ball_radius: 4.0,
             paddle: Body2D::new_pos((w as f64) / 2.0, (h as f64) - 30.0),
             paddle_width: 32.0,
@@ -85,10 +94,10 @@ impl BreakoutState {
         
         // Handle collisions:
         if self.ball.velocity.y > 0.0 {
-            // ball is "falling", check floor, paddle, bricks
-
             // check paddle:
-            if self.paddle.position.y - self.ball.position.y < self.ball_radius {
+            let paddle_ball_same_x = (self.ball.position.x - self.paddle.position.x).abs() < self.ball_radius + self.paddle_width/2.0;
+            let paddle_ball_same_y = self.paddle.position.y - self.ball.position.y < self.ball_radius;
+            if (paddle_ball_same_x && paddle_ball_same_y) {
                 self.ball.velocity.y *= -1.0;
             }
 
@@ -100,11 +109,29 @@ impl BreakoutState {
             }
 
         } else {
-            // ball is "rising", check ceiling, bricks
-
             // bounce ceiling?
             if self.ball.position.y - self.ball_radius < 0.0 {
                 self.ball.velocity.y *= -1.0;
+            }
+        }
+
+        // check living bricks:
+        let ball_bounce_x = Vec2D::new(self.ball.position.x, self.ball.position.y + self.ball.velocity.y.signum() * self.ball_radius);
+        let ball_bounce_y = Vec2D::new(self.ball.position.y, self.ball.position.x + self.ball.velocity.x.signum() * self.ball_radius);
+        
+        for brick in self.bricks.iter_mut().filter(|b| b.alive) {
+            let mut hit = false;
+            if brick.contains(&ball_bounce_x) {
+                hit = true;
+                self.ball.velocity.x *= -1.0;
+            } else if brick.contains(&ball_bounce_y) {
+                self.ball.velocity.y *= -1.0;
+            }
+            if hit {
+                brick.alive = false;
+                self.points += brick.points;
+                eprintln!("Hit brick, points={}", self.points)
+                break;
             }
         }
 
