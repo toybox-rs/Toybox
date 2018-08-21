@@ -1,3 +1,5 @@
+#[macro_use] extern crate failure;
+
 use std::f64;
 
 mod vec2d;
