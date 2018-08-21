@@ -8,6 +8,7 @@ pub const ENTITY_SIZE: (i32, i32) = (7,7);
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 
 /// Strongly-typed vector for "world" positioning in Amidar.
+#[derive(Clone)]
 pub struct WorldPoint {
     pub x: i32,
     pub y: i32,
@@ -21,6 +22,16 @@ impl WorldPoint {
     }
     pub fn pixels(&self) -> (i32, i32) {
         (self.x, self.y)
+    }
+    pub fn corners(&self, w: i32, h: i32) -> Vec<WorldPoint> {
+        let lt = WorldPoint::new(self.x, self.y);
+        let lb = WorldPoint::new(self.x, self.y+h);
+        let rb = WorldPoint::new(self.x+w, self.y+h);
+        let rt = WorldPoint::new(self.x+w, self.y);
+        vec!(lt, lb, rb, rt)
+    }
+    pub fn translate(&self, dx: i32, dy: i32) -> WorldPoint {
+        WorldPoint::new(self.x + dx, self.y + dy)
     }
 }
 
@@ -38,6 +49,7 @@ impl TilePoint {
     }
 }
 
+#[derive(Clone,Copy,PartialEq,Eq)]
 pub enum Tile {
     Empty,
     Unpainted,
@@ -96,7 +108,7 @@ impl State {
         Ok(State { 
             game_over: false,
             score: 0,
-            player: TilePoint::new(1,1).to_world(),
+            player: TilePoint::new(4,0).to_world(),
             enemies: Vec::new(),
             board: board_tiles,
         })
@@ -106,20 +118,37 @@ impl State {
         let tw = self.board[0].len() as i32;
         TilePoint::new(tw+1, th+1).to_world()
     }
+    pub fn get_tile(&self, tile: &TilePoint) -> Tile {
+        if let Some(row) = self.board.get(tile.ty as usize) {
+            if let Some(t) = row.get(tile.tx as usize) {
+                return *t
+            }
+        }
+        Tile::Empty
+    }
     pub fn update_mut(&mut self, buttons: &[Input]) {
         let left = buttons.contains(&Input::Left);
         let right = buttons.contains(&Input::Right);
         let up = buttons.contains(&Input::Up);
         let down = buttons.contains(&Input::Down);
 
+        let mut dx = 0;
+        let mut dy = 0;
         if left {
-            self.player.x -= 1;
+            dx = -1;
         } else if right {
-            self.player.x += 1;
+            dx = 1;
         } else if up {
-            self.player.y -= 1;
+            dy = -1;
         } else if down {
-            self.player.y += 1;
+            dy = 1;
+        }
+        let is_wall = self.player.translate(dx, dy).corners(TILE_SIZE.0, TILE_SIZE.1).iter()
+            .map(|c| self.get_tile(&c.to_tile()))
+            .any(|tile| tile == Tile::Empty);
+        if !is_wall {
+            self.player.x += dx;
+            self.player.y += dy;
         }
 
     }
