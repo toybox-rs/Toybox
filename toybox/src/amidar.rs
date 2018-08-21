@@ -70,13 +70,6 @@ impl Tile {
     }
 }
 
-pub fn get_board_chars() -> Vec<Vec<char>> {
-    AMIDAR_BOARD
-        .lines()
-        .map(|line| line.chars().collect::<Vec<char>>())
-        .collect()
-}
-
 pub enum MovementAI {
     Player,
     OutsideEnemy,
@@ -104,7 +97,6 @@ pub struct State {
 
 impl State {
     pub fn new() -> Result<State, Error> {
-        let board_data = get_board_chars();
         let mut board_tiles = Vec::new();
         for line in AMIDAR_BOARD.lines() {
             // Rust will aggregate errors in collect for us if we give it a type-hint.
@@ -135,7 +127,6 @@ impl State {
         }
         Tile::Empty
     }
-    fn paint(&mut self, tile: &TilePoint) {}
     pub fn update_mut(&mut self, buttons: &[Input]) {
         // Animate/step player movement.
         let next_target = if let Some(ref target) = self.player_target {
@@ -194,7 +185,10 @@ mod tests {
 
     #[test]
     fn board_included() {
-        let board_ch = get_board_chars();
+        let board_ch = AMIDAR_BOARD
+            .lines()
+            .map(|line| line.chars().collect::<Vec<char>>())
+            .collect();
         for row in board_ch.iter() {
             assert_eq!(Some('='), row.iter().cloned().find(|c| *c == '='));
         }
