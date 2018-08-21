@@ -38,4 +38,7 @@ pub enum Input {
     Button2,
 }
 
+/// Breakout defined in this module.
 pub mod breakout;
+/// Amidar defined in this module.
+pub mod amidar;
