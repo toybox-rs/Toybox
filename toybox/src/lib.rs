@@ -1,4 +1,5 @@
-#[macro_use] extern crate failure;
+#[macro_use]
+extern crate failure;
 
 use std::f64;
 
@@ -40,7 +41,7 @@ pub enum Input {
     Button2,
 }
 
-/// Breakout defined in this module.
-pub mod breakout;
 /// Amidar defined in this module.
 pub mod amidar;
+/// Breakout defined in this module.
+pub mod breakout;

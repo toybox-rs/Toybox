@@ -10,7 +10,9 @@ use quicksilver::{
 use toybox::amidar;
 use toybox::Input;
 
-struct Game { state: amidar::State }
+struct Game {
+    state: amidar::State,
+}
 
 fn process_keys(window: &Window) -> Vec<Input> {
     let keys = window.keyboard();
@@ -38,12 +40,12 @@ fn process_keys(window: &Window) -> Vec<Input> {
     buttons
 }
 
-#[derive(Clone,Copy,Debug)]
+#[derive(Clone, Copy, Debug)]
 struct RGBA {
     r: u8,
     g: u8,
     b: u8,
-    a: u8
+    a: u8,
 }
 
 impl RGBA {
@@ -54,7 +56,7 @@ impl RGBA {
 
 impl From<RGBA> for Color {
     fn from(c: RGBA) -> Color {
-        Color { 
+        Color {
             r: f32::from(c.r) / 255.0,
             g: f32::from(c.g) / 255.0,
             b: f32::from(c.b) / 255.0,
@@ -69,26 +71,30 @@ impl State for Game {
             Err(e) => {
                 panic!("{:?}", e);
             }
-            Ok(state) => Game { state }
+            Ok(state) => Game { state },
         }
     }
-    fn draw(&mut self, window: &mut Window) {
-        window.clear(Color::black());
-
-        let track_color = Color::from(RGBA::rgb(148,0,211));
-        let player_color = Color::from(RGBA::rgb(255,255,153));
-        let enemy_color = Color::from(RGBA::rgb(255,255,153));
-        let text_color = player_color.clone();
-
+    fn update(&mut self, window: &mut Window) {
         let buttons = process_keys(window);
-
         if self.state.game_over {
-            window.present();
-
             // Any key starts a new game.
             if !buttons.is_empty() {
                 self.state = amidar::State::new().expect("Expected creation of new game state ok.");
             }
+            return;
+        }
+        self.state.update_mut(&buttons);
+    }
+    fn draw(&mut self, window: &mut Window) {
+        window.clear(Color::black());
+
+        let track_color = Color::from(RGBA::rgb(148, 0, 211));
+        let player_color = Color::from(RGBA::rgb(255, 255, 153));
+        let enemy_color = Color::from(RGBA::rgb(255, 255, 153));
+        let text_color = player_color.clone();
+
+        if self.state.game_over {
+            window.present();
             return;
         }
 
@@ -123,11 +129,10 @@ impl State for Game {
             &Draw::rectangle(Rectangle::new(
                 offset_x + player_x - 1,
                 offset_y + player_y - 1,
-                entity_w, entity_h
+                entity_w,
+                entity_h,
             )).with_color(player_color),
         );
-
-        self.state.update_mut(&buttons);
 
         window.present();
     }
