@@ -1,15 +1,14 @@
-extern crate toybox;
 extern crate failure;
+extern crate toybox;
 
 use failure::Error;
 
 extern crate quicksilver;
 use quicksilver::{
     geom::{Rectangle, Vector},
-    Future,
-    graphics::{Color, Draw, View, Window, WindowBuilder, Font},
+    graphics::{Color, Draw, Font, View, Window, WindowBuilder},
     input::Key,
-    run, State,
+    run, Future, State,
 };
 use toybox::amidar;
 use toybox::Input;
@@ -160,9 +159,14 @@ impl State for Game {
 
         // Draw score:
         let (points_x, points_y) = (104, 198);
-        let score_img = self.font.render(&format!("{}", self.state.score), 16.0, text_color);
+        let score_img = self
+            .font
+            .render(&format!("{}", self.state.score), 16.0, text_color);
         let score_width = score_img.area().width as i32;
-        window.draw(&Draw::image(&score_img, Vector::new(points_x-score_width, points_y)));
+        window.draw(&Draw::image(
+            &score_img,
+            Vector::new(points_x - score_width, points_y),
+        ));
 
         window.present();
     }
