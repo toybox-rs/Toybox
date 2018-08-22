@@ -94,7 +94,6 @@ impl State for Game {
             }
             return;
         }
-        // terrible hack to get to 30FPS instead of 60FPS with this game framework.
         self.state.update_mut(&buttons);
     }
     fn draw(&mut self, window: &mut Window) {
