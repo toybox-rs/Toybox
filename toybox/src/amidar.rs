@@ -1,5 +1,7 @@
 use super::Input;
 use failure::Error;
+use std::collections::HashSet;
+use std::collections::VecDeque;
 
 // Window constants:
 pub mod screen {
@@ -82,7 +84,7 @@ impl TilePoint {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Tile {
     Empty,
     Unpainted,
@@ -94,6 +96,12 @@ impl Tile {
             '=' => Ok(Tile::Unpainted),
             ' ' => Ok(Tile::Empty),
             _ => Err(format_err!("Cannot construct AmidarTile from '{}'", c)),
+        }
+    }
+    fn walkable(&self) -> bool {
+        match self {
+            Tile::Empty => false,
+            Tile::Painted | Tile::Unpainted => true,
         }
     }
 }
@@ -160,6 +168,7 @@ pub struct Mob {
     pub position: WorldPoint,
     speed: i32,
     step: Option<TilePoint>,
+    history: VecDeque<u32>,
 }
 impl Mob {
     fn new(ai: MovementAI, position: WorldPoint) -> Mob {
@@ -168,6 +177,7 @@ impl Mob {
             position,
             step: None,
             speed: 8,
+            history: VecDeque::new(),
         }
     }
     pub fn new_player(position: WorldPoint) -> Mob {
@@ -176,6 +186,7 @@ impl Mob {
             position,
             step: None,
             speed: 8,
+            history: VecDeque::new(),
         }
     }
     fn is_player(&self) -> bool {
@@ -187,9 +198,16 @@ impl Mob {
         self.position = match self.ai {
             MovementAI::Player => player_start.to_world(),
             MovementAI::EnemyLookupAI { ref path, .. } => board.lookup_position(path[0]).to_world(),
-        }
+        };
+        self.history.clear();
     }
     pub fn update(&mut self, buttons: &[Input], board: &mut Board) {
+        if self.history.is_empty() {
+            if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
+                self.history.push_front(pt);
+            }
+        }
+
         // Animate/step player movement.
         let next_target = if let Some(ref target) = self.step {
             // Move player 1 step toward its target:
@@ -199,8 +217,8 @@ impl Mob {
 
             if dx == 0 && dy == 0 {
                 // We have reached this target tile:
-                if self.is_player() {
-                    board.paint(&target);
+                if let Some(pt) = board.get_junction_id(target) {
+                    self.history.push_front(pt);
                 }
                 None
             } else {
@@ -222,6 +240,15 @@ impl Mob {
                 .ai
                 .choose_next_tile(&self.position.to_tile(), buttons, board)
         }
+
+        // Manage history:
+        if self.is_player() {
+            board.check_paint(&mut self.history);
+        } else {
+            if self.history.len() > 12 {
+                let _ = self.history.pop_back();
+            }
+        }
     }
 }
 
@@ -229,6 +256,7 @@ pub struct Board {
     pub tiles: Vec<Vec<Tile>>,
     pub width: u32,
     pub height: u32,
+    pub junctions: HashSet<u32>,
 }
 
 impl Board {
@@ -243,12 +271,94 @@ impl Board {
         let width = tiles[0].len() as u32;
         let height = tiles.len() as u32;
 
-        Ok(Board {
+        let mut board = Board {
             tiles,
             width,
             height,
-        })
+            junctions: HashSet::new(),
+        };
+        board.init_junctions();
+        Ok(board)
     }
+
+    fn is_corner(&self, tx: i32, ty: i32) -> bool {
+        let last_y = (self.height as i32) - 1;
+        let last_x = (self.width as i32) - 1;
+        (tx == 0 || tx == last_x) && (ty == 0 || ty == last_y)
+    }
+
+    fn init_junctions(&mut self) {
+        // Only run this function once.
+        debug_assert!(self.junctions.is_empty());
+
+        for (y, row) in self.tiles.iter().enumerate() {
+            let y = y as i32;
+            for (x, cell) in row.iter().enumerate() {
+                let x = x as i32;
+                if cell.walkable() {
+                    let neighbors = [(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1)];
+                    let walkable_neighbors = neighbors
+                        .iter()
+                        .filter(|(nx, ny)| self.get_tile(&TilePoint::new(*nx, *ny)).walkable())
+                        .count();
+                    if walkable_neighbors > 2 || self.is_corner(x, y) {
+                        let y = y as u32;
+                        let x = x as u32;
+                        let _ = self.junctions.insert(y * self.width + x);
+                    }
+                }
+            }
+        }
+    }
+
+    fn tile_id(&self, tile: &TilePoint) -> Option<u32> {
+        if tile.ty < 0 || tile.tx < 0 || tile.ty > self.height as i32 || tile.tx > self.width as i32
+        {
+            return None;
+        }
+        let y = tile.ty as u32;
+        let x = tile.tx as u32;
+        Some(y * self.width + x)
+    }
+
+    fn get_junction_id(&self, tile: &TilePoint) -> Option<u32> {
+        self.tile_id(tile)
+            .filter(|num| self.junctions.contains(num))
+    }
+
+    fn check_paint(&mut self, player_history: &mut VecDeque<u32>) {
+        let painted_segment = if let Some(end) = player_history.front() {
+            if let Some(start) = player_history.iter().find(|j| *j != end) {
+                // iterate from start..end and paint()
+
+                let t1 = self.lookup_position(*start);
+                let t2 = self.lookup_position(*end);
+                let dx = (t2.tx - t1.tx).signum();
+                let dy = (t2.ty - t1.ty).signum();
+                debug_assert!(dx.abs() + dy.abs() == 1);
+
+                self.paint(&t1);
+                let mut t = t1.clone();
+                while t != t2 {
+                    t = t.translate(dx, dy);
+                    self.paint(&t);
+                }
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        if painted_segment {
+            // Don't forget this location should still be in history:
+            let current = player_history.front().unwrap().clone();
+            player_history.clear();
+            player_history.push_front(current);
+        }
+    }
+
     pub fn paint(&mut self, tile: &TilePoint) {
         self.tiles[tile.ty as usize][tile.tx as usize] = Tile::Painted;
     }
@@ -286,8 +396,10 @@ pub struct State {
 }
 
 impl State {
-    pub fn new() -> Result<State, Error> {
+    pub fn try_new() -> Result<State, Error> {
         let board = Board::try_new()?;
+
+        println!("Amidar Board Size: {}x{}", board.width, board.height);
 
         let mut enemies = Vec::new();
         for enemy_route in AMIDAR_ENEMY_POSITIONS_DATA.lines() {
@@ -353,5 +465,14 @@ mod tests {
         for row in board_ch.iter() {
             assert_eq!(Some('='), row.iter().cloned().find(|c| *c == '='));
         }
+    }
+
+    #[test]
+    fn board_corners() {
+        let board = Board::try_new().unwrap();
+        assert!(board.is_corner(0, 0));
+        assert!(board.is_corner(0, 30));
+        assert!(board.is_corner(31, 0));
+        assert!(board.is_corner(31, 30));
     }
 }
