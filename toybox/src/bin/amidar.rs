@@ -71,7 +71,7 @@ impl From<RGBA> for Color {
 
 fn try_setup_game() -> Result<Game, Error> {
     let state = amidar::State::try_new()?;
-    let font = Font::load("src/resources/arcadeclassic.regular.ttf").wait()?;
+    let font = Font::load("src/resources/PressStart2P.ttf").wait()?;
     Ok(Game { state, font })
 }
 
@@ -161,7 +161,7 @@ impl State for Game {
         let (points_x, points_y) = (104, 198);
         let score_img = self
             .font
-            .render(&format!("{}", self.state.score), 16.0, text_color);
+            .render(&format!("{}", self.state.score), 8.0, text_color);
         let score_width = score_img.area().width as i32;
         window.draw(&Draw::image(
             &score_img,
