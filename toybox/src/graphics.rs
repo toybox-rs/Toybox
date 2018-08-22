@@ -40,7 +40,7 @@ pub struct ImageBuffer {
     pub width: i32,
     pub height: i32,
     /// Pixels encoded as RGBA.
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 impl ImageBuffer {
     pub fn alloc(width: i32, height: i32) -> ImageBuffer {

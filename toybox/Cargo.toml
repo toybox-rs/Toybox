@@ -7,3 +7,4 @@ authors = ["John Foley <jfoley@cs.umass.edu>"]
 failure = "*"
 lazy_static = "*"
 png = "*"
+clap = "*"

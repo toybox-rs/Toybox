@@ -1,21 +1,99 @@
-extern crate toybox;
+extern crate clap;
+extern crate failure;
 extern crate png;
+extern crate toybox;
 
 use toybox::amidar;
 use toybox::graphics::{render_to_buffer, ImageBuffer};
 use toybox::Input;
 
+use clap::{App, Arg};
+
+use png::HasParameters;
+
+use std::fs::File;
+use std::io::BufWriter;
+use std::path::Path;
+
+fn check_output(path: &str) -> Result<(), ()> {
+    let path = Path::new(path);
+    if !path.exists() {
+        eprintln!("output {:?} does not exist!", path);
+        return Err(());
+    }
+    if !path.is_dir() {
+        eprintln!("output {:?} is not a directory!", path);
+        return Err(());
+    }
+    Ok(())
+}
+
 fn main() {
-    let num_steps = 1000;
+    let matches = App::new("headless-breakout")
+        .arg(
+            Arg::with_name("num_steps")
+                .short("n")
+                .long("num_steps")
+                .value_name("1000")
+                .help("How many steps to simulate (also how many images to output).")
+                .takes_value(true),
+        ).arg(
+            Arg::with_name("frame_step")
+                .short("f")
+                .long("frame_step")
+                .value_name("4")
+                .help("How many frames to simulate per step")
+                .takes_value(true),
+        ).arg(
+            Arg::with_name("output")
+                .long("output")
+                .value_name("OUTPUT_DIR")
+                .help("Where to save PNG files (directory).")
+                .takes_value(true),
+        ).get_matches();
+
+    let num_steps = matches
+        .value_of("num_steps")
+        .map(|c| c.parse::<usize>().expect("--num_steps should be a number"))
+        .unwrap_or(1000);
+    let frame_step = matches
+        .value_of("frame_steps")
+        .map(|c| c.parse::<usize>().expect("--frame_steps should be a number"))
+        .unwrap_or(4);
+
+    if let Some(path) = matches.value_of("output") {
+        if let Err(_) = check_output(path) {
+            return;
+        }
+    }
+
     let (w, h) = amidar::screen::GAME_SIZE;
     let mut state = amidar::State::try_new().unwrap();
     let mut images = Vec::with_capacity(num_steps);
-    for i in 0..num_steps {
+    for _ in 0..num_steps {
         let buttons = &[Input::Up];
-        state.update_mut(buttons);
+        for _ in 0..frame_step {
+            state.update_mut(buttons)
+        };
 
         let mut img = ImageBuffer::alloc(w, h);
         render_to_buffer(&mut img, &state.draw());
         images.push(img);
+    }
+
+    if let Some(path) = matches.value_of("output") {
+        // Check the folder again now in case of a data-race (best-effort).
+        if let Err(_) = check_output(path) {
+            return;
+        }
+
+        for (i, img) in images.into_iter().enumerate() {
+            let file = File::create(Path::new(path).join(format!("amidar{:08}.png", i))).unwrap();
+            let ref mut w = BufWriter::new(file);
+            let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
+            encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);
+            let mut writer = encoder.write_header().unwrap();
+            writer.write_image_data(&img.data).unwrap();
+        }
     }
 }
