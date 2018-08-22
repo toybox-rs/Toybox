@@ -93,7 +93,7 @@ impl State for Game {
 
         let track_color = Color::from(RGBA::rgb(148, 0, 211));
         let player_color = Color::from(RGBA::rgb(255, 255, 153));
-        let enemy_color = Color::from(RGBA::rgb(255, 255, 153));
+        let enemy_color = Color::from(RGBA::rgb(255, 0, 153));
         let text_color = player_color.clone();
 
         if self.state.game_over {
@@ -105,7 +105,7 @@ impl State for Game {
         let (offset_x, offset_y) = amidar::screen::BOARD_OFFSET;
         let (board_w, board_h) = self.state.board_size().to_screen().pixels();
 
-        for (ty, row) in self.state.board.iter().enumerate() {
+        for (ty, row) in self.state.board.tiles.iter().enumerate() {
             let ty = ty as i32;
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
@@ -126,20 +126,35 @@ impl State for Game {
             }
         }
 
-        let (player_x, player_y) = self.state.player.to_screen().pixels();
-        let (entity_w, entity_h) = amidar::screen::PLAYER_SIZE;
+        let (player_x, player_y) = self.state.player.position.to_screen().pixels();
+        let (player_w, player_h) = amidar::screen::PLAYER_SIZE;
         window.draw(
             &Draw::rectangle(Rectangle::new(
                 offset_x + player_x - 1,
                 offset_y + player_y - 1,
-                entity_w,
-                entity_h,
+                player_w,
+                player_h,
             )).with_color(player_color),
         );
+
+        for enemy in self.state.enemies.iter() {
+            let (x, y) = enemy.position.to_screen().pixels();
+            let (w, h) = amidar::screen::ENEMY_SIZE;
+
+            window.draw(
+                &Draw::rectangle(Rectangle::new(
+                    offset_x + x - 1,
+                    offset_y + y - 1,
+                    w,
+                    h,
+                )).with_color(enemy_color),
+            );
+        }
 
         window.present();
     }
 }
+
 fn main() {
     let (w, h) = amidar::screen::GAME_SIZE;
     let scale = 3;
