@@ -94,6 +94,7 @@ impl Tile {
     fn new_from_char(c: char) -> Result<Tile, Error> {
         match c {
             '=' => Ok(Tile::Unpainted),
+            'p' => Ok(Tile::Painted),
             ' ' => Ok(Tile::Empty),
             _ => Err(format_err!("Cannot construct AmidarTile from '{}'", c)),
         }
@@ -265,7 +266,7 @@ impl Board {
         let mut tiles = Vec::new();
         for line in AMIDAR_BOARD.lines() {
             // Rust will aggregate errors in collect for us if we give it a type-hint.
-            let row: Result<Vec<_>, _> = line.chars().map(|c| Tile::new_from_char(c)).collect();
+            let row: Result<Vec<_>, _> = line.chars().map(Tile::new_from_char).collect();
             // Exit function if row is errorful.
             tiles.push(row?);
         }
@@ -430,10 +431,10 @@ impl State {
                 .collect();
             enemies.push(board.make_enemy(route?));
         }
-        let player_start = board.lookup_position(511);
+        let player_start = TilePoint::new(31, 15);
         let player = Mob::new_player(player_start.to_world());
 
-        Ok(State {
+        let mut state = State {
             dead: false,
             game_over: false,
             score: 0,
@@ -441,10 +442,15 @@ impl State {
             player_start,
             enemies,
             board: board,
-        })
+        };
+        state.reset();
+        Ok(state)
     }
     pub fn reset(&mut self) {
         self.player.reset(&self.player_start, &self.board);
+        self.player
+            .history
+            .push_front(self.board.get_junction_id(&TilePoint::new(31, 18)).unwrap());
         for enemy in self.enemies.iter_mut() {
             enemy.reset(&self.player_start, &self.board);
         }
@@ -496,5 +502,11 @@ mod tests {
         assert!(board.is_corner(0, 30));
         assert!(board.is_corner(31, 0));
         assert!(board.is_corner(31, 30));
+    }
+    #[test]
+    fn player_start_position() {
+        let board = Board::try_new().unwrap();
+        assert_eq!(TilePoint::new(31, 15), board.lookup_position(511));
+        assert!(board.get_junction_id(&TilePoint::new(31, 18)).is_some());
     }
 }
