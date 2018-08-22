@@ -2,8 +2,8 @@ extern crate toybox;
 
 extern crate quicksilver;
 use quicksilver::{
-    geom::{Rectangle, Vector, Transform},
-    graphics::{Color, Draw, Window, WindowBuilder, View},
+    geom::Rectangle,
+    graphics::{Color, Draw, View, Window, WindowBuilder},
     input::Key,
     run, State,
 };
@@ -79,7 +79,8 @@ impl State for Game {
         if self.state.game_over {
             // Any key starts a new game.
             if !buttons.is_empty() {
-                self.state = amidar::State::try_new().expect("Expected creation of new game state ok.");
+                self.state =
+                    amidar::State::try_new().expect("Expected creation of new game state ok.");
             }
             return;
         }
@@ -88,7 +89,7 @@ impl State for Game {
     }
     fn draw(&mut self, window: &mut Window) {
         let (w, h) = amidar::screen::GAME_SIZE;
-        window.set_view(View::new(Rectangle::new(0,0,w,h)));
+        window.set_view(View::new(Rectangle::new(0, 0, w, h)));
         window.clear(Color::black());
 
         let track_color = Color::from(RGBA::rgb(148, 0, 211));
@@ -142,12 +143,8 @@ impl State for Game {
             let (w, h) = amidar::screen::ENEMY_SIZE;
 
             window.draw(
-                &Draw::rectangle(Rectangle::new(
-                    offset_x + x - 1,
-                    offset_y + y - 1,
-                    w,
-                    h,
-                )).with_color(enemy_color),
+                &Draw::rectangle(Rectangle::new(offset_x + x - 1, offset_y + y - 1, w, h))
+                    .with_color(enemy_color),
             );
         }
 
@@ -158,5 +155,9 @@ impl State for Game {
 fn main() {
     let (w, h) = amidar::screen::GAME_SIZE;
     let scale = 3;
-    run::<Game>(WindowBuilder::new("Amidar", scale * w as u32, scale * h as u32));
+    run::<Game>(WindowBuilder::new(
+        "Amidar",
+        scale * w as u32,
+        scale * h as u32,
+    ));
 }

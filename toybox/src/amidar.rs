@@ -14,7 +14,8 @@ mod world {
     use super::screen;
     pub const SCALE: i32 = 16;
     pub const TILE_SIZE: (i32, i32) = (screen::TILE_SIZE.0 * SCALE, screen::TILE_SIZE.1 * SCALE);
-    pub const PLAYER_SIZE: (i32, i32) = (screen::PLAYER_SIZE.0 * SCALE, screen::PLAYER_SIZE.1 * SCALE);
+    pub const PLAYER_SIZE: (i32, i32) =
+        (screen::PLAYER_SIZE.0 * SCALE, screen::PLAYER_SIZE.1 * SCALE);
     pub const ENEMY_SIZE: (i32, i32) = (screen::ENEMY_SIZE.0 * SCALE, screen::ENEMY_SIZE.1 * SCALE);
 }
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
@@ -106,13 +107,18 @@ pub enum MovementAI {
 impl MovementAI {
     fn reset(&mut self) {
         match self {
-            MovementAI::Player => { },
+            MovementAI::Player => {}
             MovementAI::EnemyLookupAI { next, path } => {
                 *next = 0;
             }
         }
     }
-    fn choose_next_tile(&mut self, position: &TilePoint, buttons: &[Input], board: &Board) -> Option<TilePoint> {
+    fn choose_next_tile(
+        &mut self,
+        position: &TilePoint,
+        buttons: &[Input],
+        board: &Board,
+    ) -> Option<TilePoint> {
         match self {
             MovementAI::Player => {
                 let left = buttons.contains(&Input::Left);
@@ -139,7 +145,7 @@ impl MovementAI {
                 } else {
                     None
                 }
-            },
+            }
             MovementAI::EnemyLookupAI { next, path } => {
                 *next = (*next + 1) % (path.len() as u32);
                 Some(board.lookup_position(path[*next as usize]))
@@ -157,10 +163,20 @@ pub struct Mob {
 }
 impl Mob {
     fn new(ai: MovementAI, position: WorldPoint) -> Mob {
-        Mob { ai, position, step: None, speed: 8}
+        Mob {
+            ai,
+            position,
+            step: None,
+            speed: 8,
+        }
     }
     pub fn new_player(position: WorldPoint) -> Mob {
-        Mob { ai: MovementAI::Player, position, step: None, speed: 8 }
+        Mob {
+            ai: MovementAI::Player,
+            position,
+            step: None,
+            speed: 8,
+        }
     }
     fn is_player(&self) -> bool {
         self.ai == MovementAI::Player
@@ -202,7 +218,9 @@ impl Mob {
 
         // Not an else if -- if a player or enemy reaches a tile they can immediately choose a new target.
         if self.step.is_none() {
-            self.step = self.ai.choose_next_tile(&self.position.to_tile(), buttons, board)
+            self.step = self
+                .ai
+                .choose_next_tile(&self.position.to_tile(), buttons, board)
         }
     }
 }
@@ -225,14 +243,21 @@ impl Board {
         let width = tiles[0].len() as u32;
         let height = tiles.len() as u32;
 
-        Ok(Board { tiles, width, height })
+        Ok(Board {
+            tiles,
+            width,
+            height,
+        })
     }
     pub fn paint(&mut self, tile: &TilePoint) {
         self.tiles[tile.ty as usize][tile.tx as usize] = Tile::Painted;
     }
     pub fn make_enemy(&self, positions: Vec<u32>) -> Mob {
         let first = positions[0];
-        let ai = MovementAI::EnemyLookupAI { next: 0, path: positions };
+        let ai = MovementAI::EnemyLookupAI {
+            next: 0,
+            path: positions,
+        };
         Mob::new(ai, self.lookup_position(first).to_world())
     }
     pub fn lookup_position(&self, position: u32) -> TilePoint {
@@ -266,7 +291,11 @@ impl State {
 
         let mut enemies = Vec::new();
         for enemy_route in AMIDAR_ENEMY_POSITIONS_DATA.lines() {
-            let route: Result<Vec<u32>,_> = enemy_route.trim().split(' ').map(|x| x.parse::<u32>()).collect();
+            let route: Result<Vec<u32>, _> = enemy_route
+                .trim()
+                .split(' ')
+                .map(|x| x.parse::<u32>())
+                .collect();
             enemies.push(board.make_enemy(route?));
         }
         let player_start = board.lookup_position(511);
