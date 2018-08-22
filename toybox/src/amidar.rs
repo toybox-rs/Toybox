@@ -254,6 +254,11 @@ impl Mob {
     }
 }
 
+lazy_static! {
+    static ref DEFAULT_BOARD: Board = Board::try_new().unwrap(); 
+}
+
+#[derive(Clone)]
 pub struct Board {
     pub tiles: Vec<Vec<Tile>>,
     pub width: u32,
@@ -262,7 +267,10 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn try_new() -> Result<Board, Error> {
+    pub fn fast_new() -> Board {
+        DEFAULT_BOARD.clone()
+    }
+    fn try_new() -> Result<Board, Error> {
         let mut tiles = Vec::new();
         for line in AMIDAR_BOARD.lines() {
             // Rust will aggregate errors in collect for us if we give it a type-hint.
@@ -375,7 +383,7 @@ impl Board {
     }
 
     pub fn paint(&mut self, tile: &TilePoint) -> bool {
-        let mut tile = &mut self.tiles[tile.ty as usize][tile.tx as usize];
+        let tile = &mut self.tiles[tile.ty as usize][tile.tx as usize];
         if *tile == Tile::Painted {
             false
         } else {
@@ -418,7 +426,7 @@ pub struct State {
 
 impl State {
     pub fn try_new() -> Result<State, Error> {
-        let board = Board::try_new()?;
+        let board = Board::fast_new();
 
         println!("Amidar Board Size: {}x{}", board.width, board.height);
 
@@ -497,7 +505,7 @@ mod tests {
 
     #[test]
     fn board_corners() {
-        let board = Board::try_new().unwrap();
+        let board = Board::fast_new();
         assert!(board.is_corner(0, 0));
         assert!(board.is_corner(0, 30));
         assert!(board.is_corner(31, 0));
@@ -505,7 +513,7 @@ mod tests {
     }
     #[test]
     fn player_start_position() {
-        let board = Board::try_new().unwrap();
+        let board = Board::fast_new();
         assert_eq!(TilePoint::new(31, 15), board.lookup_position(511));
         assert!(board.get_junction_id(&TilePoint::new(31, 18)).is_some());
     }

@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate failure;
 
+#[macro_use]
+extern crate lazy_static;
+
 use std::f64;
 
 mod vec2d;

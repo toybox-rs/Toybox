@@ -6,3 +6,4 @@ authors = ["John Foley <jfoley@cs.umass.edu>"]
 [dependencies]
 quicksilver = "0.2"
 failure = "*"
+lazy_static = "*"
