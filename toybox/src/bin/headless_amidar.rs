@@ -11,6 +11,7 @@ use clap::{App, Arg};
 
 use png::HasParameters;
 
+use std::collections::VecDeque;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
@@ -38,6 +39,12 @@ fn main() {
                 .help("How many steps to simulate (also how many images to output).")
                 .takes_value(true),
         ).arg(
+            Arg::with_name("max_frames")
+                .long("max_frames")
+                .value_name("all by default, try 1000")
+                .help("How many frames to keep in memory")
+                .takes_value(true),
+        ).arg(
             Arg::with_name("frame_step")
                 .short("f")
                 .long("frame_step")
@@ -60,6 +67,9 @@ fn main() {
         .value_of("frame_steps")
         .map(|c| c.parse::<usize>().expect("--frame_steps should be a number"))
         .unwrap_or(4);
+    let max_frames = matches
+        .value_of("max_frames")
+        .map(|c| c.parse::<usize>().expect("--max_frames should be a number"));
 
     if let Some(path) = matches.value_of("output") {
         if let Err(_) = check_output(path) {
@@ -69,7 +79,7 @@ fn main() {
 
     let (w, h) = amidar::screen::GAME_SIZE;
     let mut state = amidar::State::try_new().unwrap();
-    let mut images = Vec::with_capacity(num_steps);
+    let mut images = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
     for _ in 0..num_steps {
         let buttons = &[Input::Up];
         for _ in 0..frame_step {
@@ -78,7 +88,12 @@ fn main() {
 
         let mut img = ImageBuffer::alloc(w, h);
         render_to_buffer(&mut img, &state.draw());
-        images.push(img);
+        images.push_back(img);
+        if let Some(mf) = max_frames {
+            if images.len() > mf {
+                let _ = images.pop_front();
+            }
+        }
     }
 
     if let Some(path) = matches.value_of("output") {
