@@ -67,7 +67,7 @@ impl From<RGBA> for Color {
 
 impl State for Game {
     fn new() -> Game {
-        match amidar::State::new() {
+        match amidar::State::try_new() {
             Err(e) => {
                 panic!("{:?}", e);
             }
@@ -79,7 +79,7 @@ impl State for Game {
         if self.state.game_over {
             // Any key starts a new game.
             if !buttons.is_empty() {
-                self.state = amidar::State::new().expect("Expected creation of new game state ok.");
+                self.state = amidar::State::try_new().expect("Expected creation of new game state ok.");
             }
             return;
         }
