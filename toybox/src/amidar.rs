@@ -1,7 +1,6 @@
 use super::Input;
 use failure::Error;
-use std::collections::HashSet;
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 // Window constants:
 pub mod screen {
@@ -16,12 +15,27 @@ mod world {
     use super::screen;
     pub const SCALE: i32 = 16;
     pub const TILE_SIZE: (i32, i32) = (screen::TILE_SIZE.0 * SCALE, screen::TILE_SIZE.1 * SCALE);
-    pub const PLAYER_SIZE: (i32, i32) =
-        (screen::PLAYER_SIZE.0 * SCALE, screen::PLAYER_SIZE.1 * SCALE);
-    pub const ENEMY_SIZE: (i32, i32) = (screen::ENEMY_SIZE.0 * SCALE, screen::ENEMY_SIZE.1 * SCALE);
 }
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+impl Direction {
+    fn delta(&self) -> (i32, i32) {
+        match self {
+            Direction::Up => (0, -1),
+            Direction::Down => (0, 1),
+            Direction::Left => (-1, 0),
+            Direction::Right => (1, 0),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ScreenPoint {
@@ -82,6 +96,62 @@ impl TilePoint {
     pub fn translate(&self, dx: i32, dy: i32) -> TilePoint {
         TilePoint::new(self.tx + dx, self.ty + dy)
     }
+    pub fn step(&self, dir: Direction) -> TilePoint {
+        let (dx, dy) = dir.delta();
+        self.translate(dx, dy)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct GridBox {
+    pub top_left: TilePoint,
+    pub bottom_right: TilePoint,
+    pub painted: bool,
+}
+
+impl GridBox {
+    fn new(top_left: TilePoint, bottom_right: TilePoint) -> GridBox {
+        GridBox {
+            top_left,
+            bottom_right,
+            painted: false,
+        }
+    }
+    fn matches(&self, tile: &TilePoint) -> bool {
+        let x1 = self.top_left.tx;
+        let x2 = self.bottom_right.tx;
+        let y1 = self.top_left.ty;
+        let y2 = self.bottom_right.ty;
+
+        let xq = tile.tx;
+        let yq = tile.ty;
+
+        (x1 <= xq) && (xq <= x2) && (y1 <= yq) && (yq <= y2)
+    }
+    /// Check whether this box's painting should be updated.
+    /// Returns true iff something should change.
+    fn should_update_paint(&self, board: &Board) -> bool {
+        if self.painted {
+            return false;
+        }
+
+        let x1 = self.top_left.tx;
+        let x2 = self.bottom_right.tx;
+        let y1 = self.top_left.ty;
+        let y2 = self.bottom_right.ty;
+
+        let top_and_bottom = (x1..=x2).all(|xi| {
+            board.is_painted(&TilePoint::new(xi, y1)) && board.is_painted(&TilePoint::new(xi, y2))
+        });
+        let left_and_right = (y1..=y2).all(|yi| {
+            board.is_painted(&TilePoint::new(x1, yi)) && board.is_painted(&TilePoint::new(x2, yi))
+        });
+
+        if top_and_bottom && left_and_right {
+            return true;
+        }
+        false
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -135,25 +205,25 @@ impl MovementAI {
                 let up = buttons.contains(&Input::Up);
                 let down = buttons.contains(&Input::Down);
 
-                let mut dx = 0;
-                let mut dy = 0;
+                let mut input: Option<Direction> = None;
                 if left {
-                    dx = -1;
+                    input = Some(Direction::Left);
                 } else if right {
-                    dx = 1;
+                    input = Some(Direction::Right);
                 } else if up {
-                    dy = -1;
+                    input = Some(Direction::Up);
                 } else if down {
-                    dy = 1;
+                    input = Some(Direction::Down);
                 }
 
-                let target_tile = position.translate(dx, dy);
-                // Cannot cross into "empty" space.
-                if board.get_tile(&target_tile) != Tile::Empty {
-                    Some(target_tile)
-                } else {
-                    None
-                }
+                input.and_then(|dir| {
+                    let target_tile = position.step(dir);
+                    if board.get_tile(&target_tile).walkable() {
+                        Some(target_tile)
+                    } else {
+                        None
+                    }
+                })
             }
             MovementAI::EnemyLookupAI { next, path } => {
                 *next = (*next + 1) % (path.len() as u32);
@@ -202,7 +272,7 @@ impl Mob {
         };
         self.history.clear();
     }
-    pub fn update(&mut self, buttons: &[Input], board: &mut Board) -> i32 {
+    pub fn update(&mut self, buttons: &[Input], board: &mut Board) -> Option<ScoreUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -244,18 +314,18 @@ impl Mob {
 
         // Manage history:
         if self.is_player() {
-            board.check_paint(&mut self.history)
+            board.check_paint(&mut self.history).into_option()
         } else {
             if self.history.len() > 12 {
                 let _ = self.history.pop_back();
             }
-            0
+            None
         }
     }
 }
 
 lazy_static! {
-    static ref DEFAULT_BOARD: Board = Board::try_new().unwrap(); 
+    static ref DEFAULT_BOARD: Board = Board::try_new().unwrap();
 }
 
 #[derive(Clone)]
@@ -264,6 +334,32 @@ pub struct Board {
     pub width: u32,
     pub height: u32,
     pub junctions: HashSet<u32>,
+    pub boxes: Vec<GridBox>,
+}
+
+pub struct ScoreUpdate {
+    pub vertical: i32,
+    pub horizontal: i32,
+    pub num_boxes: i32,
+}
+impl ScoreUpdate {
+    fn new() -> ScoreUpdate {
+        ScoreUpdate {
+            vertical: 0,
+            horizontal: 0,
+            num_boxes: 0,
+        }
+    }
+    fn happened(&self) -> bool {
+        self.vertical != 0 || self.horizontal != 0 || self.num_boxes != 0
+    }
+    fn into_option(self) -> Option<Self> {
+        if self.happened() {
+            Some(self)
+        } else {
+            None
+        }
+    }
 }
 
 impl Board {
@@ -286,8 +382,15 @@ impl Board {
             width,
             height,
             junctions: HashSet::new(),
+            boxes: Vec::new(),
         };
         board.init_junctions();
+        debug_assert!(board.boxes.is_empty());
+        board.boxes = board
+            .junctions
+            .iter()
+            .flat_map(|pt| board.junction_corners(*pt))
+            .collect();
         Ok(board)
     }
 
@@ -321,8 +424,53 @@ impl Board {
         }
     }
 
+    fn is_painted(&self, xy: &TilePoint) -> bool {
+        self.get_tile(xy) == Tile::Painted
+    }
+
+    /// Find the junction in direction ``search`` starting from ``source`` that allows us to walk in ``walkable`` direction.
+    fn junction_neighbor(
+        &self,
+        source: u32,
+        search: Direction,
+        walkable: Direction,
+    ) -> Option<u32> {
+        let mut pos = self.lookup_position(source);
+        loop {
+            pos = pos.step(search);
+            let num = self.tile_id(&pos)?;
+            if self.junctions.contains(&num) && self.get_tile(&pos.step(walkable)).walkable() {
+                return Some(num);
+            }
+        }
+        unreachable!()
+    }
+
+    fn junction_corners(&self, source: u32) -> Option<GridBox> {
+        let mut src = source;
+        // Find the first junction to the right that lets us go down.
+        let right =
+            self.lookup_position(self.junction_neighbor(src, Direction::Right, Direction::Down)?);
+        // Find the first junction down that lets us go right.
+        let down =
+            self.lookup_position(self.junction_neighbor(src, Direction::Down, Direction::Right)?);
+        // There needs to be a bottom_right junction that connects this box.
+        let down_right = self.tile_id(&TilePoint::new(right.tx, down.ty))?;
+        if self.junctions.contains(&down_right) {
+            Some(GridBox::new(
+                self.lookup_position(source),
+                self.lookup_position(down_right),
+            ))
+        } else {
+            None
+        }
+    }
+
     fn tile_id(&self, tile: &TilePoint) -> Option<u32> {
-        if tile.ty < 0 || tile.tx < 0 || tile.ty > self.height as i32 || tile.tx > self.width as i32
+        if tile.ty < 0
+            || tile.tx < 0
+            || tile.ty >= self.height as i32
+            || tile.tx >= self.width as i32
         {
             return None;
         }
@@ -336,8 +484,29 @@ impl Board {
             .filter(|num| self.junctions.contains(num))
     }
 
-    fn check_paint(&mut self, player_history: &mut VecDeque<u32>) -> i32 {
-        let paint_segment_score: i32 = if let Some(end) = player_history.front() {
+    /// Check whether the painting of segment t1 .. t2 filled any boxes, and return the count if so.
+    fn check_box_painting(&mut self, t1: &TilePoint, t2: &TilePoint) -> i32 {
+        let indices: Vec<usize> = self
+            .boxes
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| b.matches(t1) || b.matches(t2))
+            .filter(|(_, b)| b.should_update_paint(self))
+            .map(|(i, _)| i)
+            .collect();
+
+        let updated = indices.len() as i32;
+        for i in indices {
+            self.boxes[i].painted = true;
+        }
+
+        updated
+    }
+
+    fn check_paint(&mut self, player_history: &mut VecDeque<u32>) -> ScoreUpdate {
+        let mut score_change = ScoreUpdate::new();
+
+        if let Some(end) = player_history.front() {
             if let Some(start) = player_history.iter().find(|j| *j != end) {
                 // iterate from start..end and paint()
 
@@ -358,28 +527,23 @@ impl Board {
                 // vertical segments give you 1, horizontal give you length
                 if newly_painted {
                     if dy > 0 {
-                        1
+                        score_change.vertical += (t2.ty - t1.ty).abs();
                     } else {
-                        (t2.tx - t1.tx).abs()
+                        score_change.horizontal += (t2.tx - t1.tx).abs();
                     }
-                } else {
-                    0
+                    score_change.num_boxes += self.check_box_painting(&t1, &t2);
                 }
-            } else {
-                0
             }
-        } else {
-            0
-        };
+        }
 
-        if paint_segment_score > 0 {
+        if score_change.happened() {
             // Don't forget this location should still be in history:
             let current = player_history.front().unwrap().clone();
             player_history.clear();
             player_history.push_front(current);
         }
 
-        paint_segment_score
+        score_change
     }
 
     pub fn paint(&mut self, tile: &TilePoint) -> bool {
@@ -418,6 +582,7 @@ pub struct State {
     pub dead: bool,
     pub game_over: bool,
     pub score: i32,
+    pub box_bonus: i32,
     pub player: Mob,
     pub player_start: TilePoint,
     pub enemies: Vec<Mob>,
@@ -446,6 +611,7 @@ impl State {
             dead: false,
             game_over: false,
             score: 0,
+            box_bonus: 50,
             player,
             player_start,
             enemies,
@@ -469,8 +635,12 @@ impl State {
         TilePoint::new(tw + 1, th + 1).to_world()
     }
     pub fn update_mut(&mut self, buttons: &[Input]) {
-        let score_change = self.player.update(buttons, &mut self.board);
-        self.score += score_change;
+        if let Some(score_change) = self.player.update(buttons, &mut self.board) {
+            self.score += score_change.horizontal;
+            // max 1 point for vertical, for some reason.
+            self.score += score_change.vertical.signum();
+            self.score += self.box_bonus * score_change.num_boxes;
+        }
 
         for enemy in self.enemies.iter_mut() {
             enemy.update(&[], &mut self.board);
@@ -516,5 +686,16 @@ mod tests {
         let board = Board::fast_new();
         assert_eq!(TilePoint::new(31, 15), board.lookup_position(511));
         assert!(board.get_junction_id(&TilePoint::new(31, 18)).is_some());
+    }
+
+    #[test]
+    fn num_grid_boxes() {
+        let board = Board::fast_new();
+        let mut ordered = board.boxes.clone();
+        ordered.sort_by_key(|it| it.top_left.tx + it.top_left.ty * 32);
+        for gb in ordered {
+            println!("Box-found: {:?}", gb.top_left);
+        }
+        assert_eq!(board.boxes.len(), 29);
     }
 }

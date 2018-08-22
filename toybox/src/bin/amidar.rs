@@ -136,6 +136,22 @@ impl State for Game {
             }
         }
 
+        for inner_box in self.state.board.boxes.iter().filter(|b| b.painted) {
+            let origin = inner_box.top_left.translate(1, 1).to_world().to_screen();
+            let dest = inner_box.bottom_right.to_world().to_screen();
+            let w = dest.sx - origin.sx;
+            let h = dest.sy - origin.sy;
+
+            window.draw(
+                &Draw::rectangle(Rectangle::new(
+                    offset_x + origin.sx,
+                    offset_y + origin.sy,
+                    w,
+                    h,
+                )).with_color(Color::yellow()),
+            );
+        }
+
         let (player_x, player_y) = self.state.player.position.to_screen().pixels();
         let (player_w, player_h) = amidar::screen::PLAYER_SIZE;
         window.draw(
