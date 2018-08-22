@@ -2,8 +2,8 @@ extern crate toybox;
 
 extern crate quicksilver;
 use quicksilver::{
-    geom::Rectangle,
-    graphics::{Color, Draw, Window, WindowBuilder},
+    geom::{Rectangle, Vector, Transform},
+    graphics::{Color, Draw, Window, WindowBuilder, View},
     input::Key,
     run, State,
 };
@@ -83,9 +83,12 @@ impl State for Game {
             }
             return;
         }
+        // terrible hack to get to 30FPS instead of 60FPS with this game framework.
         self.state.update_mut(&buttons);
     }
     fn draw(&mut self, window: &mut Window) {
+        let (w, h) = amidar::screen::GAME_SIZE;
+        window.set_view(View::new(Rectangle::new(0,0,w,h)));
         window.clear(Color::black());
 
         let track_color = Color::from(RGBA::rgb(148, 0, 211));
@@ -98,9 +101,9 @@ impl State for Game {
             return;
         }
 
-        let (tile_w, tile_h) = amidar::TILE_SIZE;
-        let (offset_x, offset_y) = amidar::BOARD_OFFSET;
-        let (board_w, board_h) = self.state.board_size().pixels();
+        let (tile_w, tile_h) = amidar::screen::TILE_SIZE;
+        let (offset_x, offset_y) = amidar::screen::BOARD_OFFSET;
+        let (board_w, board_h) = self.state.board_size().to_screen().pixels();
 
         for (ty, row) in self.state.board.iter().enumerate() {
             let ty = ty as i32;
@@ -123,8 +126,8 @@ impl State for Game {
             }
         }
 
-        let (player_x, player_y) = self.state.player.pixels();
-        let (entity_w, entity_h) = amidar::ENTITY_SIZE;
+        let (player_x, player_y) = self.state.player.to_screen().pixels();
+        let (entity_w, entity_h) = amidar::screen::PLAYER_SIZE;
         window.draw(
             &Draw::rectangle(Rectangle::new(
                 offset_x + player_x - 1,
@@ -138,6 +141,7 @@ impl State for Game {
     }
 }
 fn main() {
-    let (w, h) = amidar::GAME_SIZE;
-    run::<Game>(WindowBuilder::new("Amidar", w as u32, h as u32));
+    let (w, h) = amidar::screen::GAME_SIZE;
+    let scale = 3;
+    run::<Game>(WindowBuilder::new("Amidar", scale * w as u32, scale * h as u32));
 }

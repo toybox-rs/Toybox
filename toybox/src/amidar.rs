@@ -1,11 +1,38 @@
 use super::Input;
 use failure::Error;
 
-pub const GAME_SIZE: (i32, i32) = (160, 250);
-pub const BOARD_OFFSET: (i32, i32) = (16, 37);
-pub const TILE_SIZE: (i32, i32) = (4, 5);
-pub const ENTITY_SIZE: (i32, i32) = (7, 7);
+// Window constants:
+pub mod screen {
+    pub const GAME_SIZE: (i32, i32) = (160, 250);
+    pub const BOARD_OFFSET: (i32, i32) = (16, 37);
+    pub const PLAYER_SIZE: (i32, i32) = (7, 7);
+    pub const ENEMY_SIZE: (i32, i32) = (7, 7);
+    pub const TILE_SIZE: (i32, i32) = (4, 5);
+}
+
+
+mod world {
+    use super::screen;
+    pub const SCALE: i32 = 16;
+    pub const TILE_SIZE: (i32, i32) = (screen::TILE_SIZE.0 * SCALE, screen::TILE_SIZE.1 * SCALE);
+    pub const PLAYER_SIZE: (i32, i32) = (screen::PLAYER_SIZE.0 * SCALE, screen::PLAYER_SIZE.1 * SCALE);
+    pub const ENEMY_SIZE: (i32, i32) = (screen::ENEMY_SIZE.0 * SCALE, screen::ENEMY_SIZE.1 * SCALE);
+}
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
+
+#[derive(Debug, Clone)]
+pub struct ScreenPoint {
+    pub sx: i32,
+    pub sy: i32,
+}
+impl ScreenPoint {
+    fn new(sx: i32, sy: i32) -> ScreenPoint {
+        ScreenPoint { sx, sy }
+    }
+    pub fn pixels(&self) -> (i32, i32) {
+        (self.sx, self.sy)
+    }
+}
 
 /// Strongly-typed vector for "world" positioning in Amidar.
 #[derive(Debug, Clone)]
@@ -14,12 +41,15 @@ pub struct WorldPoint {
     pub y: i32,
 }
 impl WorldPoint {
-    pub fn new(x: i32, y: i32) -> WorldPoint {
+    fn new(x: i32, y: i32) -> WorldPoint {
         WorldPoint { x, y }
     }
+    pub fn to_screen(&self) -> ScreenPoint {
+        ScreenPoint::new(self.x / world::SCALE, self.y / world::SCALE)
+    }
     pub fn to_tile(&self) -> TilePoint {
-        let mut tx = self.x / TILE_SIZE.0;
-        let mut ty = self.y / TILE_SIZE.1;
+        let mut tx = self.x / world::TILE_SIZE.0;
+        let mut ty = self.y / world::TILE_SIZE.1;
         if self.x < 0 {
             tx -= 1;
         }
@@ -27,9 +57,6 @@ impl WorldPoint {
             ty -= 1;
         }
         TilePoint::new(tx, ty)
-    }
-    pub fn pixels(&self) -> (i32, i32) {
-        (self.x, self.y)
     }
     pub fn translate(&self, dx: i32, dy: i32) -> WorldPoint {
         WorldPoint::new(self.x + dx, self.y + dy)
@@ -47,7 +74,7 @@ impl TilePoint {
         TilePoint { tx, ty }
     }
     pub fn to_world(&self) -> WorldPoint {
-        WorldPoint::new(self.tx * TILE_SIZE.0, self.ty * TILE_SIZE.1)
+        WorldPoint::new(self.tx * world::TILE_SIZE.0, self.ty * world::TILE_SIZE.1)
     }
     pub fn translate(&self, dx: i32, dy: i32) -> TilePoint {
         TilePoint::new(self.tx + dx, self.ty + dy)
@@ -91,6 +118,7 @@ pub struct State {
     pub score: i32,
     pub player: WorldPoint,
     player_target: Option<TilePoint>,
+    player_speed: i32,
     pub enemies: Vec<Enemy>,
     pub board: Vec<Vec<Tile>>,
 }
@@ -110,6 +138,7 @@ impl State {
             score: 0,
             player: TilePoint::new(4, 0).to_world(),
             player_target: None,
+            player_speed: 8,
             enemies: Vec::new(),
             board: board_tiles,
         })
@@ -140,8 +169,8 @@ impl State {
                 self.board[target.ty as usize][target.tx as usize] = Tile::Painted;
                 None
             } else {
-                self.player.x += dx.signum();
-                self.player.y += dy.signum();
+                self.player.x += self.player_speed * dx.signum();
+                self.player.y += self.player_speed * dy.signum();
                 Some(target.clone())
             }
         } else {
@@ -185,7 +214,7 @@ mod tests {
 
     #[test]
     fn board_included() {
-        let board_ch = AMIDAR_BOARD
+        let board_ch: Vec<Vec<char>> = AMIDAR_BOARD
             .lines()
             .map(|line| line.chars().collect::<Vec<char>>())
             .collect();
