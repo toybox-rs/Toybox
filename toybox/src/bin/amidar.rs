@@ -1,9 +1,13 @@
 extern crate toybox;
+extern crate failure;
+
+use failure::Error;
 
 extern crate quicksilver;
 use quicksilver::{
-    geom::Rectangle,
-    graphics::{Color, Draw, View, Window, WindowBuilder},
+    geom::{Rectangle, Vector},
+    Future,
+    graphics::{Color, Draw, View, Window, WindowBuilder, Font},
     input::Key,
     run, State,
 };
@@ -12,6 +16,7 @@ use toybox::Input;
 
 struct Game {
     state: amidar::State,
+    font: Font,
 }
 
 fn process_keys(window: &Window) -> Vec<Input> {
@@ -65,13 +70,19 @@ impl From<RGBA> for Color {
     }
 }
 
+fn try_setup_game() -> Result<Game, Error> {
+    let state = amidar::State::try_new()?;
+    let font = Font::load("src/resources/arcadeclassic.regular.ttf").wait()?;
+    Ok(Game { state, font })
+}
+
 impl State for Game {
     fn new() -> Game {
-        match amidar::State::try_new() {
+        match try_setup_game() {
             Err(e) => {
                 panic!("{:?}", e);
             }
-            Ok(state) => Game { state },
+            Ok(game) => game,
         }
     }
     fn update(&mut self, window: &mut Window) {
@@ -104,7 +115,6 @@ impl State for Game {
 
         let (tile_w, tile_h) = amidar::screen::TILE_SIZE;
         let (offset_x, offset_y) = amidar::screen::BOARD_OFFSET;
-        let (board_w, board_h) = self.state.board_size().to_screen().pixels();
 
         for (ty, row) in self.state.board.tiles.iter().enumerate() {
             let ty = ty as i32;
@@ -147,6 +157,12 @@ impl State for Game {
                     .with_color(enemy_color),
             );
         }
+
+        // Draw score:
+        let (points_x, points_y) = (104, 198);
+        let score_img = self.font.render(&format!("{}", self.state.score), 16.0, text_color);
+        let score_width = score_img.area().width as i32;
+        window.draw(&Draw::image(&score_img, Vector::new(points_x-score_width, points_y)));
 
         window.present();
     }

@@ -201,7 +201,7 @@ impl Mob {
         };
         self.history.clear();
     }
-    pub fn update(&mut self, buttons: &[Input], board: &mut Board) {
+    pub fn update(&mut self, buttons: &[Input], board: &mut Board) -> i32 {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -243,11 +243,12 @@ impl Mob {
 
         // Manage history:
         if self.is_player() {
-            board.check_paint(&mut self.history);
+            board.check_paint(&mut self.history)
         } else {
             if self.history.len() > 12 {
                 let _ = self.history.pop_back();
             }
+            0
         }
     }
 }
@@ -326,8 +327,8 @@ impl Board {
             .filter(|num| self.junctions.contains(num))
     }
 
-    fn check_paint(&mut self, player_history: &mut VecDeque<u32>) {
-        let painted_segment = if let Some(end) = player_history.front() {
+    fn check_paint(&mut self, player_history: &mut VecDeque<u32>) -> i32 {
+        let paint_segment_score: i32 = if let Some(end) = player_history.front() {
             if let Some(start) = player_history.iter().find(|j| *j != end) {
                 // iterate from start..end and paint()
 
@@ -337,30 +338,49 @@ impl Board {
                 let dy = (t2.ty - t1.ty).signum();
                 debug_assert!(dx.abs() + dy.abs() == 1);
 
-                self.paint(&t1);
+                let mut newly_painted = false;
+                newly_painted |= self.paint(&t1);
                 let mut t = t1.clone();
                 while t != t2 {
                     t = t.translate(dx, dy);
-                    self.paint(&t);
+                    newly_painted |= self.paint(&t);
                 }
-                true
+
+                // vertical segments give you 1, horizontal give you length
+                if newly_painted {
+                    if dy > 0 {
+                        1
+                    } else {
+                        (t2.tx - t1.tx).abs()
+                    }
+                } else {
+                    0
+                }
             } else {
-                false
+                0
             }
         } else {
-            false
+            0
         };
 
-        if painted_segment {
+        if paint_segment_score > 0 {
             // Don't forget this location should still be in history:
             let current = player_history.front().unwrap().clone();
             player_history.clear();
             player_history.push_front(current);
         }
+
+        paint_segment_score
     }
 
-    pub fn paint(&mut self, tile: &TilePoint) {
-        self.tiles[tile.ty as usize][tile.tx as usize] = Tile::Painted;
+    pub fn paint(&mut self, tile: &TilePoint) -> bool {
+        let mut tile = &mut self.tiles[tile.ty as usize][tile.tx as usize];
+        if *tile == Tile::Painted {
+            false
+        } else {
+            *tile = Tile::Painted;
+            true
+        }
     }
     pub fn make_enemy(&self, positions: Vec<u32>) -> Mob {
         let first = positions[0];
@@ -435,7 +455,9 @@ impl State {
         TilePoint::new(tw + 1, th + 1).to_world()
     }
     pub fn update_mut(&mut self, buttons: &[Input]) {
-        self.player.update(buttons, &mut self.board);
+        let score_change = self.player.update(buttons, &mut self.board);
+        self.score += score_change;
+
         for enemy in self.enemies.iter_mut() {
             enemy.update(&[], &mut self.board);
 
