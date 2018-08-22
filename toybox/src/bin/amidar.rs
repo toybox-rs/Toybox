@@ -1,5 +1,6 @@
 extern crate failure;
 extern crate toybox;
+use toybox::graphics::Drawable;
 
 use failure::Error;
 
@@ -101,10 +102,32 @@ impl State for Game {
         window.set_view(View::new(Rectangle::new(0, 0, w, h)));
         window.clear(Color::black());
 
+        let drawables = self.state.draw();
+        for dw in drawables {
+            match dw {
+                Drawable::Rectangle { color, x, y, w, h } => {
+                    window.draw(
+                        &Draw::rectangle(Rectangle::new(x, y, w, h)).with_color(Color {
+                            r: color.r as f32 / 255.0,
+                            g: color.g as f32 / 255.0,
+                            b: color.b as f32 / 255.0,
+                            a: 1.0,
+                        }),
+                    );
+                }
+            }
+        }
+
+        let text_color = Color {
+            r: 1.0,
+            g: 1.0,
+            b: 153.0 / 255.0,
+            a: 1.0,
+        };
+        /*
         let track_color = Color::from(RGBA::rgb(148, 0, 211));
         let player_color = Color::from(RGBA::rgb(255, 255, 153));
         let enemy_color = Color::from(RGBA::rgb(255, 0, 153));
-        let text_color = player_color.clone();
 
         if self.state.game_over {
             window.present();
@@ -171,6 +194,7 @@ impl State for Game {
                     .with_color(enemy_color),
             );
         }
+        */
 
         // Draw score:
         let (points_x, points_y) = (104, 198);

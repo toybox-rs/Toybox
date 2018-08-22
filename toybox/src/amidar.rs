@@ -1,3 +1,4 @@
+use super::graphics::{Color, Drawable};
 use super::Input;
 use failure::Error;
 use std::collections::{HashSet, VecDeque};
@@ -655,6 +656,87 @@ impl State {
             self.reset();
             self.dead = false;
         }
+    }
+
+    pub fn draw(&self) -> Vec<Drawable> {
+        let mut output = Vec::new();
+        output.push(Drawable::rect(
+            Color::black(),
+            0,
+            0,
+            screen::GAME_SIZE.0,
+            screen::GAME_SIZE.1,
+        ));
+        if self.game_over {
+            return output;
+        }
+        let track_color = Color::RGB(148, 0, 211);
+        let player_color = Color::RGB(255, 255, 153);
+        let enemy_color = Color::RGB(255, 0, 153);
+        let text_color = player_color;
+
+        let (tile_w, tile_h) = screen::TILE_SIZE;
+        let (offset_x, offset_y) = screen::BOARD_OFFSET;
+
+        for (ty, row) in self.board.tiles.iter().enumerate() {
+            let ty = ty as i32;
+            for (tx, tile) in row.iter().enumerate() {
+                let tx = tx as i32;
+                let tile_color = match tile {
+                    // TODO: change this color:
+                    Tile::Painted => Color::white(),
+                    Tile::Unpainted => track_color,
+                    Tile::Empty => continue,
+                };
+                output.push(Drawable::rect(
+                    tile_color,
+                    offset_x + tx * tile_w,
+                    offset_y + ty * tile_h,
+                    tile_w,
+                    tile_h,
+                ));
+            }
+        }
+
+        for inner_box in self.board.boxes.iter().filter(|b| b.painted) {
+            let origin = inner_box.top_left.translate(1, 1).to_world().to_screen();
+            let dest = inner_box.bottom_right.to_world().to_screen();
+            let w = dest.sx - origin.sx;
+            let h = dest.sy - origin.sy;
+
+            output.push(Drawable::rect(
+                Color::RGB(0xff, 0xff, 0x00),
+                offset_x + origin.sx,
+                offset_y + origin.sy,
+                w,
+                h,
+            ));
+        }
+
+        let (player_x, player_y) = self.player.position.to_screen().pixels();
+        let (player_w, player_h) = screen::PLAYER_SIZE;
+        output.push(Drawable::rect(
+            player_color,
+            offset_x + player_x - 1,
+            offset_y + player_y - 1,
+            player_w,
+            player_h,
+        ));
+
+        for enemy in self.enemies.iter() {
+            let (x, y) = enemy.position.to_screen().pixels();
+            let (w, h) = screen::ENEMY_SIZE;
+
+            output.push(Drawable::rect(
+                Color::RGB(0xff, 0, 0),
+                offset_x + x - 1,
+                offset_y + y - 1,
+                w,
+                h,
+            ));
+        }
+
+        output
     }
 }
 

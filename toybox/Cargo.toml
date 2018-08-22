@@ -7,3 +7,4 @@ authors = ["John Foley <jfoley@cs.umass.edu>"]
 quicksilver = "0.2"
 failure = "*"
 lazy_static = "*"
+png = "*"

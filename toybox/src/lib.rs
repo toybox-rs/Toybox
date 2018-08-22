@@ -4,6 +4,8 @@ extern crate failure;
 #[macro_use]
 extern crate lazy_static;
 
+pub mod graphics;
+
 use std::f64;
 
 mod vec2d;
