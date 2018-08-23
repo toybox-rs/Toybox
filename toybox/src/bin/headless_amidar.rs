@@ -65,8 +65,10 @@ fn main() {
         .unwrap_or(1000);
     let frame_step = matches
         .value_of("frame_steps")
-        .map(|c| c.parse::<usize>().expect("--frame_steps should be a number"))
-        .unwrap_or(4);
+        .map(|c| {
+            c.parse::<usize>()
+                .expect("--frame_steps should be a number")
+        }).unwrap_or(4);
     let max_frames = matches
         .value_of("max_frames")
         .map(|c| c.parse::<usize>().expect("--max_frames should be a number"));
@@ -84,7 +86,7 @@ fn main() {
         let buttons = &[Input::Up];
         for _ in 0..frame_step {
             state.update_mut(buttons)
-        };
+        }
 
         let mut img = ImageBuffer::alloc(w, h);
         render_to_buffer(&mut img, &state.draw());
