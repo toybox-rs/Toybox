@@ -629,6 +629,9 @@ impl super::Simulation for Amidar {
 }
 
 impl super::State for State {
+    fn game_over(&self) -> bool {
+        self.game_over
+    }
     fn update_mut(&mut self, buttons: &Input) {
         if let Some(score_change) = self.player.update(buttons, &mut self.board) {
             self.score += score_change.horizontal;

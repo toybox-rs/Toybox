@@ -144,6 +144,9 @@ impl super::Simulation for Breakout {
 }
 
 impl super::State for State {
+    fn game_over(&self) -> bool {
+        self.game_over
+    }
 
     /// Mutably update the game state.
     fn update_mut(&mut self, buttons: &Input) {

@@ -96,6 +96,9 @@ fn main() {
         let mut buttons = Input::default();
         buttons.up = true;
         for _ in 0..frame_step {
+            if (state.game_over()) {
+                state = simulator.new_game();
+            }
             state.update_mut(&buttons)
         }
 

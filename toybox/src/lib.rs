@@ -64,6 +64,8 @@ impl Input {
 }
 
 pub trait State {
+    /// When true, this state should be replaced with a call to new_game() on the simulation.
+    fn game_over(&self) -> bool;
     fn update_mut(&mut self, buttons: &Input);
     fn draw(&self) -> Vec<graphics::Drawable>;
 }
