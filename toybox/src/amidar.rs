@@ -623,12 +623,12 @@ impl super::Simulation for Amidar {
     fn game_size(&self) -> (i32,i32) {
         screen::GAME_SIZE
     }
-    fn new_game(&self) -> Box<super::SimulatorState> {
+    fn new_game(&self) -> Box<super::State> {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
 }
 
-impl super::SimulatorState for State {
+impl super::State for State {
     fn update_mut(&mut self, buttons: &Input) {
         if let Some(score_change) = self.player.update(buttons, &mut self.board) {
             self.score += score_change.horizontal;

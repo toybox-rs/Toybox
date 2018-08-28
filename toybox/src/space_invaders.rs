@@ -118,7 +118,7 @@ impl super::Simulation for SpaceInvaders {
     fn game_size(&self) -> (i32,i32) {
         screen::GAME_SIZE
     }
-    fn new_game(&self) -> Box<super::SimulatorState> {
+    fn new_game(&self) -> Box<super::State> {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
         let mut shields = Vec::new();
@@ -136,7 +136,7 @@ impl super::Simulation for SpaceInvaders {
     }
 }
 
-impl super::SimulatorState for State {
+impl super::State for State {
     fn update_mut(&mut self, buttons: &Input) {
 
     }

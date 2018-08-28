@@ -107,7 +107,7 @@ impl super::Simulation for Breakout {
     }
 
     /// Create a new game of breakout.
-    fn new_game(&self) -> Box<super::SimulatorState> {
+    fn new_game(&self) -> Box<super::State> {
         let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
         let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
@@ -143,7 +143,7 @@ impl super::Simulation for Breakout {
 
 }
 
-impl super::SimulatorState for State {
+impl super::State for State {
 
     /// Mutably update the game state.
     fn update_mut(&mut self, buttons: &Input) {

@@ -63,13 +63,13 @@ impl Input {
     }
 }
 
-pub trait SimulatorState {
+pub trait State {
     fn update_mut(&mut self, buttons: &Input);
     fn draw(&self) -> Vec<graphics::Drawable>;
 }
 
 pub trait Simulation {
-    fn new_game(&self) -> Box<SimulatorState>;
+    fn new_game(&self) -> Box<State>;
     fn game_size(&self) -> (i32, i32);
 }
 
@@ -82,6 +82,8 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
     };
     y
 }
+
+pub const GAME_LIST: &'static [&str] = &["amidar", "breakout", "space_invaders"];
 
 /// Amidar defined in this module.
 pub mod amidar;

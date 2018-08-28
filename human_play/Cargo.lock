@@ -452,6 +452,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "human_play"
 version = "0.1.0"
 dependencies = [
+ "clap 2.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "quicksilver 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "toybox 0.1.0",
