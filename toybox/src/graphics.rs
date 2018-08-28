@@ -19,6 +19,12 @@ impl Color {
     }
 }
 
+impl<'a> From<&'a (u8,u8,u8)> for Color {
+    fn from(tuple: &'a (u8,u8,u8)) -> Color {
+        Color::RGB(tuple.0, tuple.1, tuple.2)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Drawable {
     Rectangle {

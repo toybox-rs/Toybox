@@ -1,8 +1,26 @@
 use super::vec2d::Vec2D;
 use super::Body2D;
 use super::Input;
+use super::graphics::{Color,Drawable};
 
-pub const GAME_SIZE: (i32, i32) = (240, 240);
+pub mod screen {
+    pub const GAME_SIZE: (i32, i32) = (240, 240);
+
+    // Atari manual refers to orange, yellow, green, aqua, blue... not what images show.
+    pub const RED: (u8,u8,u8) = (200,72,72);
+    pub const DARK_ORANGE: (u8,u8,u8) = (198, 108, 58);
+    pub const ORANGE: (u8, u8, u8) = (180, 122, 48);
+    pub const YELLOW: (u8,u8,u8) = (162,162,42);
+    pub const GREEN: (u8,u8,u8) = (72,160,72);
+    pub const BLUE: (u8,u8,u8) = (66,72,200);
+
+    pub const ROW_SCORES: &[u32] = &[7,7,7,4,4,1,1];
+    pub const ROW_COLORS: &[&(u8,u8,u8)] = &[&RED, &DARK_ORANGE, &ORANGE, &YELLOW, &GREEN, &BLUE];
+
+    // Atari colors have paddle, ball, and red all being the same.
+    pub const PADDLE_COLOR: (u8,u8,u8) = (200,72,72);
+    pub const BALL_COLOR: (u8,u8,u8) = (200,72,72);
+}
 
 #[derive(Debug, Clone)]
 pub struct Brick {
@@ -14,16 +32,18 @@ pub struct Brick {
     pub points: u32,
     /// This starts as true and moves to false when hit.
     pub alive: bool,
-    // todo, color?
+    // What color is this brick.
+    pub color: Color,
 }
 
 impl Brick {
-    pub fn new(position: Vec2D, size: Vec2D, points: u32) -> Brick {
+    pub fn new(position: Vec2D, size: Vec2D, points: u32, color: Color) -> Brick {
         Brick {
             position,
             size,
             points,
             alive: true,
+            color,
         }
     }
 
@@ -58,13 +78,13 @@ impl Default for BreakoutState {
 impl BreakoutState {
     /// Create a new game of breakout.
     pub fn new() -> BreakoutState {
-        let (w, h) = GAME_SIZE;
+        let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
         let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
         ball.velocity = Vec2D::from_polar(4.0, 0.5);
 
         let num_bricks_across = 12;
-        let num_bricks_deep = 5;
+        let num_bricks_deep = screen::ROW_COLORS.len();
         let xs = f64::from(w) / f64::from(num_bricks_across);
         let ys = 12.0;
         let roof_space = ys * 3.0;
@@ -72,8 +92,10 @@ impl BreakoutState {
         for x in 0..num_bricks_across {
             let x = f64::from(x);
             for y in 0..num_bricks_deep {
-                let bpos = Vec2D::new(x * xs, f64::from(y) * ys + roof_space);
-                bricks.push(Brick::new(bpos, bsize.clone(), y + 1));
+                let color_tuple = screen::ROW_COLORS[y];
+                let score = screen::ROW_SCORES[y];
+                let bpos = Vec2D::new(x * xs, (y as f64) * ys + roof_space);
+                bricks.push(Brick::new(bpos, bsize.clone(), score, color_tuple.into()));
             }
         }
 
@@ -95,8 +117,8 @@ impl BreakoutState {
         self.ball.integrate_mut(time_step);
         self.paddle.integrate_mut(time_step);
 
-        let game_width = f64::from(GAME_SIZE.0);
-        let game_height = f64::from(GAME_SIZE.1);
+        let game_width = f64::from(screen::GAME_SIZE.0);
+        let game_height = f64::from(screen::GAME_SIZE.1);
 
         let left = buttons.left;
         let right = buttons.right;
@@ -170,5 +192,54 @@ impl BreakoutState {
                 self.ball.velocity.x *= -1.0;
             }
         }
+    }
+
+
+    pub fn draw(&self) -> Vec<Drawable> {
+        let mut output = Vec::new();
+        output.push(Drawable::rect(
+            Color::black(),
+            0,
+            0,
+            screen::GAME_SIZE.0,
+            screen::GAME_SIZE.1,
+        ));
+
+        if self.game_over {
+            return output;
+        }
+
+        for brick in self.bricks.iter().filter(|b| b.alive) {
+            let (x, y) = brick.position.pixels();
+            let (w, h) = brick.size.pixels();
+
+            output.push(Drawable::rect(
+                brick.color,
+                x, y, w - 1, h - 1
+            ));
+        }
+
+        let (paddle_x, paddle_y) = self.paddle.position.pixels();
+        let paddle_w = self.paddle_width as i32;
+
+        output.push(Drawable::rect(
+            (&screen::PADDLE_COLOR).into(),
+            paddle_x - paddle_w / 2,
+            paddle_y,
+            paddle_w,
+            10,
+        ));
+
+        let (ball_x, ball_y) = self.ball.position.pixels();
+        let ball_r = self.ball_radius as i32;
+        output.push(Drawable::rect(
+            (&screen::BALL_COLOR).into(),
+            ball_x - ball_r,
+            ball_y - ball_r,
+            ball_r * 2,
+            ball_r * 2,
+        ));
+
+        output
     }
 }
