@@ -80,7 +80,7 @@ pub struct Actor {
 
 impl Default for Actor {
     fn default() -> Self {
-        Actor { x: 0, y: 0, w: 0, h: 0, movement: None, speed: 0, color: Color::white() }
+        Actor { x: 0, y: 0, w:40, h: 0, movement: None, speed: 3, color: Color::white() }
     }
 }
 
@@ -95,7 +95,17 @@ impl Actor {
     }
     fn laser(x: i32, y: i32, dir: Direction) -> Actor {
         let (w, h) = screen::LASER_SIZE;
-        Actor { x, y, w, h, color: (&screen::LASER_COLOR).into(), ..Default::default() }
+        Actor { x, y, w, h, color: (&screen::LASER_COLOR).into(), movement: Some(dir), speed: 5, ..Default::default() }
+    }
+    fn update_mut(&mut self) -> bool {
+        if let Some(dir) = self.movement {
+            let (dx, dy) = dir.delta();
+            self.x += dx * self.speed;
+            self.y += dy * self.speed;
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -143,10 +153,73 @@ impl super::State for State {
         self.game_over
     }
     fn update_mut(&mut self, buttons: &Input) {
+        self.ship.movement = if buttons.left {
+            Some(Direction::Left)
+        } else if buttons.right {
+            Some(Direction::Right)
+        } else { None };
 
+        if self.ship.update_mut() {
+            if self.ship.x > screen::SHIP_LIMIT_X2 {
+                self.ship.x = screen::SHIP_LIMIT_X2;
+            } else if self.ship.x < screen::SHIP_LIMIT_X1 {
+                self.ship.x = screen::SHIP_LIMIT_X1;
+            }
+        }
+        // Only shoot a laser if not present:
+        if let None = self.ship_laser {
+            if buttons.button1 {
+                self.ship_laser = Some(Actor::laser(self.ship.x + self.ship.w / 2, self.ship.y, Direction::Up));
+            }
+        }
+        let delete_laser = if let Some(ref mut laser) = &mut self.ship_laser {
+            if laser.update_mut() && laser.y < 0 {
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        if delete_laser {
+            self.ship_laser = None;
+        }
     }
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
+        output.push(Drawable::rect(
+            Color::black(),
+            0,
+            0,
+            screen::GAME_SIZE.0,
+            screen::GAME_SIZE.1,
+        ));
+        // draw ground:
+        output.push(Drawable::rect(
+            (&screen::GROUND_COLOR).into(),
+            0, screen::SKY_TO_GROUND,
+            screen::GAME_SIZE.0, screen::GAME_SIZE.1 - screen::SKY_TO_GROUND));
+        
+        if self.game_over() {
+            return output;
+        }
+
+        output.push(Drawable::rect(
+            self.ship.color,
+            self.ship.x, self.ship.y,
+            self.ship.w, self.ship.h
+        ));
+
+        for shield in self.shields.iter() {
+            output.push(Drawable::Sprite(shield.clone()));
+        }
+
+        if let Some(ref laser) = self.ship_laser {
+            output.push(Drawable::rect(
+                laser.color, laser.x, laser.y, laser.w, laser.h
+            ))
+        }
+
 
         output
     }

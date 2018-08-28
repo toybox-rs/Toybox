@@ -33,8 +33,8 @@ impl<'a> From<&'a (u8,u8,u8)> for Color {
 
 #[derive(Clone,Debug)]
 pub struct SpriteData {
-    x: i32,
-    y: i32,
+    pub x: i32,
+    pub y: i32,
     scale: i32,
     data: Vec<Vec<Color>>,
 }
@@ -53,6 +53,16 @@ impl SpriteData {
     }
     pub fn position(&self) -> (i32,i32) {
         (self.x, self.y)
+    }
+    pub fn find_visible_color(&self) -> Option<Color> {
+        for row in self.data.iter() {
+            for px in row.iter() {
+                if px.is_visible() {
+                    return Some(px.clone());
+                }
+            }
+        }
+        None
     }
     /// Make a full copy of this sprite with a new position.
     pub fn translate(&self, x: i32, y: i32) -> SpriteData {

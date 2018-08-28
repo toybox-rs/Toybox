@@ -52,8 +52,16 @@ impl quicksilver::State for AbstractGame {
                         &Draw::rectangle(Rectangle::new(x, y, w, h)).with_color(color_convert(&color)),
                     );
                 }
-                Drawable::Sprite(_) => {
-                    // TODO
+                Drawable::Sprite(sprite) => {
+                    let x = sprite.x;
+                    let y = sprite.y;
+                    let w = sprite.width() * sprite.scale();
+                    let h = sprite.height() * sprite.scale();
+                    if let Some(color) = sprite.find_visible_color() {
+                        window.draw(
+                            &Draw::rectangle(Rectangle::new(x, y, w, h)).with_color(color_convert(&color)),
+                        );
+                    }
                 }
             }
         }
