@@ -165,14 +165,14 @@ impl Tile {
 #[derive(Clone, PartialEq)]
 pub enum MovementAI {
     Player,
-    EnemyLookupAI { next: u32, path: Vec<u32> },
+    EnemyLookupAI { next: u32, default_route_index: u32 },
 }
 
 impl MovementAI {
     fn reset(&mut self) {
         match self {
             MovementAI::Player => {}
-            MovementAI::EnemyLookupAI { next, path } => {
+            MovementAI::EnemyLookupAI { next, .. } => {
                 *next = 0;
             }
         }
@@ -205,7 +205,8 @@ impl MovementAI {
                     }
                 })
             }
-            MovementAI::EnemyLookupAI { next, path } => {
+            MovementAI::EnemyLookupAI { next, default_route_index } => {
+                let path = &DEFAULT_ENEMY_ROUTES[*default_route_index as usize];
                 *next = (*next + 1) % (path.len() as u32);
                 Some(board.lookup_position(path[*next as usize]))
             }
@@ -249,7 +250,7 @@ impl Mob {
         self.ai.reset();
         self.position = match self.ai {
             MovementAI::Player => player_start.to_world(),
-            MovementAI::EnemyLookupAI { ref path, .. } => board.lookup_position(path[0]).to_world(),
+            MovementAI::EnemyLookupAI { default_route_index, .. } => board.lookup_position(DEFAULT_ENEMY_ROUTES[default_route_index as usize][0]).to_world(),
         };
         self.history.clear();
     }
@@ -307,6 +308,15 @@ impl Mob {
 
 lazy_static! {
     static ref DEFAULT_BOARD: Board = Board::try_new().unwrap();
+    static ref DEFAULT_ENEMY_ROUTES: Vec<Vec<u32>> = 
+        AMIDAR_ENEMY_POSITIONS_DATA.lines().map(|enemy_route| {
+            let route: Result<Vec<u32>, _> = enemy_route
+                .trim()
+                .split(' ')
+                .map(|x| x.parse::<u32>())
+                .collect();
+            route.unwrap()
+        }).collect();
 }
 
 #[derive(Clone)]
@@ -536,11 +546,11 @@ impl Board {
             true
         }
     }
-    pub fn make_enemy(&self, positions: Vec<u32>) -> Mob {
-        let first = positions[0];
+    pub fn make_enemy(&self, default_route_index: u32) -> Mob {
+        let first = DEFAULT_ENEMY_ROUTES[default_route_index as usize][0];
         let ai = MovementAI::EnemyLookupAI {
             next: 0,
-            path: positions,
+            default_route_index,
         };
         Mob::new(ai, self.lookup_position(first).to_world())
     }
@@ -578,13 +588,8 @@ impl State {
         println!("Amidar Board Size: {}x{}", board.width, board.height);
 
         let mut enemies = Vec::new();
-        for enemy_route in AMIDAR_ENEMY_POSITIONS_DATA.lines() {
-            let route: Result<Vec<u32>, _> = enemy_route
-                .trim()
-                .split(' ')
-                .map(|x| x.parse::<u32>())
-                .collect();
-            enemies.push(board.make_enemy(route?));
+        for (enemy_index, _) in DEFAULT_ENEMY_ROUTES.iter().enumerate() {
+            enemies.push(board.make_enemy(enemy_index as u32))
         }
         let player_start = TilePoint::new(31, 15);
         let player = Mob::new_player(player_start.to_world());
