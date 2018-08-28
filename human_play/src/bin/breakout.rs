@@ -53,5 +53,5 @@ impl State for BreakoutGame {
 }
 fn main() {
     let (w, h) = breakout::screen::GAME_SIZE;
-    run::<BreakoutGame>(WindowBuilder::new("Breakout", 2*w as u32, 2*h as u32));
+    run::<BreakoutGame>(WindowBuilder::new("Breakout", w as u32, h as u32));
 }
