@@ -5,8 +5,8 @@ use quicksilver::{
     graphics::{Color, Window},
     input::Key,
 };
-use toybox::Input;
 use toybox::graphics::Color as TColor;
+use toybox::Input;
 
 pub fn process_keys(window: &Window) -> Input {
     let keys = window.keyboard();
@@ -35,10 +35,10 @@ pub fn process_keys(window: &Window) -> Input {
 }
 
 pub fn color_convert(color: &TColor) -> Color {
-    Color { 
+    Color {
         r: color.r as f32 / 255.0,
         g: color.g as f32 / 255.0,
         b: color.b as f32 / 255.0,
-        a: 1.0
+        a: 1.0,
     }
 }
