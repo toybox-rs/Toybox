@@ -9,11 +9,10 @@ extern crate quicksilver;
 use quicksilver::{
     geom::{Rectangle, Vector},
     graphics::{Color, Draw, Font, View, Window, WindowBuilder},
-    input::Key,
     run, Future, State,
 };
 use toybox::amidar;
-use toybox::Input;
+use human_play::color_convert;
 
 struct Game {
     state: amidar::State,
@@ -57,12 +56,7 @@ impl State for Game {
             match dw {
                 Drawable::Rectangle { color, x, y, w, h } => {
                     window.draw(
-                        &Draw::rectangle(Rectangle::new(x, y, w, h)).with_color(Color {
-                            r: color.r as f32 / 255.0,
-                            g: color.g as f32 / 255.0,
-                            b: color.b as f32 / 255.0,
-                            a: 1.0,
-                        }),
+                        &Draw::rectangle(Rectangle::new(x, y, w, h)).with_color(color_convert(&color)),
                     );
                 }
             }

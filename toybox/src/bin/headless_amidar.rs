@@ -30,7 +30,7 @@ fn check_output(path: &str) -> Result<(), ()> {
 }
 
 fn main() {
-    let matches = App::new("headless-breakout")
+    let matches = App::new("headless-amidar")
         .arg(
             Arg::with_name("num_steps")
                 .short("n")
@@ -83,9 +83,10 @@ fn main() {
     let mut state = amidar::State::try_new().unwrap();
     let mut images = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
     for _ in 0..num_steps {
-        let buttons = &[Input::Up];
+        let mut buttons = Input::default();
+        buttons.up = true;
         for _ in 0..frame_step {
-            state.update_mut(buttons)
+            state.update_mut(&buttons)
         }
 
         let mut img = ImageBuffer::alloc(w, h);

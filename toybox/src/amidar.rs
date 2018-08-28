@@ -196,24 +196,19 @@ impl MovementAI {
     fn choose_next_tile(
         &mut self,
         position: &TilePoint,
-        buttons: &[Input],
+        buttons: &Input,
         board: &Board,
     ) -> Option<TilePoint> {
         match self {
             MovementAI::Player => {
-                let left = buttons.contains(&Input::Left);
-                let right = buttons.contains(&Input::Right);
-                let up = buttons.contains(&Input::Up);
-                let down = buttons.contains(&Input::Down);
-
                 let mut input: Option<Direction> = None;
-                if left {
+                if buttons.left {
                     input = Some(Direction::Left);
-                } else if right {
+                } else if buttons.right {
                     input = Some(Direction::Right);
-                } else if up {
+                } else if buttons.up {
                     input = Some(Direction::Up);
-                } else if down {
+                } else if buttons.down {
                     input = Some(Direction::Down);
                 }
 
@@ -273,7 +268,7 @@ impl Mob {
         };
         self.history.clear();
     }
-    pub fn update(&mut self, buttons: &[Input], board: &mut Board) -> Option<ScoreUpdate> {
+    pub fn update(&mut self, buttons: &Input, board: &mut Board) -> Option<ScoreUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -635,7 +630,7 @@ impl State {
         let tw = self.board.width as i32;
         TilePoint::new(tw + 1, th + 1).to_world()
     }
-    pub fn update_mut(&mut self, buttons: &[Input]) {
+    pub fn update_mut(&mut self, buttons: &Input) {
         if let Some(score_change) = self.player.update(buttons, &mut self.board) {
             self.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
@@ -644,7 +639,7 @@ impl State {
         }
 
         for enemy in self.enemies.iter_mut() {
-            enemy.update(&[], &mut self.board);
+            enemy.update(&Input::default(), &mut self.board);
 
             if self.player.position.to_tile() == enemy.position.to_tile() {
                 self.dead = true;

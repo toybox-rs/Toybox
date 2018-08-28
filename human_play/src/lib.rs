@@ -1,39 +1,44 @@
-extern crate failure;
 extern crate toybox;
-
-use failure::Error;
 
 extern crate quicksilver;
 use quicksilver::{
-    geom::{Rectangle, Vector},
-    graphics::{Color, Draw, Font, View, Window, WindowBuilder},
+    graphics::{Color, Window},
     input::Key,
-    run, Future, State,
 };
 use toybox::Input;
+use toybox::graphics::Color as TColor;
 
-pub fn process_keys(window: &Window) -> Vec<Input> {
+pub fn process_keys(window: &Window) -> Input {
     let keys = window.keyboard();
-    let mut buttons = Vec::new();
+    let mut buttons = Input::new();
 
     if keys[Key::Up].is_down() || keys[Key::W].is_down() {
-        buttons.push(Input::Up);
+        buttons.up = true;
     }
     if keys[Key::Down].is_down() || keys[Key::S].is_down() {
-        buttons.push(Input::Down);
+        buttons.down = true;
     }
     if keys[Key::Left].is_down() || keys[Key::A].is_down() {
-        buttons.push(Input::Left);
+        buttons.left = true;
     }
     if keys[Key::Right].is_down() || keys[Key::D].is_down() {
-        buttons.push(Input::Right);
+        buttons.right = true;
     }
     if keys[Key::Z].is_down() || keys[Key::Space].is_down() {
-        buttons.push(Input::Button1);
+        buttons.button1 = true;
     }
     if keys[Key::X].is_down() {
-        buttons.push(Input::Button2);
+        buttons.button2 = true;
     }
 
     buttons
+}
+
+pub fn color_convert(color: &TColor) -> Color {
+    Color { 
+        r: color.r as f32 / 255.0,
+        g: color.g as f32 / 255.0,
+        b: color.b as f32 / 255.0,
+        a: 1.0
+    }
 }

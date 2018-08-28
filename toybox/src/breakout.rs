@@ -90,7 +90,7 @@ impl BreakoutState {
     }
 
     /// Mutably update the game state with a given time-step.
-    pub fn update_mut(&mut self, time_step: f64, buttons: &[Input]) {
+    pub fn update_mut(&mut self, time_step: f64, buttons: &Input) {
         // Update positions.
         self.ball.integrate_mut(time_step);
         self.paddle.integrate_mut(time_step);
@@ -98,8 +98,8 @@ impl BreakoutState {
         let game_width = f64::from(GAME_SIZE.0);
         let game_height = f64::from(GAME_SIZE.1);
 
-        let left = buttons.contains(&Input::Left);
-        let right = buttons.contains(&Input::Right);
+        let left = buttons.left;
+        let right = buttons.right;
 
         if left {
             self.paddle.velocity.x = -self.paddle_speed;
