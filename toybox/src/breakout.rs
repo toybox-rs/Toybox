@@ -78,10 +78,10 @@ impl Brick {
     }
 
     pub fn contains(&self, point: &Vec2D) -> bool {
-        point.y >= self.position.y
-            && point.y <= (self.position.y + self.size.y)
-            && point.x >= self.position.x
+        point.x >= self.position.x
             && point.x <= (self.position.x + self.size.x)
+            && point.y >= self.position.y
+            && point.y <= (self.position.y + self.size.y)
     }
 }
 
@@ -89,7 +89,6 @@ impl Brick {
 pub struct State {
     pub game_over: bool,
     pub points: u32,
-    pub time_step: f64,
     /// ball position describes the center of the ball.
     pub ball: Body2D,
     pub ball_radius: f64,
@@ -136,7 +135,6 @@ impl super::Simulation for Breakout {
             ball,
             points: 0,
             ball_radius: 3.0,
-            time_step: 1.0,
             paddle: Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into()),
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
             paddle_speed: 4.0,
@@ -145,19 +143,8 @@ impl super::Simulation for Breakout {
     }
 }
 
-impl super::State for State {
-    fn game_over(&self) -> bool {
-        self.game_over
-    }
-
-    /// Mutably update the game state.
-    fn update_mut(&mut self, buttons: Input) {
-        let time_step = self.time_step;
-
-        // Update positions.
-        self.ball.integrate_mut(time_step);
-        self.paddle.integrate_mut(time_step);
-
+impl State {
+    fn update_paddle_movement(&mut self, buttons: Input) {
         let left = buttons.left;
         let right = buttons.right;
 
@@ -168,6 +155,11 @@ impl super::State for State {
         } else {
             self.paddle.velocity.x = 0.0;
         }
+    }
+    fn update_time_slice(&mut self, time_step: f64) {
+        // Update positions.
+        self.ball.integrate_mut(time_step);
+        self.paddle.integrate_mut(time_step);
 
         // Handle collisions:
         if self.ball.velocity.y > 0.0 {
@@ -184,7 +176,6 @@ impl super::State for State {
             if self.ball.position.y + self.ball_radius > screen::BOARD_BOTTOM_Y.into() {
                 // TODO, lose
                 self.game_over = true;
-                //eprintln!("Press any key, e.g., SPACE to reset the game!");
             }
         } else {
             // bounce ceiling?
@@ -228,6 +219,42 @@ impl super::State for State {
             // bounce left wall?
             if self.ball.position.x - self.ball_radius < screen::BOARD_LEFT_X.into() {
                 self.ball.velocity.x *= -1.0;
+            }
+        }
+    }
+}
+
+use std::cmp::min;
+
+impl super::State for State {
+    fn game_over(&self) -> bool {
+        self.game_over
+    }
+
+    /// Mutably update the game state.
+    fn update_mut(&mut self, buttons: Input) {
+        self.update_paddle_movement(buttons);
+
+        let mut distance_limit = self.ball_radius as i32;
+        let total_time = 1.0;
+        let distance_limit = distance_limit as f64; // m
+        let speed = self.ball.velocity.magnitude(); // m/s
+
+        // if your speed is 30, and your radius is 5, we want to do about 6 steps.
+        let time_step = distance_limit / speed; // (m) / (m/s) = m * s / m = s
+
+        // Update positions, checking for collisions in as many increments as is needed.
+        let mut steps = 0;
+        let mut time_simulated = 0.0;
+        while time_simulated < 1.0 {
+            steps += 1;
+            let time_left = total_time - time_simulated;
+            if time_left < time_step {
+                self.update_time_slice(time_left);
+                return;
+            } else {
+                self.update_time_slice(time_step);
+                time_simulated += time_step;
             }
         }
     }
