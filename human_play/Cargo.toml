@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["John Foley <jfoley@cs.umass.edu>"]
 
 [dependencies]
-quicksliver = "0.2"
+quicksilver = "0.2"
 failure = "*"
 
 [dependencies.toybox]
