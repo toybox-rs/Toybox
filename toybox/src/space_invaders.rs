@@ -166,12 +166,8 @@ pub struct State {
     pub enemy_lasers: Vec<Actor>,
 }
 
-pub struct SpaceInvaders;
-impl super::Simulation for SpaceInvaders {
-    fn game_size(&self) -> (i32, i32) {
-        screen::GAME_SIZE
-    }
-    fn new_game(&self) -> Box<super::State> {
+impl State {
+    fn new() -> State {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
         let mut shields = Vec::new();
@@ -183,14 +179,24 @@ impl super::Simulation for SpaceInvaders {
         ] {
             shields.push(SHIELD_SPRITE.translate(*x, *y))
         }
-        Box::new(State {
+        State {
             game_over: false,
             ship: Actor::ship(player_start_x, player_start_y),
             ship_laser: None,
             shields,
             enemies: Vec::new(),
             enemy_lasers: Vec::new(),
-        })
+        }
+    }
+}
+
+pub struct SpaceInvaders;
+impl super::Simulation for SpaceInvaders {
+    fn game_size(&self) -> (i32, i32) {
+        screen::GAME_SIZE
+    }
+    fn new_game(&self) -> Box<super::State> {
+        Box::new(State::new())
     }
 }
 

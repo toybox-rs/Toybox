@@ -224,8 +224,6 @@ impl State {
     }
 }
 
-use std::cmp::min;
-
 impl super::State for State {
     fn game_over(&self) -> bool {
         self.game_over
@@ -235,7 +233,7 @@ impl super::State for State {
     fn update_mut(&mut self, buttons: Input) {
         self.update_paddle_movement(buttons);
 
-        let mut distance_limit = self.ball_radius as i32;
+        let distance_limit = self.ball_radius as i32;
         let total_time = 1.0;
         let distance_limit = distance_limit as f64; // m
         let speed = self.ball.velocity.magnitude(); // m/s
@@ -244,10 +242,8 @@ impl super::State for State {
         let time_step = distance_limit / speed; // (m) / (m/s) = m * s / m = s
 
         // Update positions, checking for collisions in as many increments as is needed.
-        let mut steps = 0;
         let mut time_simulated = 0.0;
         while time_simulated < 1.0 {
-            steps += 1;
             let time_left = total_time - time_simulated;
             if time_left < time_step {
                 self.update_time_slice(time_left);

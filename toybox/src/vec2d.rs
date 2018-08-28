@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut ball = Vec2D::new(7.0, 3.0);
+        let ball = Vec2D::new(7.0, 3.0);
         let velocity = Vec2D::new(4.0, 4.0);
         let pos = ball.translate(&velocity);
         assert_eq!(pos, Vec2D::new(11.0, 7.0));
