@@ -64,3 +64,5 @@ impl Input {
 pub mod amidar;
 /// Breakout defined in this module.
 pub mod breakout;
+/// Space Invaders logic defined in this module.
+pub mod space_invaders;

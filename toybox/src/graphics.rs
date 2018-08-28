@@ -11,6 +11,12 @@ impl Color {
     pub fn RGB(r: u8, g: u8, b: u8) -> Color {
         Color { r, g, b, a: 255 }
     }
+    pub fn invisible() -> Color {
+        Color { r: 0, g: 0, b: 0, a: 0 }
+    }
+    pub fn is_visible(&self) -> bool {
+        return self.a > 0;
+    }
     pub fn black() -> Color {
         Color::RGB(0, 0, 0)
     }
@@ -34,6 +40,10 @@ pub enum Drawable {
         w: i32,
         h: i32,
     },
+    Sprite {
+        data: Vec<Vec<Color>>,
+        scale: i32,
+    }
 }
 
 impl Drawable {
@@ -58,6 +68,7 @@ impl ImageBuffer {
     }
     #[inline(always)]
     fn set_pixel(&mut self, x: i32, y: i32, color: &Color) {
+        debug_assert!(color.is_visible());
         let start = (y * self.width * 4) + (x * 4);
         if start < 0 {
             return;
@@ -71,6 +82,12 @@ impl ImageBuffer {
         self.data[start + 2] = color.b;
         self.data[start + 3] = color.a;
     }
+    #[inline(always)]
+    fn set_pixel_alpha(&mut self, x: i32, y: i32, color: &Color) {
+        if color.is_visible() {
+            self.set_pixel(x, y, color)
+        }
+    }
 }
 
 pub fn render_to_buffer(target: &mut ImageBuffer, commands: &[Drawable]) {
@@ -82,6 +99,10 @@ pub fn render_to_buffer(target: &mut ImageBuffer, commands: &[Drawable]) {
                         target.set_pixel(xi, yi, color)
                     }
                 }
+            }
+            Drawable::Sprite { data, scale } => {
+                // TODO....
+                panic!("TODO: Drawable::Sprite")
             }
         }
     }
