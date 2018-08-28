@@ -3,9 +3,8 @@ extern crate failure;
 extern crate png;
 extern crate toybox;
 
-use toybox::amidar;
 use toybox::graphics::{render_to_buffer, ImageBuffer};
-use toybox::Input;
+use toybox::{Simulation, Input};
 
 use clap::{App, Arg};
 
@@ -30,7 +29,14 @@ fn check_output(path: &str) -> Result<(), ()> {
 }
 
 fn main() {
-    let matches = App::new("headless-amidar")
+    let matches = App::new("headless-simulation")
+        .arg(
+            Arg::with_name("game")
+            .long("game")
+            .value_name("GAME")
+            .help("Try amidar, breakout or space_invaders. (amidar by default)")
+            .takes_value(true)
+        )
         .arg(
             Arg::with_name("num_steps")
                 .short("n")
@@ -58,6 +64,8 @@ fn main() {
                 .help("Where to save PNG files (directory).")
                 .takes_value(true),
         ).get_matches();
+    
+    let game = matches.value_of("game").unwrap_or("amidar");
 
     let num_steps = matches
         .value_of("num_steps")
@@ -79,9 +87,11 @@ fn main() {
         }
     }
 
-    let (w, h) = amidar::screen::GAME_SIZE;
-    let mut state = amidar::State::try_new().unwrap();
+    let simulator = toybox::get_simulation_by_name(game).unwrap();
+    let (w, h) = simulator.game_size();
+    let mut state = simulator.new_game();
     let mut images = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
+
     for _ in 0..num_steps {
         let mut buttons = Input::default();
         buttons.up = true;

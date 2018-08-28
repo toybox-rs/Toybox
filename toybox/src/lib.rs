@@ -63,6 +63,26 @@ impl Input {
     }
 }
 
+pub trait SimulatorState {
+    fn update_mut(&mut self, buttons: &Input);
+    fn draw(&self) -> Vec<graphics::Drawable>;
+}
+
+pub trait Simulation {
+    fn new_game(&self) -> Box<SimulatorState>;
+    fn game_size(&self) -> (i32, i32);
+}
+
+pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Error> {
+    let y: Result<Box<Simulation>,_> = match name.to_lowercase().as_str() {
+        "amidar" => Ok(Box::new(amidar::Amidar)),
+        "breakout" => Ok(Box::new(breakout::Breakout)),
+        "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
+        _ => Err(format_err!("Cannot construct game: `{}`. Try amidar, breakout, space_invaders.", name))
+    };
+    y
+}
+
 /// Amidar defined in this module.
 pub mod amidar;
 /// Breakout defined in this module.

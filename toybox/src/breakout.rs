@@ -86,9 +86,10 @@ impl Brick {
 }
 
 #[derive(Debug, Clone)]
-pub struct BreakoutState {
+pub struct State {
     pub game_over: bool,
     pub points: u32,
+    pub time_step: f64,
     /// ball position describes the center of the ball.
     pub ball: Body2D,
     pub ball_radius: f64,
@@ -99,15 +100,14 @@ pub struct BreakoutState {
     pub bricks: Vec<Brick>,
 }
 
-impl Default for BreakoutState {
-    fn default() -> Self {
-        Self::new()
+pub struct Breakout;
+impl super::Simulation for Breakout {
+    fn game_size(&self) -> (i32,i32) {
+        screen::GAME_SIZE
     }
-}
 
-impl BreakoutState {
     /// Create a new game of breakout.
-    pub fn new() -> BreakoutState {
+    fn new_game(&self) -> Box<super::SimulatorState> {
         let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
         let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
@@ -128,26 +128,30 @@ impl BreakoutState {
             }
         }
 
-        BreakoutState {
+        Box::new(State {
             game_over: false,
             ball,
             points: 0,
             ball_radius: 3.0,
+            time_step: 1.0,
             paddle: Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into()),
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
             paddle_speed: 4.0,
             bricks,
-        }
+        })
     }
 
-    /// Mutably update the game state with a given time-step.
-    pub fn update_mut(&mut self, time_step: f64, buttons: &Input) {
+}
+
+impl super::SimulatorState for State {
+
+    /// Mutably update the game state.
+    fn update_mut(&mut self, buttons: &Input) {
+        let time_step = self.time_step;
+
         // Update positions.
         self.ball.integrate_mut(time_step);
         self.paddle.integrate_mut(time_step);
-
-        //let game_width = f64::from(screen::GAME_SIZE.0);
-        //let game_height = f64::from(screen::GAME_SIZE.1);
 
         let left = buttons.left;
         let right = buttons.right;
@@ -175,7 +179,7 @@ impl BreakoutState {
             if self.ball.position.y + self.ball_radius > screen::BOARD_BOTTOM_Y.into() {
                 // TODO, lose
                 self.game_over = true;
-                eprintln!("Press any key, e.g., SPACE to reset the game!");
+                //eprintln!("Press any key, e.g., SPACE to reset the game!");
             }
         } else {
             // bounce ceiling?
@@ -224,7 +228,7 @@ impl BreakoutState {
     }
 
 
-    pub fn draw(&self) -> Vec<Drawable> {
+    fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
         output.push(Drawable::rect(
             Color::black(),

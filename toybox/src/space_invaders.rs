@@ -99,6 +99,7 @@ impl Actor {
     }
 }
 
+#[derive(Clone)]
 pub struct State {
     /// Ship is a rectangular actor (logically).
     pub ship: Actor,
@@ -112,8 +113,12 @@ pub struct State {
     pub enemy_lasers: Vec<Actor>
 }
 
-impl State {
-    pub fn new() -> State {
+pub struct SpaceInvaders;
+impl super::Simulation for SpaceInvaders {
+    fn game_size(&self) -> (i32,i32) {
+        screen::GAME_SIZE
+    }
+    fn new_game(&self) -> Box<super::SimulatorState> {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
         let mut shields = Vec::new();
@@ -121,18 +126,21 @@ impl State {
         for (x,y) in &[screen::SHIELD1_POS, screen::SHIELD2_POS, screen::SHIELD3_POS] {
             shields.push(SHIELD_SPRITE.translate(*x, *y))
         }
-        State {
+        Box::new(State {
             ship: Actor::ship(player_start_x, player_start_y),
             ship_laser: None,
             shields,
             enemies: Vec::new(),
             enemy_lasers: Vec::new(),
-        }
+        })
     }
-    pub fn update_mut(&mut self, buttons: &Input) {
+}
+
+impl super::SimulatorState for State {
+    fn update_mut(&mut self, buttons: &Input) {
 
     }
-    pub fn draw(&self) -> Vec<Drawable> {
+    fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
 
         output

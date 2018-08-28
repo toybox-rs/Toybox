@@ -12,13 +12,13 @@ use toybox::graphics::Drawable;
 use human_play::color_convert;
 
 struct BreakoutGame {
-    state: breakout::BreakoutState,
+    state: breakout::State,
 }
 
 impl State for BreakoutGame {
     fn new() -> BreakoutGame {
         BreakoutGame {
-            state: breakout::BreakoutState::new(),
+            state: breakout::State::new(),
         }
     }
     fn update(&mut self, window: &mut Window) {
@@ -26,11 +26,11 @@ impl State for BreakoutGame {
         if self.state.game_over {
             // Any key starts a new game.
             if !buttons.is_empty() {
-                self.state = breakout::BreakoutState::new()
+                self.state = breakout::State::new()
             }
             return;
         }
-        self.state.update_mut(1.0, &buttons);
+        self.state.update_mut(&buttons);
     }
     fn draw(&mut self, window: &mut Window) {
         let (w, h) = breakout::screen::GAME_SIZE;

@@ -162,7 +162,7 @@ impl Tile {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum MovementAI {
     Player,
     EnemyLookupAI { next: u32, path: Vec<u32> },
@@ -214,6 +214,7 @@ impl MovementAI {
 }
 
 /// Mob is a videogame slang for "mobile" unit. Players and Enemies are the same struct.
+#[derive(Clone)]
 pub struct Mob {
     pub ai: MovementAI,
     pub position: WorldPoint,
@@ -558,6 +559,7 @@ impl Board {
     }
 }
 
+#[derive(Clone)]
 pub struct State {
     pub dead: bool,
     pub game_over: bool,
@@ -614,7 +616,20 @@ impl State {
         let tw = self.board.width as i32;
         TilePoint::new(tw + 1, th + 1).to_world()
     }
-    pub fn update_mut(&mut self, buttons: &Input) {
+}
+
+pub struct Amidar;
+impl super::Simulation for Amidar {
+    fn game_size(&self) -> (i32,i32) {
+        screen::GAME_SIZE
+    }
+    fn new_game(&self) -> Box<super::SimulatorState> {
+        Box::new(State::try_new().expect("new_game should succeed."))
+    }
+}
+
+impl super::SimulatorState for State {
+    fn update_mut(&mut self, buttons: &Input) {
         if let Some(score_change) = self.player.update(buttons, &mut self.board) {
             self.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
@@ -637,7 +652,7 @@ impl State {
         }
     }
 
-    pub fn draw(&self) -> Vec<Drawable> {
+    fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
         output.push(Drawable::rect(
             Color::black(),
