@@ -4,7 +4,7 @@ extern crate png;
 extern crate toybox;
 
 use toybox::graphics::{render_to_buffer, ImageBuffer};
-use toybox::{Simulation, Input};
+use toybox::Input;
 
 use clap::{App, Arg};
 
@@ -32,12 +32,11 @@ fn main() {
     let matches = App::new("headless-simulation")
         .arg(
             Arg::with_name("game")
-            .long("game")
-            .value_name("GAME")
-            .help("Try amidar, breakout or space_invaders. (amidar by default)")
-            .takes_value(true)
-        )
-        .arg(
+                .long("game")
+                .value_name("GAME")
+                .help("Try amidar, breakout or space_invaders. (amidar by default)")
+                .takes_value(true),
+        ).arg(
             Arg::with_name("num_steps")
                 .short("n")
                 .long("num_steps")
@@ -64,7 +63,7 @@ fn main() {
                 .help("Where to save PNG files (directory).")
                 .takes_value(true),
         ).get_matches();
-    
+
     let game = matches.value_of("game").unwrap_or("amidar");
 
     let num_steps = matches
@@ -82,7 +81,7 @@ fn main() {
         .map(|c| c.parse::<usize>().expect("--max_frames should be a number"));
 
     if let Some(path) = matches.value_of("output") {
-        if let Err(_) = check_output(path) {
+        if check_output(path).is_err() {
             return;
         }
     }
@@ -96,10 +95,10 @@ fn main() {
         let mut buttons = Input::default();
         buttons.up = true;
         for _ in 0..frame_step {
-            if (state.game_over()) {
+            if state.game_over() {
                 state = simulator.new_game();
             }
-            state.update_mut(&buttons)
+            state.update_mut(buttons)
         }
 
         let mut img = ImageBuffer::alloc(w, h);
@@ -114,13 +113,13 @@ fn main() {
 
     if let Some(path) = matches.value_of("output") {
         // Check the folder again now in case of a data-race (best-effort).
-        if let Err(_) = check_output(path) {
+        if check_output(path).is_err() {
             return;
         }
 
         for (i, img) in images.into_iter().enumerate() {
             let file = File::create(Path::new(path).join(format!("amidar{:08}.png", i))).unwrap();
-            let ref mut w = BufWriter::new(file);
+            let w = &mut BufWriter::new(file);
             let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
             encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);
             let mut writer = encoder.write_header().unwrap();

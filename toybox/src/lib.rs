@@ -51,22 +51,29 @@ pub struct Input {
 
 impl Default for Input {
     fn default() -> Self {
-        Input { left: false, right: false, up: false, down: false, button1: false, button2: false }
+        Input {
+            left: false,
+            right: false,
+            up: false,
+            down: false,
+            button1: false,
+            button2: false,
+        }
     }
 }
 impl Input {
     pub fn new() -> Input {
         Input::default()
     }
-    pub fn is_empty(&self) -> bool {
-        return !self.left && !self.right && !self.up && !self.down && !self.button1 && !self.button2;
+    pub fn is_empty(self) -> bool {
+        !self.left && !self.right && !self.up && !self.down && !self.button1 && !self.button2
     }
 }
 
 pub trait State {
     /// When true, this state should be replaced with a call to new_game() on the simulation.
     fn game_over(&self) -> bool;
-    fn update_mut(&mut self, buttons: &Input);
+    fn update_mut(&mut self, buttons: Input);
     fn draw(&self) -> Vec<graphics::Drawable>;
 }
 
@@ -76,16 +83,19 @@ pub trait Simulation {
 }
 
 pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Error> {
-    let y: Result<Box<Simulation>,_> = match name.to_lowercase().as_str() {
+    let y: Result<Box<Simulation>, _> = match name.to_lowercase().as_str() {
         "amidar" => Ok(Box::new(amidar::Amidar)),
         "breakout" => Ok(Box::new(breakout::Breakout)),
         "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
-        _ => Err(format_err!("Cannot construct game: `{}`. Try amidar, breakout, space_invaders.", name))
+        _ => Err(format_err!(
+            "Cannot construct game: `{}`. Try amidar, breakout, space_invaders.",
+            name
+        )),
     };
     y
 }
 
-pub const GAME_LIST: &'static [&str] = &["amidar", "breakout", "space_invaders"];
+pub const GAME_LIST: &[&str] = &["amidar", "breakout", "space_invaders"];
 
 /// Amidar defined in this module.
 pub mod amidar;

@@ -1,6 +1,6 @@
 use super::graphics::{Color, Drawable};
-use super::Input;
 use super::Direction;
+use super::Input;
 use failure::Error;
 use std::collections::{HashSet, VecDeque};
 
@@ -20,7 +20,6 @@ mod world {
 }
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
-
 
 #[derive(Debug, Clone)]
 pub struct ScreenPoint {
@@ -154,7 +153,7 @@ impl Tile {
             _ => Err(format_err!("Cannot construct AmidarTile from '{}'", c)),
         }
     }
-    fn walkable(&self) -> bool {
+    fn walkable(self) -> bool {
         match self {
             Tile::Empty => false,
             Tile::Painted | Tile::Unpainted => true,
@@ -180,7 +179,7 @@ impl MovementAI {
     fn choose_next_tile(
         &mut self,
         position: &TilePoint,
-        buttons: &Input,
+        buttons: Input,
         board: &Board,
     ) -> Option<TilePoint> {
         match self {
@@ -205,7 +204,10 @@ impl MovementAI {
                     }
                 })
             }
-            MovementAI::EnemyLookupAI { next, default_route_index } => {
+            MovementAI::EnemyLookupAI {
+                next,
+                default_route_index,
+            } => {
                 let path = &DEFAULT_ENEMY_ROUTES[*default_route_index as usize];
                 *next = (*next + 1) % (path.len() as u32);
                 Some(board.lookup_position(path[*next as usize]))
@@ -250,11 +252,16 @@ impl Mob {
         self.ai.reset();
         self.position = match self.ai {
             MovementAI::Player => player_start.to_world(),
-            MovementAI::EnemyLookupAI { default_route_index, .. } => board.lookup_position(DEFAULT_ENEMY_ROUTES[default_route_index as usize][0]).to_world(),
+            MovementAI::EnemyLookupAI {
+                default_route_index,
+                ..
+            } => board
+                .lookup_position(DEFAULT_ENEMY_ROUTES[default_route_index as usize][0])
+                .to_world(),
         };
         self.history.clear();
     }
-    pub fn update(&mut self, buttons: &Input, board: &mut Board) -> Option<ScoreUpdate> {
+    pub fn update(&mut self, buttons: Input, board: &mut Board) -> Option<ScoreUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -308,8 +315,9 @@ impl Mob {
 
 lazy_static! {
     static ref DEFAULT_BOARD: Board = Board::try_new().unwrap();
-    static ref DEFAULT_ENEMY_ROUTES: Vec<Vec<u32>> = 
-        AMIDAR_ENEMY_POSITIONS_DATA.lines().map(|enemy_route| {
+    static ref DEFAULT_ENEMY_ROUTES: Vec<Vec<u32>> = AMIDAR_ENEMY_POSITIONS_DATA
+        .lines()
+        .map(|enemy_route| {
             let route: Result<Vec<u32>, _> = enemy_route
                 .trim()
                 .split(' ')
@@ -434,17 +442,21 @@ impl Board {
                 return Some(num);
             }
         }
-        unreachable!()
     }
 
     fn junction_corners(&self, source: u32) -> Option<GridBox> {
-        let mut src = source;
         // Find the first junction to the right that lets us go down.
-        let right =
-            self.lookup_position(self.junction_neighbor(src, Direction::Right, Direction::Down)?);
+        let right = self.lookup_position(self.junction_neighbor(
+            source,
+            Direction::Right,
+            Direction::Down,
+        )?);
         // Find the first junction down that lets us go right.
-        let down =
-            self.lookup_position(self.junction_neighbor(src, Direction::Down, Direction::Right)?);
+        let down = self.lookup_position(self.junction_neighbor(
+            source,
+            Direction::Down,
+            Direction::Right,
+        )?);
         // There needs to be a bottom_right junction that connects this box.
         let down_right = self.tile_id(&TilePoint::new(right.tx, down.ty))?;
         if self.junctions.contains(&down_right) {
@@ -529,7 +541,7 @@ impl Board {
 
         if score_change.happened() {
             // Don't forget this location should still be in history:
-            let current = player_history.front().unwrap().clone();
+            let current = *player_history.front().unwrap();
             player_history.clear();
             player_history.push_front(current);
         }
@@ -602,7 +614,7 @@ impl State {
             player,
             player_start,
             enemies,
-            board: board,
+            board,
         };
         state.reset();
         Ok(state)
@@ -612,7 +624,7 @@ impl State {
         self.player
             .history
             .push_front(self.board.get_junction_id(&TilePoint::new(31, 18)).unwrap());
-        for enemy in self.enemies.iter_mut() {
+        for enemy in &mut self.enemies {
             enemy.reset(&self.player_start, &self.board);
         }
     }
@@ -625,7 +637,7 @@ impl State {
 
 pub struct Amidar;
 impl super::Simulation for Amidar {
-    fn game_size(&self) -> (i32,i32) {
+    fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
     fn new_game(&self) -> Box<super::State> {
@@ -637,7 +649,7 @@ impl super::State for State {
     fn game_over(&self) -> bool {
         self.game_over
     }
-    fn update_mut(&mut self, buttons: &Input) {
+    fn update_mut(&mut self, buttons: Input) {
         if let Some(score_change) = self.player.update(buttons, &mut self.board) {
             self.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
@@ -645,8 +657,8 @@ impl super::State for State {
             self.score += self.box_bonus * score_change.num_boxes;
         }
 
-        for enemy in self.enemies.iter_mut() {
-            enemy.update(&Input::default(), &mut self.board);
+        for enemy in &mut self.enemies {
+            enemy.update(Input::default(), &mut self.board);
 
             if self.player.position.to_tile() == enemy.position.to_tile() {
                 self.dead = true;
@@ -672,10 +684,10 @@ impl super::State for State {
         if self.game_over {
             return output;
         }
-        let track_color = Color::RGB(148, 0, 211);
-        let player_color = Color::RGB(255, 255, 153);
-        let enemy_color = Color::RGB(255, 0, 153);
-        let text_color = player_color;
+        let track_color = Color::rgb(148, 0, 211);
+        let player_color = Color::rgb(255, 255, 153);
+        let enemy_color = Color::rgb(255, 0, 153);
+        let _text_color = player_color;
 
         let (tile_w, tile_h) = screen::TILE_SIZE;
         let (offset_x, offset_y) = screen::BOARD_OFFSET;
@@ -707,7 +719,7 @@ impl super::State for State {
             let h = dest.sy - origin.sy;
 
             output.push(Drawable::rect(
-                Color::RGB(0xff, 0xff, 0x00),
+                Color::rgb(0xff, 0xff, 0x00),
                 offset_x + origin.sx,
                 offset_y + origin.sy,
                 w,
@@ -725,12 +737,12 @@ impl super::State for State {
             player_h,
         ));
 
-        for enemy in self.enemies.iter() {
+        for enemy in &self.enemies {
             let (x, y) = enemy.position.to_screen().pixels();
             let (w, h) = screen::ENEMY_SIZE;
 
             output.push(Drawable::rect(
-                Color::RGB(0xff, 0, 0),
+                enemy_color,
                 offset_x + x - 1,
                 offset_y + y - 1,
                 w,

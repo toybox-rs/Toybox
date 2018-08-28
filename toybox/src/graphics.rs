@@ -8,30 +8,35 @@ pub struct Color {
 }
 
 impl Color {
-    pub fn RGB(r: u8, g: u8, b: u8) -> Color {
+    pub fn rgb(r: u8, g: u8, b: u8) -> Color {
         Color { r, g, b, a: 255 }
     }
     pub fn invisible() -> Color {
-        Color { r: 0, g: 0, b: 0, a: 0 }
+        Color {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 0,
+        }
     }
-    pub fn is_visible(&self) -> bool {
-        return self.a > 0;
+    pub fn is_visible(self) -> bool {
+        self.a > 0
     }
     pub fn black() -> Color {
-        Color::RGB(0, 0, 0)
+        Color::rgb(0, 0, 0)
     }
     pub fn white() -> Color {
-        Color::RGB(0xff, 0xff, 0xff)
+        Color::rgb(0xff, 0xff, 0xff)
     }
 }
 
-impl<'a> From<&'a (u8,u8,u8)> for Color {
-    fn from(tuple: &'a (u8,u8,u8)) -> Color {
-        Color::RGB(tuple.0, tuple.1, tuple.2)
+impl<'a> From<&'a (u8, u8, u8)> for Color {
+    fn from(tuple: &'a (u8, u8, u8)) -> Color {
+        Color::rgb(tuple.0, tuple.1, tuple.2)
     }
 }
 
-#[derive(Clone,Debug)]
+#[derive(Clone, Debug)]
 pub struct SpriteData {
     pub x: i32,
     pub y: i32,
@@ -40,7 +45,12 @@ pub struct SpriteData {
 }
 impl SpriteData {
     pub fn new(data: Vec<Vec<Color>>, scale: i32) -> SpriteData {
-        SpriteData { x: 0, y: 0, scale, data }
+        SpriteData {
+            x: 0,
+            y: 0,
+            scale,
+            data,
+        }
     }
     pub fn width(&self) -> i32 {
         self.data[0].len() as i32
@@ -51,14 +61,14 @@ impl SpriteData {
     pub fn scale(&self) -> i32 {
         self.scale
     }
-    pub fn position(&self) -> (i32,i32) {
+    pub fn position(&self) -> (i32, i32) {
         (self.x, self.y)
     }
     pub fn find_visible_color(&self) -> Option<Color> {
-        for row in self.data.iter() {
-            for px in row.iter() {
+        for row in &self.data {
+            for px in row {
                 if px.is_visible() {
-                    return Some(px.clone());
+                    return Some(*px);
                 }
             }
         }
@@ -66,7 +76,12 @@ impl SpriteData {
     }
     /// Make a full copy of this sprite with a new position.
     pub fn translate(&self, x: i32, y: i32) -> SpriteData {
-        SpriteData { x, y, scale: self.scale, data: self.data.clone() }
+        SpriteData {
+            x,
+            y,
+            scale: self.scale,
+            data: self.data.clone(),
+        }
     }
 }
 
@@ -79,7 +94,7 @@ pub enum Drawable {
         w: i32,
         h: i32,
     },
-    Sprite(SpriteData)
+    Sprite(SpriteData),
 }
 
 impl Drawable {
@@ -103,7 +118,7 @@ impl ImageBuffer {
         }
     }
     #[inline(always)]
-    fn set_pixel(&mut self, x: i32, y: i32, color: &Color) {
+    fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
         debug_assert!(color.is_visible());
         let start = (y * self.width * 4) + (x * 4);
         if start < 0 {
@@ -119,7 +134,7 @@ impl ImageBuffer {
         self.data[start + 3] = color.a;
     }
     #[inline(always)]
-    fn set_pixel_alpha(&mut self, x: i32, y: i32, color: &Color) {
+    fn set_pixel_alpha(&mut self, x: i32, y: i32, color: Color) {
         if color.is_visible() {
             self.set_pixel(x, y, color)
         }
@@ -132,19 +147,19 @@ pub fn render_to_buffer(target: &mut ImageBuffer, commands: &[Drawable]) {
             Drawable::Rectangle { color, x, y, w, h } => {
                 for yi in *y..(y + h) {
                     for xi in *x..(x + w) {
-                        target.set_pixel(xi, yi, color)
+                        target.set_pixel(xi, yi, *color)
                     }
                 }
             }
             Drawable::Sprite(sprite) => {
                 let w = sprite.width();
                 let h = sprite.height();
-                let (x,y) = sprite.position();
+                let (x, y) = sprite.position();
                 let scale = sprite.scale();
                 debug_assert!(scale > 0);
                 for yi in 0..h {
                     for xi in 0..w {
-                        let color = &sprite.data[yi as usize][xi as usize];
+                        let color = sprite.data[yi as usize][xi as usize];
                         for xt in 0..sprite.scale {
                             for yt in 0..sprite.scale {
                                 target.set_pixel_alpha(xi + x + xt, yi + y + yt, color)

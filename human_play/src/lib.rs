@@ -34,7 +34,7 @@ pub fn process_keys(window: &Window) -> Input {
     buttons
 }
 
-pub fn color_convert(color: &TColor) -> Color {
+pub fn color_convert(color: TColor) -> Color {
     Color {
         r: color.r as f32 / 255.0,
         g: color.g as f32 / 255.0,

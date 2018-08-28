@@ -36,7 +36,7 @@ impl quicksilver::State for AbstractGame {
             self.state = self.factory.new_game();
             return;
         }
-        self.state.update_mut(&buttons);
+        self.state.update_mut(buttons);
     }
     fn draw(&mut self, window: &mut Window) {
         let (w, h) = self.factory.game_size();
@@ -49,7 +49,7 @@ impl quicksilver::State for AbstractGame {
                 Drawable::Rectangle { color, x, y, w, h } => {
                     window.draw(
                         &Draw::rectangle(Rectangle::new(x, y, w, h))
-                            .with_color(color_convert(&color)),
+                            .with_color(color_convert(color)),
                     );
                 }
                 Drawable::Sprite(sprite) => {
@@ -60,7 +60,7 @@ impl quicksilver::State for AbstractGame {
                     if let Some(color) = sprite.find_visible_color() {
                         window.draw(
                             &Draw::rectangle(Rectangle::new(x, y, w, h))
-                                .with_color(color_convert(&color)),
+                                .with_color(color_convert(color)),
                         );
                     }
                 }
