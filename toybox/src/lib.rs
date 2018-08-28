@@ -8,6 +8,9 @@ pub mod graphics;
 
 use std::f64;
 
+mod direction;
+pub use direction::Direction;
+
 mod vec2d;
 pub use vec2d::Vec2D;
 

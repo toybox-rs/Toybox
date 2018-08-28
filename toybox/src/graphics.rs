@@ -31,6 +31,35 @@ impl<'a> From<&'a (u8,u8,u8)> for Color {
     }
 }
 
+#[derive(Clone,Debug)]
+pub struct SpriteData {
+    x: i32,
+    y: i32,
+    scale: i32,
+    data: Vec<Vec<Color>>,
+}
+impl SpriteData {
+    pub fn new(data: Vec<Vec<Color>>, scale: i32) -> SpriteData {
+        SpriteData { x: 0, y: 0, scale, data }
+    }
+    pub fn width(&self) -> i32 {
+        self.data[0].len() as i32
+    }
+    pub fn height(&self) -> i32 {
+        self.data.len() as i32
+    }
+    pub fn scale(&self) -> i32 {
+        self.scale
+    }
+    pub fn position(&self) -> (i32,i32) {
+        (self.x, self.y)
+    }
+    /// Make a full copy of this sprite with a new position.
+    pub fn translate(&self, x: i32, y: i32) -> SpriteData {
+        SpriteData { x, y, scale: self.scale, data: self.data.clone() }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Drawable {
     Rectangle {
@@ -40,10 +69,7 @@ pub enum Drawable {
         w: i32,
         h: i32,
     },
-    Sprite {
-        data: Vec<Vec<Color>>,
-        scale: i32,
-    }
+    Sprite(SpriteData)
 }
 
 impl Drawable {
@@ -100,9 +126,22 @@ pub fn render_to_buffer(target: &mut ImageBuffer, commands: &[Drawable]) {
                     }
                 }
             }
-            Drawable::Sprite { data, scale } => {
-                // TODO....
-                panic!("TODO: Drawable::Sprite")
+            Drawable::Sprite(sprite) => {
+                let w = sprite.width();
+                let h = sprite.height();
+                let (x,y) = sprite.position();
+                let scale = sprite.scale();
+                debug_assert!(scale > 0);
+                for yi in 0..h {
+                    for xi in 0..w {
+                        let color = &sprite.data[yi as usize][xi as usize];
+                        for xt in 0..sprite.scale {
+                            for yt in 0..sprite.scale {
+                                target.set_pixel_alpha(xi + x + xt, yi + y + yt, color)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

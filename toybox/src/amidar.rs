@@ -1,5 +1,6 @@
 use super::graphics::{Color, Drawable};
 use super::Input;
+use super::Direction;
 use failure::Error;
 use std::collections::{HashSet, VecDeque};
 
@@ -20,23 +21,6 @@ mod world {
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-}
-impl Direction {
-    fn delta(&self) -> (i32, i32) {
-        match self {
-            Direction::Up => (0, -1),
-            Direction::Down => (0, 1),
-            Direction::Left => (-1, 0),
-            Direction::Right => (1, 0),
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct ScreenPoint {
