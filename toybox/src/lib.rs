@@ -87,6 +87,7 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
         "amidar" => Ok(Box::new(amidar::Amidar)),
         "breakout" => Ok(Box::new(breakout::Breakout)),
         "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
+        "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
         _ => Err(format_err!(
             "Cannot construct game: `{}`. Try amidar, breakout, space_invaders.",
             name
@@ -95,7 +96,7 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
     y
 }
 
-pub const GAME_LIST: &[&str] = &["amidar", "breakout", "space_invaders"];
+pub const GAME_LIST: &[&str] = &["amidar", "breakout", "space_invaders", "gridworld"];
 
 /// Amidar defined in this module.
 pub mod amidar;
@@ -103,3 +104,5 @@ pub mod amidar;
 pub mod breakout;
 /// Space Invaders logic defined in this module.
 pub mod space_invaders;
+/// Gridworld
+pub mod gridworld;
