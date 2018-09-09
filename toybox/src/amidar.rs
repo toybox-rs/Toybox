@@ -2,6 +2,7 @@ use super::graphics::{Color, Drawable};
 use super::Direction;
 use super::Input;
 use failure::Error;
+use serde_json;
 use std::collections::{HashSet, VecDeque};
 
 // Window constants:
@@ -644,6 +645,10 @@ impl super::Simulation for Amidar {
     fn new_game(&self) -> Box<super::State> {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
+    fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, Error> {
+        let state: State = serde_json::from_str(json_str)?;
+        Ok(Box::new(state))
+    }
 }
 
 impl super::State for State {
@@ -752,6 +757,10 @@ impl super::State for State {
         }
 
         output
+    }
+    
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
 }
 

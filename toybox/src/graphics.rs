@@ -37,7 +37,7 @@ impl<'a> From<&'a (u8, u8, u8)> for Color {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpriteData {
     pub x: i32,
     pub y: i32,

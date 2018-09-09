@@ -5,6 +5,7 @@ extern crate toybox;
 
 use toybox::graphics::{render_to_buffer, ImageBuffer};
 use toybox::Input;
+use toybox::State;
 
 use clap::{App, Arg};
 
@@ -13,9 +14,10 @@ use png::HasParameters;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::BufWriter;
+use std::io::Write;
 use std::path::Path;
 
-fn check_output(path: &str) -> Result<(), ()> {
+fn check_output_dir_exists(path: Option<&str>) -> Result<(), ()> {
     let path = Path::new(path);
     if !path.exists() {
         eprintln!("output {:?} does not exist!", path);
@@ -57,6 +59,12 @@ fn main() {
                 .help("How many frames to simulate per step")
                 .takes_value(true),
         ).arg(
+            Arg::with_name("output_json")
+                .long("output_json")
+                .value_name("OUTPUT_DIR")
+                .help("Where to save JSON files (directory).")
+                .takes_value(true),
+        ).arg(
             Arg::with_name("output")
                 .long("output")
                 .value_name("OUTPUT_DIR")
@@ -80,16 +88,18 @@ fn main() {
         .value_of("max_frames")
         .map(|c| c.parse::<usize>().expect("--max_frames should be a number"));
 
-    if let Some(path) = matches.value_of("output") {
-        if check_output(path).is_err() {
-            return;
-        }
+    if check_output_dir_exists(matches.value_of("output")).is_err() {
+        return;
+    }
+    if check_output_dir_exists(matches.value_of("output_json")).is_err() {
+        return;
     }
 
     let simulator = toybox::get_simulation_by_name(game).unwrap();
     let (w, h) = simulator.game_size();
     let mut state = simulator.new_game();
     let mut images = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
+    let mut jsons = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
 
     for _ in 0..num_steps {
         let mut buttons = Input::default();
@@ -101,6 +111,8 @@ fn main() {
             state.update_mut(buttons)
         }
 
+        jsons.push_back(state.to_json());
+
         let mut img = ImageBuffer::alloc(w, h);
         render_to_buffer(&mut img, &state.draw());
         images.push_back(img);
@@ -111,14 +123,24 @@ fn main() {
         }
     }
 
-    if let Some(path) = matches.value_of("output") {
-        // Check the folder again now in case of a data-race (best-effort).
-        if check_output(path).is_err() {
-            return;
+    // Check folders again after running, before I/O.
+    if check_output_dir_exists(matches.value_of("output")).is_err() {
+        return;
+    }
+    if check_output_dir_exists(matches.value_of("output_json")).is_err() {
+        return;
+    }
+    if let Some(path) = matches.value_of("output_json") {
+        for (i, json) in jsons.into_iter().enumerate() {
+            let file = File::create(Path::new(path).join(format!("{}_{:08}.json", game, i))).unwrap();
+            let w = &mut BufWriter::new(file);
+            write!(w, "{}", json).unwrap();
         }
+    }
 
+    if let Some(path) = matches.value_of("output") {
         for (i, img) in images.into_iter().enumerate() {
-            let file = File::create(Path::new(path).join(format!("amidar{:08}.png", i))).unwrap();
+            let file = File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
             let w = &mut BufWriter::new(file);
             let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
             encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);

@@ -1,6 +1,7 @@
 use super::graphics::{Color, Drawable, SpriteData};
 use super::{Direction, Input};
 use failure::Error;
+use serde_json;
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (480, 319);
@@ -77,7 +78,7 @@ lazy_static! {
             .expect("Shield sprite should be included!");
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Actor {
     pub x: i32,
     pub y: i32,
@@ -151,7 +152,7 @@ impl Actor {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct State {
     pub game_over: bool,
     /// Ship is a rectangular actor (logically).
@@ -197,6 +198,10 @@ impl super::Simulation for SpaceInvaders {
     }
     fn new_game(&self) -> Box<super::State> {
         Box::new(State::new())
+    }
+    fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, Error> {
+        let state: State = serde_json::from_str(json_str)?;
+        Ok(Box::new(state))
     }
 }
 
@@ -282,6 +287,10 @@ impl super::State for State {
         }
 
         output
+    }
+
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
 }
 

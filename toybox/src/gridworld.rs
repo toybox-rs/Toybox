@@ -2,6 +2,8 @@ use super::graphics::{Color, Drawable};
 use super::Input;
 use super::Direction;
 
+use serde_json;
+use failure;
 use std::collections::HashMap;
 
 #[derive(Debug,Clone,Serialize,Deserialize)]
@@ -150,6 +152,7 @@ impl State {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct GridWorld {
     config: Config,
 }
@@ -165,6 +168,11 @@ impl super::Simulation for GridWorld {
 
     fn new_game(&self) -> Box<super::State> {
         Box::new(State::from_config(&self.config))
+    }
+
+    fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, failure::Error> {
+        let state: State = serde_json::from_str(json_str)?;
+        Ok(Box::new(state))
     }
 }
 
@@ -202,5 +210,8 @@ impl super::State for State {
         output.push(Drawable::rect(self.player_color, self.player.0, self.player.1, 1, 1));
 
         output
+    }
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
 }

@@ -37,6 +37,8 @@ pub trait State {
     fn update_mut(&mut self, buttons: Input);
     /// Any state can create a vector of drawable objects to present itself.
     fn draw(&self) -> Vec<graphics::Drawable>;
+    /// Any state can serialize to JSON String.
+    fn to_json(&self) -> String;
 }
 
 /// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.
@@ -45,6 +47,8 @@ pub trait Simulation {
     fn new_game(&self) -> Box<State>;
     /// Return a tuple of game size in pixels, e.g., (100,100).
     fn game_size(&self) -> (i32, i32);
+    /// Generate a new state from JSON String.
+    fn new_state_from_json(&self, json: &str) -> Result<Box<State>, failure::Error>;
 }
 
 /// This method returns a Box<Simulation> if possible for a given game name.

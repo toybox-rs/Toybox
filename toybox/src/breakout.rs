@@ -3,6 +3,9 @@ use super::vec2d::Vec2D;
 use super::Body2D;
 use super::Input;
 
+use failure;
+use serde_json;
+
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (480, 319);
     pub const FRAME_OFFSET: i32 = 31;
@@ -140,6 +143,11 @@ impl super::Simulation for Breakout {
             paddle_speed: 4.0,
             bricks,
         })
+    }
+
+    fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, failure::Error> {
+        let state: State = serde_json::from_str(json_str)?;
+        Ok(Box::new(state))
     }
 }
 
@@ -343,5 +351,9 @@ impl super::State for State {
         ));
 
         output
+    }
+    
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
 }
