@@ -2,6 +2,11 @@
 
 A set of games designed for causal experimentation with deep RL agents.
 
+## Projects
+
+- ``toybox`` - Contains core logic for games.
+- ``human_play`` - Contains a front-end for playing those games as a human. 
+
 ## Mac Dev Setup Instructions
 * `brew install rustup`
 * `rustup-init` with the default install
