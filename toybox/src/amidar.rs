@@ -36,7 +36,7 @@ impl ScreenPoint {
 }
 
 /// Strongly-typed vector for "world" positioning in Amidar.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorldPoint {
     pub x: i32,
     pub y: i32,
@@ -65,7 +65,7 @@ impl WorldPoint {
 }
 
 /// Strongly-typed vector for "tile" positioning in Amidar.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TilePoint {
     pub tx: i32,
     pub ty: i32,
@@ -86,7 +86,7 @@ impl TilePoint {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GridBox {
     pub top_left: TilePoint,
     pub bottom_right: TilePoint,
@@ -138,7 +138,7 @@ impl GridBox {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Tile {
     Empty,
     Unpainted,
@@ -161,7 +161,7 @@ impl Tile {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub enum MovementAI {
     Player,
     EnemyLookupAI { next: u32, default_route_index: u32 },
@@ -217,7 +217,7 @@ impl MovementAI {
 }
 
 /// Mob is a videogame slang for "mobile" unit. Players and Enemies are the same struct.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mob {
     pub ai: MovementAI,
     pub position: WorldPoint,
@@ -327,7 +327,7 @@ lazy_static! {
         }).collect();
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Board {
     pub tiles: Vec<Vec<Tile>>,
     pub width: u32,
@@ -336,6 +336,7 @@ pub struct Board {
     pub boxes: Vec<GridBox>,
 }
 
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScoreUpdate {
     pub vertical: i32,
     pub horizontal: i32,
@@ -581,7 +582,7 @@ impl Board {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct State {
     pub dead: bool,
     pub game_over: bool,

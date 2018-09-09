@@ -52,7 +52,7 @@ pub mod screen {
     pub const PADDLE_START_SIZE: (i32, i32) = (48, 6);
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Brick {
     /// Brick position describes the upper-left of the brick.
     pub position: Vec2D,
@@ -85,7 +85,7 @@ impl Brick {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
     pub game_over: bool,
     pub points: u32,

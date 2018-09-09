@@ -4,7 +4,7 @@ use super::Direction;
 
 use std::collections::HashMap;
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct TileConfig {
     /// What reward (if any) is given or taken by passing this tile?
     pub reward: i32,
@@ -39,6 +39,7 @@ impl TileConfig {
     }
 }
 
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct Config {
     pub game_size: (i32, i32),
     pub grid: Vec<String>,
@@ -79,7 +80,7 @@ impl Default for Config {
     }
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
     pub game_over: bool,
     pub score: u32,

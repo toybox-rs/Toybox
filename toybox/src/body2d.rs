@@ -1,6 +1,6 @@
 use super::Vec2D;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Body2D {
     pub position: Vec2D,
     pub velocity: Vec2D,
