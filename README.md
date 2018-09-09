@@ -2,6 +2,12 @@
 
 A set of games designed for causal experimentation with deep RL agents.
 
+## Mac Dev Setup Instructions
+* `brew install rustup`
+* `rustup-init` with the default install
+* clone this repo
+* `source $HOME/.cargo/env`
+
 ## Lints and Formatting in Rust
 
 The best rust tools require the nightly compiler (because they don't want to stabilize the compiler internals yet). Follow the readme instructions to get [rustfmt](https://github.com/rust-lang-nursery/rustfmt) and [clippy](https://github.com/rust-lang-nursery/rust-clippy).
