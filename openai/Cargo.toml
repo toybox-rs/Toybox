@@ -1,0 +1,4 @@
+[package]
+name = "openai"
+version = "0.1.0"
+authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
