@@ -4,84 +4,54 @@ extern crate failure;
 #[macro_use]
 extern crate lazy_static;
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+
 pub mod graphics;
 
-use std::f64;
-
 mod direction;
+/// Direction represents an enum of Left,Right,Up and Down.
 pub use direction::Direction;
 
 mod vec2d;
+/// Vec2D represents a floating (x,y) coordinate or vector.
 pub use vec2d::Vec2D;
 
-#[derive(Debug, Clone)]
-pub struct Body2D {
-    pub position: Vec2D,
-    pub velocity: Vec2D,
-    pub acceleration: Vec2D,
-}
+mod body2d;
+/// Body2D represents an object with position, velocity and acceleration in 2D.
+pub use body2d::Body2D;
 
-impl Body2D {
-    pub fn new_pos(x: f64, y: f64) -> Body2D {
-        Body2D::new_detailed(x, y, 0.0, 0.0, 0.0, 0.0)
-    }
-    pub fn new_detailed(x: f64, y: f64, vx: f64, vy: f64, ax: f64, ay: f64) -> Body2D {
-        Body2D {
-            position: Vec2D::new(x, y),
-            velocity: Vec2D::new(vx, vy),
-            acceleration: Vec2D::new(ax, ay),
-        }
-    }
-    pub fn integrate_mut(&mut self, time_step: f64) {
-        self.position += self.velocity.scale(time_step);
-        self.velocity += self.acceleration.scale(time_step);
-    }
-}
+mod input;
+/// Input represents the buttons pressed given to our games.
+pub use input::Input;
 
-/// Think NES-style controls: directions, and two buttons.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Input {
-    pub left: bool,
-    pub right: bool,
-    pub up: bool,
-    pub down: bool,
-    pub button1: bool,
-    pub button2: bool,
-}
 
-impl Default for Input {
-    fn default() -> Self {
-        Input {
-            left: false,
-            right: false,
-            up: false,
-            down: false,
-            button1: false,
-            button2: false,
-        }
-    }
-}
-impl Input {
-    pub fn new() -> Input {
-        Input::default()
-    }
-    pub fn is_empty(self) -> bool {
-        !self.left && !self.right && !self.up && !self.down && !self.button1 && !self.button2
-    }
-}
 
+/// This trait models a single frame state for a Simulation.
 pub trait State {
     /// When true, this state should be replaced with a call to new_game() on the simulation.
     fn game_over(&self) -> bool;
+    /// To update internally to the next state, we pass buttons to internal logic.
     fn update_mut(&mut self, buttons: Input);
+    /// Any state can create a vector of drawable objects to present itself.
     fn draw(&self) -> Vec<graphics::Drawable>;
+    /// Any state can serialize to JSON String.
+    fn to_json(&self) -> String;
 }
 
+/// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.
 pub trait Simulation {
+    /// Generate a new State. This is in a Box<State> because it may be 1 of many unknown types as far as calling code is concerned.
     fn new_game(&self) -> Box<State>;
+    /// Return a tuple of game size in pixels, e.g., (100,100).
     fn game_size(&self) -> (i32, i32);
+    /// Generate a new state from JSON String.
+    fn new_state_from_json(&self, json: &str) -> Result<Box<State>, failure::Error>;
 }
 
+/// This method returns a Box<Simulation> if possible for a given game name.
 pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Error> {
     let y: Result<Box<Simulation>, _> = match name.to_lowercase().as_str() {
         "amidar" => Ok(Box::new(amidar::Amidar)),
@@ -89,13 +59,14 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
         "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
         _ => Err(format_err!(
-            "Cannot construct game: `{}`. Try amidar, breakout, space_invaders.",
-            name
+            "Cannot construct game: `{}`. Try any of {:?}.",
+            name, GAME_LIST
         )),
     };
     y
 }
 
+/// This defines the set of games that are known. An index into this array is used in human_play, so try not to shuffle them!
 pub const GAME_LIST: &[&str] = &["amidar", "breakout", "space_invaders", "gridworld"];
 
 /// Amidar defined in this module.

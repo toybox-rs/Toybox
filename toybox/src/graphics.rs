@@ -1,5 +1,5 @@
 /// For now we only support RGB colors so we don't have to do alpha-blending in our software renderer.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Color {
     pub r: u8,
     pub b: u8,
@@ -8,6 +8,7 @@ pub struct Color {
 }
 
 impl Color {
+    /// Create a color from (r, g, b) components.
     pub fn rgb(r: u8, g: u8, b: u8) -> Color {
         Color { r, g, b, a: 255 }
     }
@@ -36,7 +37,7 @@ impl<'a> From<&'a (u8, u8, u8)> for Color {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpriteData {
     pub x: i32,
     pub y: i32,
