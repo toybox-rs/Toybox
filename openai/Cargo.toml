@@ -1,4 +1,12 @@
 [package]
-name = "openai"
+name = "pyext-openai"
 version = "0.1.0"
 authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
+
+[lib]
+name = "openai"
+crate-type = ["dylib"]
+
+[dependencies.cpython]
+version = "0.1"
+features = ["extension-module"]
