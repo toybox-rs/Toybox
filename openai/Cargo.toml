@@ -1,5 +1,5 @@
 [package]
-name = "pyext-openai"
+name = "openai"
 version = "0.1.0"
 authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
 
@@ -7,6 +7,9 @@ authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
 name = "openai"
 crate-type = ["dylib"]
 
-[dependencies.cpython]
-version = "0.1"
-features = ["extension-module"]
+[dependencies.toybox]
+version = "*"
+path = "../toybox"
+
+[dependencies]
+failure = "*"
