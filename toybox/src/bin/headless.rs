@@ -18,7 +18,10 @@ use std::io::Write;
 use std::path::Path;
 
 fn check_output_dir_exists(path: Option<&str>) -> Result<(), ()> {
-    let path = Path::new(path);
+    if path.is_none() {
+        return Ok(());
+    }
+    let path = Path::new(path.unwrap());
     if !path.exists() {
         eprintln!("output {:?} does not exist!", path);
         return Err(());
