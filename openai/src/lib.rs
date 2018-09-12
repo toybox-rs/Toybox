@@ -4,9 +4,12 @@ extern crate failure;
 extern crate toybox;
 use toybox::State;
 use std::boxed::Box;
+use std::ffi::CStr;
 
 #[no_mangle]
-pub extern "C" fn new_game(name: &str) -> *mut State {
+pub extern "C" fn new_game(name: *const i8) -> *mut State {
+    let name : &CStr = unsafe { CStr::from_ptr(name) };
+    let name : &str = name.to_str().expect("poop!");
     print!("game: {}", name);
     let state = toybox::get_simulation_by_name(name)
         .unwrap()
