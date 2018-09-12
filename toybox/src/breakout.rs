@@ -53,6 +53,9 @@ pub mod screen {
 
     pub const PADDLE_START_Y: i32 = FRAME_TO_PADDLE + BOARD_TOP_Y;
     pub const PADDLE_START_SIZE: (i32, i32) = (48, 6);
+
+    pub const BALL_ANGLE_MAX: f64 = 75.0;
+    pub const BALL_SPEED_START: f64 = 4.0;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,7 +116,7 @@ impl super::Simulation for Breakout {
         let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
         let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
-        ball.velocity = Vec2D::from_polar(4.0, 0.5);
+        ball.velocity = Vec2D::from_polar(screen::BALL_SPEED_START, 0.5);
 
         let offset = Vec2D::new(
             screen::BOARD_LEFT_X.into(),
@@ -177,7 +180,13 @@ impl State {
             let paddle_ball_same_y =
                 (self.paddle.position.y - self.ball.position.y).abs() < self.ball_radius;
             if paddle_ball_same_x && paddle_ball_same_y {
-                self.ball.velocity.y *= -1.0;
+                // self.ball.velocity.y *= -1.0;
+                // get middle of paddle
+                let paddle_normalized_relative_intersect_x = (self.paddle.position.x - self.ball.position.x) / (self.paddle_width / 2.0);
+                let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_MAX;
+
+                self.ball.velocity = Vec2D::from_polar(4.0, bounce_angle)
+
             }
 
             // check lose?
