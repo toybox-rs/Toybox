@@ -1,70 +1,76 @@
 import ctypes
 import numpy as np
 
-_lib_path = "target/debug/libopenai.dylib"
+_lib_path = 'target/debug/libopenai.dylib'
 _lib = ctypes.CDLL(_lib_path)
 
+class WrapSimulator(ctypes.Structure):
+    pass
+
+class WrapState(ctypes.Structure):
+    pass
+
 _lib.alloc_game_simulator.argtypes = [ctypes.c_char_p]
-_lib.alloc_game_simulator.restype = ctypes.c_void_p
+_lib.alloc_game_simulator.restype = ctypes.POINTER(WrapSimulator)
 
-_lib.frame_width.argtypes = [ctypes.c_void_p]
-_lib.frame_width.restype = ctypes.c_int8
+_lib.alloc_game_state.argtypes = [ctypes.POINTER(WrapSimulator)]
+_lib.alloc_game_state.restype = ctypes.POINTER(WrapState)
 
-_lib.frame_height.argtypes = [ctypes.c_void_p]
-_lib.frame_height.restype = ctypes.c_int8
+_lib.frame_width.argtypes = [ctypes.POINTER(WrapSimulator)]
+_lib.frame_width.restype = ctypes.c_int
+
+_lib.frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
+_lib.frame_height.restype = ctypes.c_int 
 
 
 def _get_frame(game):
-    _lib.get_frame.argtypes = [ctypes.c_void_p]
-    # _lib.get_frame.restype = [ctypes.c_]
-    
+    return None
 
 def _to_action(action):
-    pass
+    return None
 
 def _apply_action(game, action):
-    pass
+    return None
 
 def _get_score(game):
-    pass
+    return None
 
 
 class Simulator(object):
     def __init__(self, game_name):
-        as_utf8 = game_name.encode('utf-8')
-        cstring_game_name = ctypes.create_string_buffer(as_utf8)
-        sim = _lib.alloc_game_simulator(cstring_game_name)
+        sim = _lib.alloc_game_simulator(game_name.encode('utf-8'))
         # sim should be a pointer
-        self.__sim = sim
-        self.__width = _lib.frame_width(self.__sim)
-        # self.__height = _lib.frame_width(self.__sim)
+        #self.__sim = ctypes.pointer(ctypes.c_int(sim))
+        self.__sim = sim 
+        print('sim', self.__sim)
+        self.__width = _lib.frame_width(sim)
+        self.__height = _lib.frame_height(sim)
 
     def __enter__(self):
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
-        _lib.free_game_simulator.argtypes = [ctypes.c_void_p]
         _lib.free_game_simulator(self.__sim)
         self.__sim = None
 
-    def get_board_width(self):
+    def get_frame_width(self):
         return self.__width
 
-    def get_board_height(self):
+    def get_frame_height(self):
         return self.__height
+
+    def get_simulator(self):
+        return self.__sim
 
 
 class State(object):
     def __init__(self, sim):
-        _lib.alloc_game_state.argtypes = [ctypes.c_void_p]
-        _lib.alloc_game_state.restype = ctypes.c_void_p
-        self.__state = _lib.alloc_game_state(sim.__sim)
+        self.__state = _lib.alloc_game_state(sim.get_simulator())
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        _lib.free_game_state.argtypes = [ctypes.c_void_p]
         _lib.free_game_state(self.__state)
         self.__state = None
 
@@ -89,5 +95,13 @@ class Toybox():
 
 
 if __name__ == "__main__":
-    with Simulator("breakout") as sim:
-        print(sim)
+    # sim = _lib.alloc_game_simulator(bytes('breakout', 'utf-8'))
+    # print(sim)
+    # print('frame width', sim.get_frame_width())
+    # _lib.free_game_simulator(sim)
+    with Simulator('breakout') as sim:
+        with State(sim) as state:
+            print('sim in main', sim)
+            print('hahahahah')
+            print('\tframe width:', sim.get_frame_width())
+            print('\tframe height:', sim.get_frame_height())

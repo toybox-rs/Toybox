@@ -1,57 +1,89 @@
 #![crate_type = "dylib"]
 
 extern crate failure;
+extern crate libc;
 extern crate toybox;
+
+
 use toybox::{Simulation, State};
 use toybox::graphics::{render_to_buffer, ImageBuffer};
 use std::boxed::Box;
 use std::ffi::CStr;
 
-// SIMULATOR ALLOC + FREE
+#[repr(C)]
+pub struct WrapSimulator {
+    pub simulator : Box<Simulation>
+}
+
+#[repr(C)]
+pub struct WrapState {
+    pub state : Box<State>
+}
+
+
 #[no_mangle]
-pub extern "C" fn alloc_game_simulator(name: *const i8) -> *mut Simulation {
+pub extern "C" fn alloc_game_simulator(name: *const i8) -> *mut WrapSimulator {
     let name : &CStr = unsafe { CStr::from_ptr(name) };
     let name : &str = name.to_str().expect("poop!");
-    print!("game: {}", name);
-    let simulation = toybox::get_simulation_by_name(name).unwrap();
-    Box::into_raw(simulation)
+    let simulator = toybox::get_simulation_by_name(name)
+        .unwrap();
+    // The boxing stuff ensures the pointer remains allocated after 
+    // we leave this scope.
+    let simulator = Box::new(WrapSimulator { simulator });
+    Box::into_raw(simulator)
 }
 
 #[no_mangle]
-pub extern "C" fn free_game_simulator(simulator: *mut Simulation) {
-    if simulator.is_null() {
+pub extern "C" fn free_game_simulator(ptr: *mut WrapSimulator) {
+    if ptr.is_null() {
         return;
     }
     unsafe {
-        Box::from_raw(simulator);
+        Box::from_raw(ptr);
     }
+    println!("Freed the simulator...")
 }
 
 // STATE ALLOC + FREE
 #[no_mangle]
-pub extern "C" fn alloc_game_state(simulator: &mut Simulation) -> *mut State {
-    Box::into_raw(simulator.new_game())
+pub extern "C" fn alloc_game_state(ptr: *mut WrapSimulator) -> *mut WrapState {
+    let WrapSimulator { simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let state : Box<State> = simulator.new_game();
+    let boxed_wrapped_state : Box<WrapState> = Box::new(WrapState { state });
+    Box::into_raw(boxed_wrapped_state)
 }
 
-pub extern "C" fn free_game_state(state: *mut State) {
-    if state.is_null() {
+#[no_mangle]
+pub extern "C" fn free_game_state(ptr: *mut WrapState) {
+    if ptr.is_null() {
         return;
     }
     unsafe {
-        Box::from_raw(state);
+        Box::from_raw(ptr);
     }
+    println!("Freed the state...")
 }
 
 // Need this information to initialize the numpy array in python
 #[no_mangle]
-pub extern "C" fn frame_width(simulator: *mut Simulation) -> i32 {
-    let simulator = unsafe { Box::from_raw(simulator) };
+pub extern "C" fn frame_width(ptr: *mut WrapSimulator) -> i32 {
+    let WrapSimulator { simulator } = unsafe { 
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
     let (w, _) = simulator.game_size();
     w
 }
 
 #[no_mangle]
-pub extern "C" fn frame_height(simulator: &mut Simulation) -> i32 {
+pub extern "C" fn frame_height(ptr: *mut WrapSimulator) -> i32 {
+    let WrapSimulator { simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
     let (_, h) = simulator.game_size();
     h
 }

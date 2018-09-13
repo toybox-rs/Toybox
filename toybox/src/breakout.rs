@@ -102,7 +102,10 @@ pub struct State {
     pub bricks: Vec<Brick>,
 }
 
-pub struct Breakout;
+pub struct Breakout {
+    pub implemented : bool
+}
+
 impl super::Simulation for Breakout {
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
