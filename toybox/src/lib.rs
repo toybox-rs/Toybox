@@ -10,6 +10,7 @@ extern crate serde_derive;
 extern crate serde_json;
 
 pub mod graphics;
+pub mod digit_sprites;
 
 mod direction;
 /// Direction represents an enum of Left,Right,Up and Down.
