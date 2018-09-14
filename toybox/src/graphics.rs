@@ -32,7 +32,6 @@ impl Color {
     pub fn grayscale_byte(&self) -> u8 {
         (self.luminance() * 255.0) as u8
     }
-
     fn to_grayscale(&self) -> Color {
         let gray = self.grayscale_byte();
         Color::rgb(gray, gray, gray)

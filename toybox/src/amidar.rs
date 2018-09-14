@@ -45,7 +45,7 @@ impl Default for Config {
             player_color: Color::rgb(255, 255, 153),
             unpainted_color: Color::rgb(148, 0, 211),
             painted_color: Color::rgb(255, 255, 30),
-            enemy_color: Color::rgb(255, 0, 0),
+            enemy_color: Color::rgb(255, 50, 100),
             inner_painted_color: Color::rgb(255, 255, 0),
         }
     }
