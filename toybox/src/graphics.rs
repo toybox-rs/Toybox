@@ -29,6 +29,32 @@ impl Color {
     pub fn white() -> Color {
         Color::rgb(0xff, 0xff, 0xff)
     }
+    pub fn grayscale_byte(&self) -> u8 {
+        (self.luminance() * 255.0) as u8
+    }
+
+    fn to_grayscale(&self) -> Color {
+        let gray = self.grayscale_byte();
+        Color::rgb(gray, gray, gray)
+    }
+
+    fn float_red(&self) -> f64 {
+        self.r as f64 / 255.0
+    }
+    fn float_green(&self) -> f64 {
+        self.g as f64 / 255.0
+    }
+    fn float_blue(&self) -> f64 {
+        self.b as f64 / 255.0
+    }
+
+    /// This taken from [StackOverflow](https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color)
+    /// which referred to [Wikipedia's Relative Luminance](https://en.wikipedia.org/wiki/Luminance_%28relative%29).
+    pub fn luminance(&self) -> f64 {
+        self.float_red() * 0.2126 +
+        self.float_green() * 0.7152 + 
+        self.float_blue() * 0.0722
+    }
 }
 
 impl<'a> From<&'a (u8, u8, u8)> for Color {
@@ -104,6 +130,72 @@ impl Drawable {
     }
 }
 
+pub struct GrayscaleBuffer {
+    pub width: i32,
+    pub height: i32,
+    pub data: Vec<u8>,
+}
+impl GrayscaleBuffer {
+    pub fn alloc(width: i32, height: i32) -> GrayscaleBuffer {
+        GrayscaleBuffer {
+            width,
+            height,
+            data: vec![0; (width * height) as usize]
+        }
+    }
+    #[inline(always)]
+    fn set_pixel(&mut self, x: i32, y: i32, color: u8) {
+        let start = (y * self.width) + x;
+        if start < 0 {
+            return;
+        }
+        let start = start as usize;
+        if start >= self.data.len() {
+            return;
+        }
+        self.data[start] = color;
+    }
+    #[inline(always)]
+    fn set_pixel_alpha(&mut self, x: i32, y: i32, color: Color) {
+        if color.is_visible() {
+            self.set_pixel(x, y, color.grayscale_byte())
+        }
+    }
+
+    pub fn render(&mut self, commands: &[Drawable]) {
+        for cmd in commands {
+            match cmd {
+                Drawable::Rectangle { color, x, y, w, h } => {
+                    let fill = color.grayscale_byte();
+                    for yi in *y..(y + h) {
+                        for xi in *x..(x + w) {
+                            self.set_pixel(xi, yi, fill)
+                        }
+                    }
+                }
+                Drawable::Sprite(sprite) => {
+                    let w = sprite.width();
+                    let h = sprite.height();
+                    let (x, y) = sprite.position();
+                    let scale = sprite.scale();
+                    debug_assert!(scale > 0);
+                    for yi in 0..h {
+                        for xi in 0..w {
+                            let color = sprite.data[yi as usize][xi as usize];
+                            for xt in 0..sprite.scale {
+                                for yt in 0..sprite.scale {
+                                    self.set_pixel_alpha(xi + x + xt, yi + y + yt, color)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Done.
+    }
+}
+
 pub struct ImageBuffer {
     pub width: i32,
     pub height: i32,
@@ -134,42 +226,48 @@ impl ImageBuffer {
         self.data[start + 2] = color.b;
         self.data[start + 3] = color.a;
     }
+    
     #[inline(always)]
     fn set_pixel_alpha(&mut self, x: i32, y: i32, color: Color) {
         if color.is_visible() {
             self.set_pixel(x, y, color)
         }
     }
-}
 
-pub fn render_to_buffer(target: &mut ImageBuffer, commands: &[Drawable]) {
-    for cmd in commands {
-        match cmd {
-            Drawable::Rectangle { color, x, y, w, h } => {
-                for yi in *y..(y + h) {
-                    for xi in *x..(x + w) {
-                        target.set_pixel(xi, yi, *color)
+    fn render(&mut self, commands: &[Drawable]) {
+        for cmd in commands {
+            match cmd {
+                Drawable::Rectangle { color, x, y, w, h } => {
+                    for yi in *y..(y + h) {
+                        for xi in *x..(x + w) {
+                            self.set_pixel(xi, yi, *color)
+                        }
                     }
                 }
-            }
-            Drawable::Sprite(sprite) => {
-                let w = sprite.width();
-                let h = sprite.height();
-                let (x, y) = sprite.position();
-                let scale = sprite.scale();
-                debug_assert!(scale > 0);
-                for yi in 0..h {
-                    for xi in 0..w {
-                        let color = sprite.data[yi as usize][xi as usize];
-                        for xt in 0..sprite.scale {
-                            for yt in 0..sprite.scale {
-                                target.set_pixel_alpha(xi + x + xt, yi + y + yt, color)
+                Drawable::Sprite(sprite) => {
+                    let w = sprite.width();
+                    let h = sprite.height();
+                    let (x, y) = sprite.position();
+                    let scale = sprite.scale();
+                    debug_assert!(scale > 0);
+                    for yi in 0..h {
+                        for xi in 0..w {
+                            let color = sprite.data[yi as usize][xi as usize];
+                            for xt in 0..sprite.scale {
+                                for yt in 0..sprite.scale {
+                                    self.set_pixel_alpha(xi + x + xt, yi + y + yt, color)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-    }
     // Done.
+    }
+}
+
+/// Maybe deprecated? I made it OOP.
+pub fn render_to_buffer(target: &mut ImageBuffer, commands: &[Drawable]) {
+    target.render(commands);
 }
