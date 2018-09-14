@@ -10,6 +10,55 @@ class WrapSimulator(ctypes.Structure):
 class WrapState(ctypes.Structure):
     pass
 
+
+# I don't know how actions will be issued, so let's have lots of options available
+LEFT = "left"
+RIGHT = "right"
+UP = "up"
+DOWN = "down"
+BUTTON1 = "button1"
+BUTTON2 = "button2"
+
+class Input(ctypes.Structure):
+    _fields_ = [(LEFT, ctypes.c_bool), 
+                (RIGHT, ctypes.c_bool),
+                (UP, ctypes.c_bool),
+                (DOWN, ctypes.c_bool),
+                (BUTTON1, ctypes.c_bool),
+                (BUTTON2, ctypes.c_bool)]
+
+    def _set_default(self):
+        self.left = False
+        self.right = False
+        self.up = False
+        self.down = False
+        self.button1 = False
+        self.button2 = False
+
+    def set_input(self, input_dir, button):
+        self._set_default()
+
+        # reset all directions
+        if input_dir == LEFT:
+            self.left = True
+        elif input_dir == RIGHT:
+            self.right = True
+        elif input_dir == UP:
+            self.up = True
+        elif input_dir == DOWN:
+            self.down = True
+        else:
+            assert False
+
+        # reset buttons
+        if button == BUTTON1:
+            self.button1 = True
+        if button == BUTTON2:
+            self.button2 = True
+        else:
+            assert False
+            
+
 _lib.alloc_game_simulator.argtypes = [ctypes.c_char_p]
 _lib.alloc_game_simulator.restype = ctypes.POINTER(WrapSimulator)
 
@@ -21,19 +70,6 @@ _lib.frame_width.restype = ctypes.c_int
 
 _lib.frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.frame_height.restype = ctypes.c_int 
-
-
-def _get_frame(game):
-    return None
-
-def _to_action(action):
-    return None
-
-def _apply_action(game, action):
-    return None
-
-def _get_score(game):
-    return None
 
 
 class Simulator(object):
@@ -74,6 +110,9 @@ class State(object):
         _lib.free_game_state(self.__state)
         self.__state = None
 
+    def get_state(self):
+        return self.__state
+
     def render_frame(self, sim):
         h = sim.get_frame_height()
         w = sim.get_frame_width()
@@ -87,21 +126,25 @@ class State(object):
 class Toybox():
 
     def __init__(self, game_name):
-        self.game = _get_game()
+        self.rsimulator = Simulator(game_name)
+        self.rstate = State(self.rsimulator)
         # OpenAI state is a 4-frame sequence
-        self.state = tuple([_get_frame(self.game)] * 4)
+        self.state = tuple([self.rstate.render_frame(self.rsimulator)] * 4)
 
     def get_state(self):
         return self.state
 
-    def apply_action(self, action):
-        action = _to_action(action)
-        new_frame = _apply_action(self.game, action)
+    def apply_action(self, action_input_obj):
+        _lib.apply_action(self.rstate.get_state(), action_input_obj)
+        new_frame = self.rstate.render_frame(self.rsimulator)
         self.state = (self.state[1], self.state[2], self.state[3], new_frame)
         return new_frame
 
     def get_score(self):
-        return _get_score(self.game)
+        return -1
+
+    def __del__(self):
+        pass
 
 
 if __name__ == "__main__":
@@ -115,5 +158,6 @@ if __name__ == "__main__":
             from PIL import Image
             img = Image.fromarray(frame, 'RGB')
             img.save('my.png')
-            img.show()
+    tb = Toybox('breakout')
+    tb.apply_action(Input())
         
