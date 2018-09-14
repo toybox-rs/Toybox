@@ -55,7 +55,7 @@ pub trait Simulation {
 pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Error> {
     let y: Result<Box<Simulation>, _> = match name.to_lowercase().as_str() {
         "amidar" => Ok(Box::new(amidar::Amidar)),
-        "breakout" => Ok(Box::new(breakout::Breakout)),
+        "breakout" => Ok(Box::new(breakout::Breakout{implemented: false})),
         "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
         _ => Err(format_err!(
