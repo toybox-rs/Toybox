@@ -227,10 +227,14 @@ impl State {
             if paddle_ball_same_x && paddle_ball_same_y {
                 // get x location of ball hit relative to paddle
                 let ball_hit_x = self.ball.position.x - (self.paddle.position.x - (self.paddle_width/ 2.0));
+                // get normalized location of ball hit along paddle
                 let paddle_normalized_relative_intersect_x =  1.0 - ball_hit_x / self.paddle_width;
+                // convert this normalized parameter to the degree of the bounce angle
                 let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE + screen::BALL_ANGLE_MIN;
 
                 self.ball.velocity = Vec2D::from_polar(4.0, bounce_angle.to_radians());
+                // calculations use non-graphics polar orientation
+                // to quickly fix, we reflect over the x-axis
                 self.ball.velocity.y *= -1.0;
             }
 
