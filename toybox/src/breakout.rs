@@ -38,7 +38,7 @@ pub mod screen {
     pub const GREEN: (u8, u8, u8) = (72, 160, 72);
     pub const BLUE: (u8, u8, u8) = (66, 72, 200);
 
-    pub const ROW_SCORES: &[u32] = &[7, 7, 7, 4, 4, 1, 1];
+    pub const ROW_SCORES: &[i32] = &[7, 7, 7, 4, 4, 1, 1];
     pub const ROW_COLORS: &[&(u8, u8, u8)] = &[&RED, &DARK_ORANGE, &ORANGE, &YELLOW, &GREEN, &BLUE];
 
     // Atari colors have paddle, ball, and red all being the same.
@@ -59,13 +59,46 @@ pub mod screen {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    bg_color: Color,
+    frame_color: Color,
+    paddle_color: Color,
+    ball_color: Color,
+    row_colors: Vec<Color>,
+    row_scores: Vec<i32>,
+}
+impl Config {
+    fn unique_colors(&self) -> Vec<&Color> {
+        let mut output: Vec<&Color> = Vec::new();
+        output.extend(self.row_colors.iter());
+        output.push(&self.bg_color);
+        output.push(&self.frame_color);
+        // Note, ball and paddle are the same and that's OK for breakout.
+        output
+    }
+}
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            bg_color: Color::black(),
+            frame_color: (&screen::FRAME_COLOR).into(),
+            paddle_color: (&screen::PADDLE_COLOR).into(),
+            ball_color: (&screen::BALL_COLOR).into(),
+            row_colors: screen::ROW_COLORS.iter().cloned().map(|c| c.into()).collect(),
+            row_scores: screen::ROW_SCORES.iter().cloned().collect()
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Brick {
     /// Brick position describes the upper-left of the brick.
     pub position: Vec2D,
     /// Brick size is the width and height of the brick.
     pub size: Vec2D,
     /// This is the number of points for a brick.
-    pub points: u32,
+    pub points: i32,
     /// This starts as true and moves to false when hit.
     pub alive: bool,
     // What color is this brick.
@@ -73,7 +106,7 @@ pub struct Brick {
 }
 
 impl Brick {
-    pub fn new(position: Vec2D, size: Vec2D, points: u32, color: Color) -> Brick {
+    pub fn new(position: Vec2D, size: Vec2D, points: i32, color: Color) -> Brick {
         Brick {
             position,
             size,
@@ -93,8 +126,9 @@ impl Brick {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
+    pub config: Config,
     pub game_over: bool,
-    pub points: u32,
+    pub points: i32,
     /// ball position describes the center of the ball.
     pub ball: Body2D,
     pub ball_radius: f64,
@@ -106,7 +140,12 @@ pub struct State {
 }
 
 pub struct Breakout {
-    pub implemented : bool
+    pub config: Config,
+}
+impl Default for Breakout {
+    fn default() -> Self {
+        Breakout { config: Config::default() }
+    }
 }
 
 impl super::Simulation for Breakout {
@@ -125,21 +164,22 @@ impl super::Simulation for Breakout {
             screen::BOARD_LEFT_X.into(),
             (screen::BOARD_TOP_Y + screen::ROOF_SPACING).into(),
         );
-        let num_bricks_deep = screen::ROW_COLORS.len();
+        let num_bricks_deep = self.config.row_colors.len();
         let bsize = Vec2D::new(screen::BRICK_WIDTH.into(), screen::BRICK_HEIGHT.into());
         let xs = bsize.x;
         let ys = bsize.y;
         for x in 0..screen::BRICKS_ACROSS {
             let x = f64::from(x);
             for y in 0..num_bricks_deep {
-                let color_tuple = screen::ROW_COLORS[y];
-                let score = screen::ROW_SCORES[y];
+                let color_tuple = self.config.row_colors[y];
+                let score = self.config.row_scores[y];
                 let bpos = Vec2D::new(x * xs, (y as f64) * ys).translate(&offset);
                 bricks.push(Brick::new(bpos, bsize.clone(), score, color_tuple.into()));
             }
         }
 
         Box::new(State {
+            config: self.config.clone(),
             game_over: false,
             ball,
             points: 0,
@@ -278,7 +318,7 @@ impl super::State for State {
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
         output.push(Drawable::rect(
-            Color::black(),
+            self.config.bg_color,
             0,
             0,
             screen::GAME_SIZE.0,
@@ -287,7 +327,7 @@ impl super::State for State {
 
         // Draw frame top:
         output.push(Drawable::rect(
-            (&screen::FRAME_COLOR).into(),
+            self.config.frame_color,
             0,
             screen::FRAME_OFFSET,
             screen::GAME_SIZE.0,
@@ -296,20 +336,11 @@ impl super::State for State {
 
         // Draw frame left:
         output.push(Drawable::rect(
-            (&screen::FRAME_COLOR).into(),
+            self.config.frame_color,
             0,
             screen::FRAME_OFFSET,
             screen::FRAME_SUPPORT_WIDTH,
             screen::FRAME_LEFT_HEIGHT,
-        ));
-
-        // Draw frame left "colored spot"
-        output.push(Drawable::rect(
-            (&screen::FRAME_LEFT_SUPPORT_COLOR).into(),
-            0,
-            screen::FRAME_OFFSET + screen::FRAME_LEFT_HEIGHT - screen::FRAME_LEFT_SUPPORT.1,
-            screen::FRAME_LEFT_SUPPORT.0,
-            screen::FRAME_LEFT_SUPPORT.1,
         ));
 
         // Draw frame right:
@@ -321,6 +352,16 @@ impl super::State for State {
             screen::FRAME_RIGHT_HEIGHT,
         ));
 
+        /* Let's not be perfect!
+        // Draw frame left "colored spot"
+        output.push(Drawable::rect(
+            (&screen::FRAME_LEFT_SUPPORT_COLOR).into(),
+            0,
+            screen::FRAME_OFFSET + screen::FRAME_LEFT_HEIGHT - screen::FRAME_LEFT_SUPPORT.1,
+            screen::FRAME_LEFT_SUPPORT.0,
+            screen::FRAME_LEFT_SUPPORT.1,
+        ));
+
         // Draw frame right "colored spot"
         output.push(Drawable::rect(
             (&screen::FRAME_RIGHT_SUPPORT_COLOR).into(),
@@ -329,6 +370,7 @@ impl super::State for State {
             screen::FRAME_RIGHT_SUPPORT.0,
             screen::FRAME_RIGHT_SUPPORT.1,
         ));
+        */
 
         if self.game_over {
             return output;
@@ -345,7 +387,7 @@ impl super::State for State {
         let paddle_w = self.paddle_width as i32;
 
         output.push(Drawable::rect(
-            (&screen::PADDLE_COLOR).into(),
+            self.config.paddle_color,
             paddle_x - paddle_w / 2,
             paddle_y,
             paddle_w,
@@ -355,7 +397,7 @@ impl super::State for State {
         let (ball_x, ball_y) = self.ball.position.pixels();
         let ball_r = self.ball_radius as i32;
         output.push(Drawable::rect(
-            (&screen::BALL_COLOR).into(),
+            self.config.ball_color,
             ball_x - ball_r,
             ball_y - ball_r,
             ball_r * 2,
@@ -368,4 +410,21 @@ impl super::State for State {
     fn to_json(&self) -> String {
         serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn test_colors_unique_in_gray() {
+        let config = Config::default();
+        let num_colors = config.unique_colors().len();
+        let uniq_grays: HashSet<u8> = config.unique_colors().into_iter().map(|c| c.grayscale_byte()).collect();
+        // Don't allow a grayscale agent to be confused where a human wouldn't be.
+        assert_eq!(uniq_grays.len(), num_colors);
+    }
+
 }
