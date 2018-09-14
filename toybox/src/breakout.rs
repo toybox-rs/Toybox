@@ -231,7 +231,6 @@ impl State {
                 let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE + screen::BALL_ANGLE_MIN;
 
                 self.ball.velocity = Vec2D::from_polar(4.0, bounce_angle);
-                println!("stmt: {}", bounce_angle);
             }
 
             // check lose?
