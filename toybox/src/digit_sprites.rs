@@ -1,4 +1,4 @@
-use super::graphics::{Color, SpriteData};
+use super::graphics::{Color, SpriteData, Drawable};
 
 const RAW_NUMBER_DATA: &str = include_str!("resources/number_sprites.txt");
 const SET: char = '1';
@@ -11,8 +11,28 @@ lazy_static! {
 }
 
 /// Returns a copy for now...
-pub fn get_sprite(digit_index: usize) -> SpriteData {
-    DIGIT_SPRITES[digit_index].clone()
+fn get_sprite(digit_index: u32) -> SpriteData {
+    debug_assert!(digit_index < 10);
+    DIGIT_SPRITES[digit_index as usize].clone()
+}
+
+/// We don't have a sprite for negatives, but scores might be someday... this just prints zero.
+/// x and y represent the top-right of scores.
+pub fn draw_score(score: i32, x: i32, y: i32) -> Vec<Drawable> {
+    let score = if score < 0 {
+        0
+    } else {
+        score as u32
+    };
+    let radix = 10;
+    format!("{}", score).chars()
+        .map(|ch| ch.to_digit(radix).expect("format! only gives us digits!"))
+        .rev()
+        .enumerate()
+        .map(|(position, digit)| {
+            let x = x - (position as i32) * DIGIT_WIDTH;
+            Drawable::Sprite(get_sprite(digit).translate(x, y))
+        }).collect()
 }
 
 /// Parse a number from number_sprites.txt into a SpriteData.

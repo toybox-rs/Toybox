@@ -1,6 +1,7 @@
 use super::graphics::{Color, Drawable};
 use super::Direction;
 use super::Input;
+use super::digit_sprites::draw_score;
 use failure::Error;
 use serde_json;
 use std::collections::{HashSet, VecDeque};
@@ -366,7 +367,7 @@ pub struct Board {
     pub boxes: Vec<GridBox>,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct ScoreUpdate {
     pub vertical: i32,
     pub horizontal: i32,
@@ -560,7 +561,7 @@ impl Board {
 
                 // vertical segments give you 1, horizontal give you length
                 if newly_painted {
-                    if dy > 0 {
+                    if dy.abs() > 0 {
                         score_change.vertical += (t2.ty - t1.ty).abs();
                     } else {
                         score_change.horizontal += (t2.tx - t1.tx).abs();
@@ -569,7 +570,7 @@ impl Board {
                 }
             }
         }
-
+        
         if score_change.happened() {
             // Don't forget this location should still be in history:
             let current = *player_history.front().unwrap();
@@ -782,6 +783,8 @@ impl super::State for State {
                 h,
             ));
         }
+
+        output.extend(draw_score(self.score, 104, 198));
 
         output
     }
