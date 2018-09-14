@@ -3,7 +3,7 @@ extern crate failure;
 extern crate png;
 extern crate toybox;
 
-use toybox::graphics::{render_to_buffer, ImageBuffer};
+use toybox::graphics::{ImageBuffer, GrayscaleBuffer};
 use toybox::Input;
 use toybox::State;
 
@@ -55,6 +55,10 @@ fn main() {
                 .help("How many frames to keep in memory")
                 .takes_value(true),
         ).arg(
+            Arg::with_name("grayscale")
+                .long("grayscale")
+                .help("Agents work in grayscale. This will output PNG to grayscale.")
+        ).arg(
             Arg::with_name("frame_step")
                 .short("f")
                 .long("frame_step")
@@ -91,6 +95,7 @@ fn main() {
         .value_of("max_frames")
         .map(|c| c.parse::<usize>().expect("--max_frames should be a number"));
 
+    let grayscale = matches.is_present("grayscale");
     if check_output_dir_exists(matches.value_of("output")).is_err() {
         return;
     }
@@ -98,10 +103,13 @@ fn main() {
         return;
     }
 
+    println!("output={:?} grayscale={:?}", matches.value_of("output"), grayscale);
+
     let simulator = toybox::get_simulation_by_name(game).unwrap();
     let (w, h) = simulator.game_size();
     let mut state = simulator.new_game();
     let mut images = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
+    let mut grayscale_images = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
     let mut jsons = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));
 
     for _ in 0..num_steps {
@@ -116,12 +124,23 @@ fn main() {
 
         jsons.push_back(state.to_json());
 
-        let mut img = ImageBuffer::alloc(w, h);
-        render_to_buffer(&mut img, &state.draw());
-        images.push_back(img);
-        if let Some(mf) = max_frames {
-            if images.len() > mf {
-                let _ = images.pop_front();
+        if grayscale {
+            let mut img = GrayscaleBuffer::alloc(w, h);
+            img.render(&state.draw());
+            grayscale_images.push_back(img);
+            if let Some(mf) = max_frames {
+                if grayscale_images.len() > mf {
+                    let _ = grayscale_images.pop_front();
+                }
+            }
+        } else {
+            let mut img = ImageBuffer::alloc(w, h);
+            img.render(&state.draw());
+            images.push_back(img);
+            if let Some(mf) = max_frames {
+                if images.len() > mf {
+                    let _ = images.pop_front();
+                }
             }
         }
     }
@@ -142,13 +161,24 @@ fn main() {
     }
 
     if let Some(path) = matches.value_of("output") {
-        for (i, img) in images.into_iter().enumerate() {
-            let file = File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
-            let w = &mut BufWriter::new(file);
-            let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
-            encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);
-            let mut writer = encoder.write_header().unwrap();
-            writer.write_image_data(&img.data).unwrap();
+        if grayscale {
+            for (i, img) in grayscale_images.into_iter().enumerate() {
+                let file = File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
+                let w = &mut BufWriter::new(file);
+                let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
+                encoder.set(png::ColorType::Grayscale).set(png::BitDepth::Eight);
+                let mut writer = encoder.write_header().unwrap();
+                writer.write_image_data(&img.data).unwrap();
+            }
+        } else {
+            for (i, img) in images.into_iter().enumerate() {
+                let file = File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
+                let w = &mut BufWriter::new(file);
+                let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
+                encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);
+                let mut writer = encoder.write_header().unwrap();
+                writer.write_image_data(&img.data).unwrap();
+            }
         }
     }
 }

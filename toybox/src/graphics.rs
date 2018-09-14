@@ -234,7 +234,7 @@ impl ImageBuffer {
         }
     }
 
-    fn render(&mut self, commands: &[Drawable]) {
+    pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
                 Drawable::Rectangle { color, x, y, w, h } => {
