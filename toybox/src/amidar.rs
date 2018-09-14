@@ -1,6 +1,7 @@
 use super::graphics::{Color, Drawable};
 use super::Direction;
 use super::Input;
+use super::digit_sprites::draw_score;
 use failure::Error;
 use serde_json;
 use std::collections::{HashSet, VecDeque};
@@ -21,6 +22,35 @@ mod world {
 }
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
+
+#[derive(Debug,Clone,Serialize,Deserialize)]
+pub struct Config {
+    bg_color: Color,
+    player_color: Color,
+    unpainted_color: Color,
+    painted_color: Color,
+    enemy_color: Color,
+    inner_painted_color: Color,
+}
+
+impl Config {
+    pub fn colors(&self) -> Vec<&Color> {
+        vec![&self.bg_color, &self.enemy_color, &self.inner_painted_color, &self.painted_color, &self.player_color, &self.unpainted_color]
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            bg_color: Color::black(),
+            player_color: Color::rgb(255, 255, 153),
+            unpainted_color: Color::rgb(148, 0, 211),
+            painted_color: Color::rgb(255, 255, 30),
+            enemy_color: Color::rgb(255, 50, 100),
+            inner_painted_color: Color::rgb(255, 255, 0),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct ScreenPoint {
@@ -337,7 +367,7 @@ pub struct Board {
     pub boxes: Vec<GridBox>,
 }
 
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct ScoreUpdate {
     pub vertical: i32,
     pub horizontal: i32,
@@ -531,7 +561,7 @@ impl Board {
 
                 // vertical segments give you 1, horizontal give you length
                 if newly_painted {
-                    if dy > 0 {
+                    if dy.abs() > 0 {
                         score_change.vertical += (t2.ty - t1.ty).abs();
                     } else {
                         score_change.horizontal += (t2.tx - t1.tx).abs();
@@ -540,7 +570,7 @@ impl Board {
                 }
             }
         }
-
+        
         if score_change.happened() {
             // Don't forget this location should still be in history:
             let current = *player_history.front().unwrap();
@@ -585,6 +615,7 @@ impl Board {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
+    pub config: Config,
     pub dead: bool,
     pub game_over: bool,
     pub score: i32,
@@ -609,6 +640,7 @@ impl State {
         let player = Mob::new_player(player_start.to_world());
 
         let mut state = State {
+            config: Config::default(),
             dead: false,
             game_over: false,
             score: 0,
@@ -681,7 +713,7 @@ impl super::State for State {
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
         output.push(Drawable::rect(
-            Color::black(),
+            self.config.bg_color,
             0,
             0,
             screen::GAME_SIZE.0,
@@ -690,10 +722,6 @@ impl super::State for State {
         if self.game_over {
             return output;
         }
-        let track_color = Color::rgb(148, 0, 211);
-        let player_color = Color::rgb(255, 255, 153);
-        let enemy_color = Color::rgb(255, 0, 153);
-        let _text_color = player_color;
 
         let (tile_w, tile_h) = screen::TILE_SIZE;
         let (offset_x, offset_y) = screen::BOARD_OFFSET;
@@ -704,8 +732,8 @@ impl super::State for State {
                 let tx = tx as i32;
                 let tile_color = match tile {
                     // TODO: change this color:
-                    Tile::Painted => Color::white(),
-                    Tile::Unpainted => track_color,
+                    Tile::Painted => self.config.painted_color,
+                    Tile::Unpainted => self.config.unpainted_color,
                     Tile::Empty => continue,
                 };
                 output.push(Drawable::rect(
@@ -725,7 +753,7 @@ impl super::State for State {
             let h = dest.sy - origin.sy;
 
             output.push(Drawable::rect(
-                Color::rgb(0xff, 0xff, 0x00),
+                self.config.inner_painted_color,
                 offset_x + origin.sx,
                 offset_y + origin.sy,
                 w,
@@ -736,7 +764,7 @@ impl super::State for State {
         let (player_x, player_y) = self.player.position.to_screen().pixels();
         let (player_w, player_h) = screen::PLAYER_SIZE;
         output.push(Drawable::rect(
-            player_color,
+            self.config.player_color,
             offset_x + player_x - 1,
             offset_y + player_y - 1,
             player_w,
@@ -748,13 +776,15 @@ impl super::State for State {
             let (w, h) = screen::ENEMY_SIZE;
 
             output.push(Drawable::rect(
-                enemy_color,
+                self.config.enemy_color,
                 offset_x + x - 1,
                 offset_y + y - 1,
                 w,
                 h,
             ));
         }
+
+        output.extend(draw_score(self.score, 104, 198));
 
         output
     }
@@ -767,6 +797,15 @@ impl super::State for State {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_colors_unique_in_gray() {
+        let config = Config::default();
+        let num_colors = config.colors().len();
+        let uniq_grays: HashSet<u8> = config.colors().into_iter().map(|c| c.grayscale_byte()).collect();
+        // Don't allow a grayscale agent to be confused where a human wouldn't be.
+        assert_eq!(uniq_grays.len(), num_colors);
+    }
 
     #[test]
     fn board_included() {

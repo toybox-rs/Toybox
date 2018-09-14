@@ -5,11 +5,12 @@ authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
 
 [lib]
 name = "openai"
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 [dependencies.toybox]
 version = "*"
 path = "../toybox"
 
 [dependencies]
-failure = "*"
+failure = "0.1"
+libc = "0.2"
