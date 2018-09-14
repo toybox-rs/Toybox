@@ -7,6 +7,7 @@ extern crate toybox;
 
 use toybox::{Simulation, State};
 use toybox::graphics::{render_to_buffer, ImageBuffer};
+use toybox::Input;
 use std::boxed::Box;
 use std::ffi::CStr;
 
@@ -121,7 +122,18 @@ pub extern "C" fn render_current_frame(
     std::mem::forget(dat)
 }
 
-// void render_current_frame(void* numpy_pixels, size_t numpy_pixels_len, void* game_state, void* simulator);
+#[no_mangle]
+pub extern "C" fn apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
+    let WrapState { state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+    let input = unsafe { 
+        assert!(!input_ptr.is_null());
+        &mut *input_ptr
+    };
+    state.update_mut(*input);
+}
 
 // fn simulate_n_frames(game_state: &mut State, n: u32) {
 //   for _ in range(n) {
@@ -130,11 +142,6 @@ pub extern "C" fn render_current_frame(
 // }
 
 // // Going to need score() on State (abstractly) so we can calculate reward in python-land.
-
-// fn render_current_frame(pixels_from_numpy: &mut [u8], game_state: &State, simulator &simulator) { 
-//   assert!(pixels_from_numpy.is_right_size_for(simulator));
-//   graphics::render_to_numpy(pixels_from_numpy, game_state.draw());
-// } 
 
 
 // void simulate_n_frames(void* game_state, unsigned int n);
