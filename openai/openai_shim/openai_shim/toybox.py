@@ -74,6 +74,16 @@ class State(object):
         _lib.free_game_state(self.__state)
         self.__state = None
 
+    def render_frame(self, sim):
+        h = sim.get_frame_height()
+        w = sim.get_frame_width()
+        rgba = 1
+        size = h * w * rgba
+        frame = np.zeros(size)
+        frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
+        _lib.render_current_frame(frame_ptr, size, sim.get_simulator(), self.__state)
+        return np.reshape(frame, (w,h,rgba))
+
 class Toybox():
 
     def __init__(self, game_name):
@@ -95,13 +105,15 @@ class Toybox():
 
 
 if __name__ == "__main__":
-    # sim = _lib.alloc_game_simulator(bytes('breakout', 'utf-8'))
-    # print(sim)
-    # print('frame width', sim.get_frame_width())
-    # _lib.free_game_simulator(sim)
-    with Simulator('breakout') as sim:
+    with Simulator('amidar') as sim:
         with State(sim) as state:
             print('sim in main', sim)
             print('hahahahah')
             print('\tframe width:', sim.get_frame_width())
             print('\tframe height:', sim.get_frame_height())
+            frame = state.render_frame(sim)
+            from PIL import Image
+            img = Image.fromarray(frame, 'RGB')
+            img.save('my.png')
+            img.show()
+        

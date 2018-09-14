@@ -90,17 +90,35 @@ pub extern "C" fn frame_height(ptr: *mut WrapSimulator) -> i32 {
 
 
 #[no_mangle]
-pub extern "C" fn render_current_frame(numpy_pixels: &mut [u8], numpy_pixels_len : i32, simulator: &mut Simulation, state: &mut State) {
+pub extern "C" fn render_current_frame(
+    numpy_pixels: *mut u8, 
+    numpy_pixels_len: usize,
+    sim_ptr: *mut WrapSimulator, 
+    state_ptr: *mut WrapState) {
+
+    let WrapSimulator { simulator } = unsafe {
+        assert!(!sim_ptr.is_null());
+        &mut *sim_ptr
+    };
+    let WrapState { state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
     let (w, h) = simulator.game_size();
     let mut img = ImageBuffer::alloc(w, h);
     render_to_buffer(&mut img, &state.draw());
 
+    let mut dat = unsafe {
+        Vec::from_raw_parts(numpy_pixels, numpy_pixels_len, numpy_pixels_len)
+    };
+
     for i in 0..w {
         for j in 0..h {
             let k = (j * w + i) as usize;
-            numpy_pixels[k] = img.data[k];
+            dat[k] = img.data[k];
         }
     }
+    std::mem::forget(dat)
 }
 
 // void render_current_frame(void* numpy_pixels, size_t numpy_pixels_len, void* game_state, void* simulator);
