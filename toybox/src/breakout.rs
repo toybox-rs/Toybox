@@ -2,6 +2,7 @@ use super::graphics::{Color, Drawable};
 use super::vec2d::Vec2D;
 use super::Body2D;
 use super::Input;
+use super::digit_sprites::draw_score;
 
 use failure;
 use serde_json;
@@ -403,6 +404,8 @@ impl super::State for State {
             ball_r * 2,
             ball_r * 2,
         ));
+
+        output.extend(draw_score(self.points, screen::BOARD_RIGHT_X, 5));
 
         output
     }
