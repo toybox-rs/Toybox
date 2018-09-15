@@ -23,7 +23,7 @@ pub struct WrapState {
 
 
 #[no_mangle]
-pub extern "C" fn alloc_game_simulator(name: *const i8) -> *mut WrapSimulator {
+pub extern "C" fn simulator_alloc(name: *const i8) -> *mut WrapSimulator {
     let name : &CStr = unsafe { CStr::from_ptr(name) };
     let name : &str = name.to_str().expect("poop!");
     let simulator = toybox::get_simulation_by_name(name)
@@ -35,7 +35,7 @@ pub extern "C" fn alloc_game_simulator(name: *const i8) -> *mut WrapSimulator {
 }
 
 #[no_mangle]
-pub extern "C" fn free_game_simulator(ptr: *mut WrapSimulator) {
+pub extern "C" fn simulator_free(ptr: *mut WrapSimulator) {
     if ptr.is_null() {
         return;
     }
@@ -47,7 +47,7 @@ pub extern "C" fn free_game_simulator(ptr: *mut WrapSimulator) {
 
 // STATE ALLOC + FREE
 #[no_mangle]
-pub extern "C" fn alloc_game_state(ptr: *mut WrapSimulator) -> *mut WrapState {
+pub extern "C" fn state_alloc(ptr: *mut WrapSimulator) -> *mut WrapState {
     let WrapSimulator { simulator } = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -58,7 +58,7 @@ pub extern "C" fn alloc_game_state(ptr: *mut WrapSimulator) -> *mut WrapState {
 }
 
 #[no_mangle]
-pub extern "C" fn free_game_state(ptr: *mut WrapState) {
+pub extern "C" fn state_free(ptr: *mut WrapState) {
     if ptr.is_null() {
         return;
     }
@@ -70,7 +70,7 @@ pub extern "C" fn free_game_state(ptr: *mut WrapState) {
 
 // Need this information to initialize the numpy array in python
 #[no_mangle]
-pub extern "C" fn frame_width(ptr: *mut WrapSimulator) -> i32 {
+pub extern "C" fn simulator_frame_width(ptr: *mut WrapSimulator) -> i32 {
     let WrapSimulator { simulator } = unsafe { 
         assert!(!ptr.is_null());
         &mut *ptr
@@ -80,7 +80,7 @@ pub extern "C" fn frame_width(ptr: *mut WrapSimulator) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn frame_height(ptr: *mut WrapSimulator) -> i32 {
+pub extern "C" fn simulator_frame_height(ptr: *mut WrapSimulator) -> i32 {
     let WrapSimulator { simulator } = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -123,7 +123,7 @@ pub extern "C" fn render_current_frame(
 }
 
 #[no_mangle]
-pub extern "C" fn apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
+pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
     let WrapState { state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
@@ -133,6 +133,15 @@ pub extern "C" fn apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input)
         &mut *input_ptr
     };
     state.update_mut(*input);
+}
+
+#[no_mangle]
+pub extern "C" fn state_game_over(state_ptr: *mut WrapState) -> bool {
+    let WrapState { state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+    state.game_over()
 }
 
 // fn simulate_n_frames(game_state: &mut State, n: u32) {

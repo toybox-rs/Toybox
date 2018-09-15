@@ -59,34 +59,34 @@ class Input(ctypes.Structure):
             assert False
             
 
-_lib.alloc_game_simulator.argtypes = [ctypes.c_char_p]
-_lib.alloc_game_simulator.restype = ctypes.POINTER(WrapSimulator)
+_lib.simulator_alloc.argtypes = [ctypes.c_char_p]
+_lib.simulator_alloc.restype = ctypes.POINTER(WrapSimulator)
 
-_lib.alloc_game_state.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.alloc_game_state.restype = ctypes.POINTER(WrapState)
+_lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
+_lib.state_alloc.restype = ctypes.POINTER(WrapState)
 
-_lib.frame_width.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.frame_width.restype = ctypes.c_int
+_lib.simulator_frame_width.argtypes = [ctypes.POINTER(WrapSimulator)]
+_lib.simulator_frame_width.restype = ctypes.c_int
 
-_lib.frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.frame_height.restype = ctypes.c_int 
+_lib.simulator_frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
+_lib.simulator_frame_height.restype = ctypes.c_int 
 
 
 class Simulator(object):
     def __init__(self, game_name):
-        sim = _lib.alloc_game_simulator(game_name.encode('utf-8'))
+        sim = _lib.simulator_alloc(game_name.encode('utf-8'))
         # sim should be a pointer
         #self.__sim = ctypes.pointer(ctypes.c_int(sim))
         self.__sim = sim 
         print('sim', self.__sim)
-        self.__width = _lib.frame_width(sim)
-        self.__height = _lib.frame_height(sim)
+        self.__width = _lib.simulator_frame_width(sim)
+        self.__height = _lib.simulator_frame_height(sim)
         self.deleted = False
 
     def __del__(self):
         if not self.deleted:
             self.deleted = True
-            _lib.free_game_simulator(self.__sim)
+            _lib.simulator_free(self.__sim)
             self.__sim = None
 
     def __enter__(self):
@@ -107,7 +107,7 @@ class Simulator(object):
 
 class State(object):
     def __init__(self, sim):
-        self.__state = _lib.alloc_game_state(sim.get_simulator())
+        self.__state = _lib.state_alloc(sim.get_simulator())
         self.deleted = False
 
     def __enter__(self):
@@ -116,7 +116,7 @@ class State(object):
     def __del__(self):
         if not self.deleted:
             self.deleted = True
-            _lib.free_game_state(self.__state)
+            _lib.state_free(self.__state)
             self.__state = None
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -148,7 +148,7 @@ class Toybox():
         return self.state
 
     def apply_action(self, action_input_obj):
-        _lib.apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
+        _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
         new_frame = self.rstate.render_frame(self.rsimulator)
         self.state = (self.state[1], self.state[2], self.state[3], new_frame)
         return new_frame
@@ -176,7 +176,6 @@ if __name__ == "__main__":
     with Simulator('amidar') as sim:
         with State(sim) as state:
             print('sim in main', sim)
-            print('hahahahah')
             print('\tframe width:', sim.get_frame_width())
             print('\tframe height:', sim.get_frame_height())
             frame = state.render_frame(sim)
