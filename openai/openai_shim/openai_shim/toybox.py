@@ -1,9 +1,10 @@
 import ctypes
 import numpy as np
 from PIL import Image
+import time
 
-_lib_path = 'target/debug/libopenai.dylib'
-#_lib_path = 'target/release/libopenai.dylib'
+#_lib_path = 'target/debug/libopenai.dylib'
+_lib_path = 'target/release/libopenai.dylib'
 _lib = ctypes.CDLL(_lib_path)
 
 class WrapSimulator(ctypes.Structure):
@@ -73,7 +74,8 @@ _lib.simulator_frame_width.restype = ctypes.c_int
 _lib.simulator_frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.simulator_frame_height.restype = ctypes.c_int 
 
-_lib.state_game_over.restype = ctypes.c_bool
+_lib.state_lives.restype = ctypes.c_int
+_lib.state_score.restype = ctypes.c_int
 
 
 class Simulator(object):
@@ -108,6 +110,9 @@ class Simulator(object):
     def get_simulator(self):
         return self.__sim
 
+    def new_game(self):
+        return State(self)
+
 
 class State(object):
     def __init__(self, sim):
@@ -129,8 +134,12 @@ class State(object):
     def get_state(self):
         return self.__state
     
+    def lives(self):
+        return _lib.state_lives(self.__state)
+    def score(self):
+        return _lib.state_score(self.__state)
     def game_over(self):
-        return _lib.state_game_over(self.__state)
+        return self.lives() <= 0
 
     def render_frame(self, sim):
         h = sim.get_frame_height()
@@ -154,6 +163,11 @@ class Toybox():
     def get_state(self):
         return self.state
 
+    def new_game(self):
+        old_state = self.rstate
+        del old_state
+        self.rstate = self.rsimulator.new_game()
+
     def apply_action(self, action_input_obj):
         _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
         new_frame = self.rstate.render_frame(self.rsimulator)
@@ -165,7 +179,13 @@ class Toybox():
         img.save(path)
 
     def get_score(self):
-        return -1
+        return self.rstate.score()
+    
+    def get_lives(self):
+        return self.rstate.lives()
+    
+    def game_over(self):
+        return self.get_lives() <= 0
 
     def __del__(self):
         if not self.deleted:
@@ -192,21 +212,22 @@ if __name__ == "__main__":
             frame = state.render_frame(sim)
             print(frame[0])
     
-    with Toybox('amidar') as tb:
-        for i in range(100):
-            move_up = Input()
-            move_up.up = True
-            tb.apply_action(move_up)
-            tb.save_frame_image('amidar%03d.png' % i)
-            if tb.rstate.game_over():
-                print(i, "amidar.game_over?", tb.rstate.game_over())
-                break
-    
-    with Toybox('breakout') as tb:
-        for i in range(100):
-            tb.apply_action(Input())
-            tb.save_frame_image('breakout%03d.png' % i)
-            if tb.rstate.game_over():
-                print(i, "tb.game_over?", tb.rstate.game_over())
-                break
+    # benchmark our games:
+    for game in ['amidar', 'breakout']:
+        with Toybox(game) as tb:
+            scores = []
+            startTime = time.time()
+            N = 10000
+            for i in range(N):
+                move_up = Input()
+                move_up.up = True
+                tb.apply_action(move_up)
+                #tb.save_frame_image('amidar%03d.png' % i)
+                if tb.game_over():
+                    scores.append(tb.get_score())
+                    tb.new_game()
+            endTime = time.time()
+            FPS = N / (endTime - startTime)
+            print("%s-FPS: %3.4f" % (game, FPS))
+            print("\t", scores)
         

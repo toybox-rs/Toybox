@@ -68,6 +68,7 @@ pub struct Config {
     ball_color: Color,
     row_colors: Vec<Color>,
     row_scores: Vec<i32>,
+    start_lives: i32
 }
 impl Config {
     fn unique_colors(&self) -> Vec<&Color> {
@@ -78,6 +79,16 @@ impl Config {
         // Note, ball and paddle are the same and that's OK for breakout.
         output
     }
+    fn start_paddle(&self) -> Body2D {
+        let (w,h) = screen::GAME_SIZE;
+        Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into())
+    }
+    fn start_ball(&self) -> Body2D {
+        let (w,h) = screen::GAME_SIZE;
+        let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
+        ball.velocity = Vec2D::from_polar(screen::BALL_SPEED_START, 0.5);
+        ball
+    }
 }
 impl Default for Config {
     fn default() -> Self {
@@ -87,7 +98,8 @@ impl Default for Config {
             paddle_color: (&screen::PADDLE_COLOR).into(),
             ball_color: (&screen::BALL_COLOR).into(),
             row_colors: screen::ROW_COLORS.iter().cloned().map(|c| c.into()).collect(),
-            row_scores: screen::ROW_SCORES.iter().cloned().collect()
+            row_scores: screen::ROW_SCORES.iter().cloned().collect(),
+            start_lives: 3,
         }
     }
 }
@@ -129,7 +141,7 @@ impl Brick {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
     pub config: Config,
-    pub game_over: bool,
+    pub lives: i32,
     pub points: i32,
     /// ball position describes the center of the ball.
     pub ball: Body2D,
@@ -159,8 +171,6 @@ impl super::Simulation for Breakout {
     fn new_game(&self) -> Box<super::State> {
         let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
-        let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
-        ball.velocity = Vec2D::from_polar(screen::BALL_SPEED_START, 0.5);
 
         let offset = Vec2D::new(
             screen::BOARD_LEFT_X.into(),
@@ -182,11 +192,11 @@ impl super::Simulation for Breakout {
 
         Box::new(State {
             config: self.config.clone(),
-            game_over: false,
-            ball,
+            lives: self.config.start_lives,
+            ball: self.config.start_ball(),
+            paddle: self.config.start_paddle(),
             points: 0,
             ball_radius: 3.0,
-            paddle: Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into()),
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
             paddle_speed: 4.0,
             bricks,
@@ -240,8 +250,10 @@ impl State {
 
             // check lose?
             if self.ball.position.y + self.ball_radius > screen::BOARD_BOTTOM_Y.into() {
-                // TODO, lose
-                self.game_over = true;
+                self.lives-=1;
+                self.ball = self.config.start_ball();
+                self.paddle = self.config.start_paddle();
+                return;
             }
         } else {
             // bounce ceiling?
@@ -291,8 +303,11 @@ impl State {
 }
 
 impl super::State for State {
-    fn game_over(&self) -> bool {
-        self.game_over
+    fn lives(&self) -> i32 {
+        self.lives
+    }
+    fn score(&self) -> i32 {
+        self.points
     }
 
     /// Mutably update the game state.
@@ -378,7 +393,7 @@ impl super::State for State {
         ));
         */
 
-        if self.game_over {
+        if self.lives <= 0 {
             return output;
         }
 

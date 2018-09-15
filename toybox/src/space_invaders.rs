@@ -154,7 +154,8 @@ impl Actor {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
-    pub game_over: bool,
+    pub lives: i32,
+    pub score: i32,
     /// Ship is a rectangular actor (logically).
     pub ship: Actor,
     /// Emulate the fact that Atari could only have one laser at a time (and it "recharges" faster if you hit the front row...)
@@ -181,7 +182,8 @@ impl State {
             shields.push(SHIELD_SPRITE.translate(*x, *y))
         }
         State {
-            game_over: false,
+            lives: 0,
+            score: 0,
             ship: Actor::ship(player_start_x, player_start_y),
             ship_laser: None,
             shields,
@@ -206,8 +208,11 @@ impl super::Simulation for SpaceInvaders {
 }
 
 impl super::State for State {
-    fn game_over(&self) -> bool {
-        self.game_over
+    fn lives(&self) -> i32 {
+        self.lives
+    }
+    fn score(&self) -> i32 {
+        self.score
     }
     fn update_mut(&mut self, buttons: Input) {
         self.ship.movement = if buttons.left {
@@ -260,7 +265,7 @@ impl super::State for State {
             screen::GAME_SIZE.1 - screen::SKY_TO_GROUND,
         ));
 
-        if self.game_over() {
+        if self.lives() <= 0 {
             return output;
         }
 

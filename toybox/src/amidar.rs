@@ -31,6 +31,7 @@ pub struct Config {
     painted_color: Color,
     enemy_color: Color,
     inner_painted_color: Color,
+    start_lives: i32,
 }
 
 impl Config {
@@ -48,6 +49,7 @@ impl Default for Config {
             painted_color: Color::rgb(255, 255, 30),
             enemy_color: Color::rgb(255, 50, 100),
             inner_painted_color: Color::rgb(255, 255, 0),
+            start_lives: 3,
         }
     }
 }
@@ -616,9 +618,8 @@ impl Board {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
     pub config: Config,
-    pub dead: bool,
-    pub game_over: bool,
     pub score: i32,
+    pub lives: i32,
     pub box_bonus: i32,
     pub player: Mob,
     pub player_start: TilePoint,
@@ -630,8 +631,6 @@ impl State {
     pub fn try_new() -> Result<State, Error> {
         let board = Board::fast_new();
 
-        println!("Amidar Board Size: {}x{}", board.width, board.height);
-
         let mut enemies = Vec::new();
         for (enemy_index, _) in DEFAULT_ENEMY_ROUTES.iter().enumerate() {
             enemies.push(board.make_enemy(enemy_index as u32))
@@ -639,10 +638,11 @@ impl State {
         let player_start = TilePoint::new(31, 15);
         let player = Mob::new_player(player_start.to_world());
 
+        let config = Config::default();
+
         let mut state = State {
-            config: Config::default(),
-            dead: false,
-            game_over: false,
+            config: config.clone(),
+            lives: config.start_lives,
             score: 0,
             box_bonus: 50,
             player,
@@ -661,6 +661,7 @@ impl State {
         for enemy in &mut self.enemies {
             enemy.reset(&self.player_start, &self.board);
         }
+        self.lives -= 1;
     }
     pub fn board_size(&self) -> WorldPoint {
         let th = self.board.height as i32;
@@ -684,8 +685,11 @@ impl super::Simulation for Amidar {
 }
 
 impl super::State for State {
-    fn game_over(&self) -> bool {
-        self.game_over
+    fn lives(&self) -> i32 {
+        self.lives
+    }
+    fn score(&self) -> i32 {
+        self.score
     }
     fn update_mut(&mut self, buttons: Input) {
         if let Some(score_change) = self.player.update(buttons, &mut self.board) {
@@ -695,18 +699,18 @@ impl super::State for State {
             self.score += self.box_bonus * score_change.num_boxes;
         }
 
+        let mut dead = false;
         for enemy in &mut self.enemies {
             enemy.update(Input::default(), &mut self.board);
 
             if self.player.position.to_tile() == enemy.position.to_tile() {
-                self.dead = true;
+                dead = true;
                 break;
             }
         }
 
-        if self.dead {
+        if dead {
             self.reset();
-            self.dead = false;
         }
     }
 
@@ -719,7 +723,7 @@ impl super::State for State {
             screen::GAME_SIZE.0,
             screen::GAME_SIZE.1,
         ));
-        if self.game_over {
+        if self.lives <= 0 {
             return output;
         }
 
@@ -731,7 +735,6 @@ impl super::State for State {
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
                 let tile_color = match tile {
-                    // TODO: change this color:
                     Tile::Painted => self.config.painted_color,
                     Tile::Unpainted => self.config.unpainted_color,
                     Tile::Empty => continue,

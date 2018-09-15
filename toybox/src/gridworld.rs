@@ -85,7 +85,7 @@ impl Default for Config {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
     pub game_over: bool,
-    pub score: u32,
+    pub score: i32,
     pub reward_becomes: usize,
     pub tiles: Vec<TileConfig>,
     pub grid: Vec<Vec<usize>>,
@@ -177,8 +177,15 @@ impl super::Simulation for GridWorld {
 }
 
 impl super::State for State {
-    fn game_over(&self) -> bool {
-        self.game_over
+    fn lives(&self) -> i32 {
+        if self.game_over {
+            1
+        } else {
+            0
+        }
+    }
+    fn score(&self) -> i32 {
+        self.score
     }
     fn update_mut(&mut self, buttons: Input) {
         // Must take an action in GridWorld.

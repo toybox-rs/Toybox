@@ -42,7 +42,6 @@ pub extern "C" fn simulator_free(ptr: *mut WrapSimulator) {
     unsafe {
         Box::from_raw(ptr);
     }
-    println!("Freed the simulator...")
 }
 
 // STATE ALLOC + FREE
@@ -65,7 +64,6 @@ pub extern "C" fn state_free(ptr: *mut WrapState) {
     unsafe {
         Box::from_raw(ptr);
     }
-    println!("Freed the state...")
 }
 
 // Need this information to initialize the numpy array in python
@@ -140,12 +138,21 @@ pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *mut 
 }
 
 #[no_mangle]
-pub extern "C" fn state_game_over(state_ptr: *mut WrapState) -> bool {
+pub extern "C" fn state_lives(state_ptr: *mut WrapState) -> i32 {
     let WrapState { state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
     };
-    state.game_over()
+    state.lives()
+}
+
+#[no_mangle]
+pub extern "C" fn state_score(state_ptr: *mut WrapState) -> i32 {
+    let WrapState { state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+    state.score()
 }
 
 // fn simulate_n_frames(game_state: &mut State, n: u32) {

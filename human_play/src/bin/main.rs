@@ -32,7 +32,7 @@ impl quicksilver::State for AbstractGame {
     }
     fn update(&mut self, window: &mut Window) {
         let buttons = human_play::process_keys(window);
-        if self.state.game_over() {
+        if self.state.lives() <= 0 {
             self.state = self.factory.new_game();
             return;
         }

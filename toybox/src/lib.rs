@@ -32,8 +32,10 @@ pub use input::Input;
 
 /// This trait models a single frame state for a Simulation.
 pub trait State {
-    /// When true, this state should be replaced with a call to new_game() on the simulation.
-    fn game_over(&self) -> bool;
+    /// When <= 0, this state should be replaced with a call to new_game() on the simulation.
+    fn lives(&self) -> i32;
+    /// Get the score from the game, i32 allows for negative scores.
+    fn score(&self) -> i32;
     /// To update internally to the next state, we pass buttons to internal logic.
     fn update_mut(&mut self, buttons: Input);
     /// Any state can create a vector of drawable objects to present itself.
