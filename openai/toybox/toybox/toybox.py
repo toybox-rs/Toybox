@@ -38,7 +38,7 @@ class Input(ctypes.Structure):
         self.button1 = False
         self.button2 = False
 
-    def set_input(self, input_dir, button):
+    def set_input(self, input_dir, button=None):
         self._set_default()
 
         # reset all directions
@@ -186,6 +186,12 @@ class Toybox():
         old_state = self.rstate
         del old_state
         self.rstate = self.rsimulator.new_game()
+
+    def get_height(self):
+        return self.rsimulator.get_frame_height()
+
+    def get_width(self):
+        return self.rsimulator.get_frame_width()
 
     def apply_action(self, action_input_obj):
         _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
