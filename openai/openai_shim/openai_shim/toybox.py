@@ -2,6 +2,7 @@ import ctypes
 import numpy as np
 
 _lib_path = 'target/debug/libopenai.dylib'
+#_lib_path = 'target/release/libopenai.dylib'
 _lib = ctypes.CDLL(_lib_path)
 
 class WrapSimulator(ctypes.Structure):
@@ -71,6 +72,8 @@ _lib.simulator_frame_width.restype = ctypes.c_int
 _lib.simulator_frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.simulator_frame_height.restype = ctypes.c_int 
 
+_lib.state_game_over.restype = ctypes.c_bool
+
 
 class Simulator(object):
     def __init__(self, game_name):
@@ -131,12 +134,12 @@ class State(object):
     def render_frame(self, sim):
         h = sim.get_frame_height()
         w = sim.get_frame_width()
-        rgba = 1
-        size = h * w * rgba
-        frame = np.zeros(size)
-        frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_int))
+        rgba = 4
+        size = h * w  * rgba
+        frame = np.zeros(size, dtype='uint8')
+        frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         _lib.render_current_frame(frame_ptr, size, sim.get_simulator(), self.__state)
-        return np.reshape(frame, (w,h,rgba))
+        return np.reshape(frame, (h,w,rgba))
 
 class Toybox():
 
@@ -176,20 +179,30 @@ class Toybox():
 
 
 if __name__ == "__main__":
-    with Simulator('amidar') as sim:
+    with Simulator('breakout') as sim:
         with State(sim) as state:
             print('sim in main', sim)
             print('\tframe width:', sim.get_frame_width())
             print('\tframe height:', sim.get_frame_height())
             frame = state.render_frame(sim)
+            print(frame[0])
             from PIL import Image
-            img = Image.fromarray(frame, 'RGB')
+            img = Image.fromarray(frame, 'RGBA') # 8-bit pixels, grayscale is L, for some reason
             img.save('my.png')
+    
+    with Toybox('amidar') as tb:
+        for i in range(100):
+            move_up = Input()
+            move_up.up = True
+            tb.apply_action(move_up)
+            if tb.rstate.game_over():
+                print(i, "amidar.game_over?", tb.rstate.game_over())
+                break
+    
     with Toybox('breakout') as tb:
-
         for i in range(100):
             tb.apply_action(Input())
-            print(i, "tb.game_over?", tb.rstate.game_over())
             if tb.rstate.game_over():
+                print(i, "tb.game_over?", tb.rstate.game_over())
                 break
         

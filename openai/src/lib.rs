@@ -109,16 +109,20 @@ pub extern "C" fn render_current_frame(
     let mut img = ImageBuffer::alloc(w, h);
     render_to_buffer(&mut img, &state.draw());
 
-    let mut dat = unsafe {
-        Vec::from_raw_parts(numpy_pixels, numpy_pixels_len, numpy_pixels_len)
+    let mut dat: Vec<u8> = unsafe {
+        Vec::from_raw_parts(numpy_pixels, 0, numpy_pixels_len)
     };
+    assert_eq!(numpy_pixels_len, img.data.len());
+    assert_eq!(dat.len(), 0);
+    dat.extend(&img.data);
+    assert_eq!(dat.len(), img.data.len());
 
-    for i in 0..w {
-        for j in 0..h {
-            let k = (j * w + i) as usize;
-            dat[k] = img.data[k];
-        }
-    }
+    //for i in 0..h {
+        //for j in 0..w {
+            //let k = (j * w + i) as usize;
+            //dat[k] = img.data[k];
+        //}
+    //}
     std::mem::forget(dat)
 }
 
