@@ -49,7 +49,7 @@ impl Default for Config {
             painted_color: Color::rgb(255, 255, 30),
             enemy_color: Color::rgb(255, 50, 100),
             inner_painted_color: Color::rgb(255, 255, 0),
-            start_lives: 3,
+            start_lives: 1,
         }
     }
 }

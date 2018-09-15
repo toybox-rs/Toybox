@@ -99,7 +99,7 @@ impl Default for Config {
             ball_color: (&screen::BALL_COLOR).into(),
             row_colors: screen::ROW_COLORS.iter().cloned().map(|c| c.into()).collect(),
             row_scores: screen::ROW_SCORES.iter().cloned().collect(),
-            start_lives: 3,
+            start_lives: 1,
         }
     }
 }
