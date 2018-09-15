@@ -124,6 +124,9 @@ class State(object):
 
     def get_state(self):
         return self.__state
+    
+    def game_over(self):
+        return _lib.state_game_over(self.__state)
 
     def render_frame(self, sim):
         h = sim.get_frame_height()
@@ -183,5 +186,10 @@ if __name__ == "__main__":
             img = Image.fromarray(frame, 'RGB')
             img.save('my.png')
     with Toybox('breakout') as tb:
-        tb.apply_action(Input())
+
+        for i in range(100):
+            tb.apply_action(Input())
+            print(i, "tb.game_over?", tb.rstate.game_over())
+            if tb.rstate.game_over():
+                break
         
