@@ -8,3 +8,15 @@ When running on Linux, you should be able to remove the path part of the Python 
 
 
 Finally, compile the R code using `cargo build --release`.
+
+## Using OpenAI Gym baselines right now
+
+In this directory, checkout the baselines repo.
+
+    git clone https://github.com/openai/baselines.git
+
+Follow their instructions for installing dependencies. Then, run:
+
+    ./start_python toybox_baselines.py --alg=acer --env=toybox-breakout-v0 --num_timesteps=10000 --save_path=$PWD/breakout1e4.model
+
+FPS is quite low on my Air because tensorflow-CPU is slow on it.

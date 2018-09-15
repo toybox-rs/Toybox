@@ -1,8 +1,8 @@
 import gym 
-import toybox.envs as ai
 from gym import error, spaces, utils
 from gym.utils import seeding
-from openai_shim.toybox import Toybox, Input
+from toybox.envs.constants import *
+from toybox.toybox import Toybox, Input
 
 
 class BreakoutEnv(gym.Env):
@@ -13,17 +13,16 @@ class BreakoutEnv(gym.Env):
     self.toybox = Toybox('breakout', grayscale)
     self.score = self.toybox.get_score()
 
-    self._action_set = [ai.NOOP_ID, ai.LEFT_ID, ai.RIGHT_ID]
-    self._pixel_high = 100 if grayscale else 255
+    self._action_set = [NOOP_ID, LEFT_ID, RIGHT_ID]
+    self._pixel_high = 255
     self._height = self.toybox.get_height()
     self._width = self.toybox.get_width()
     self._rgba = 1 if grayscale else 4 if alpha else 3
     # Not sure if we need to wrap for grayscale? That's why I set rgba anyway
-    self._dim = (self._height, self._width) if grayscale \
-      else (self._height, self._width, self._rgba) 
+    self._dim = (self._height, self._width, self._rgba) 
 
     self.action_space = spaces.Discrete(len(self._action_set))
-    self.observation_space = spaces.Box(low=0, high=self._pixel_high, shape=self._dim)
+    self.observation_space = spaces.Box(low=0, high=self._pixel_high, shape=self._dim, dtype='uint8')
     self.reward_range = (0, float('inf'))
 
 
@@ -72,14 +71,14 @@ class BreakoutEnv(gym.Env):
 
   def _action_to_input(self, action):
     input = Input()
-    if action == ai.NOOP_STR or action == ai.NOOP_ID:
+    if action == NOOP_STR or action == NOOP_ID:
       return input
-    elif action == ai.RIGHT_STR or action == ai.RIGHT_ID:
-      input.set_input(ai.RIGHT_STR)
-    elif action == ai.LEFT_STR or action == ai.LEFT_ID:
-      input.set_input(ai.LEFT_STR)
+    elif action == RIGHT_STR or action == RIGHT_ID:
+      input.set_input(RIGHT_STR)
+    elif action == LEFT_STR or action == LEFT_ID:
+      input.set_input(LEFT_STR)
     else:
       action = action if type(action) == str \
-        else ai.ACTION_ID_TO_STR_LOOKUP[action]
+        else ACTION_ID_TO_STR_LOOKUP[action]
       raise ValueError('Unsupported action: %s' % action)
     return input

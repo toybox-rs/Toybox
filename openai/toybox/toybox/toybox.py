@@ -15,6 +15,7 @@ class WrapState(ctypes.Structure):
 
 
 # I don't know how actions will be issued, so let's have lots of options available
+NOOP = 'noop'
 LEFT = "left"
 RIGHT = "right"
 UP = "up"
@@ -38,11 +39,13 @@ class Input(ctypes.Structure):
         self.button1 = False
         self.button2 = False
 
-    def set_input(self, input_dir, button=None):
+    def set_input(self, input_dir, button=NOOP):
         self._set_default()
 
         # reset all directions
-        if input_dir == LEFT:
+        if input_dir == NOOP:
+            pass
+        elif input_dir == LEFT:
             self.left = True
         elif input_dir == RIGHT:
             self.right = True
@@ -51,12 +54,15 @@ class Input(ctypes.Structure):
         elif input_dir == DOWN:
             self.down = True
         else:
+            print('input_dir:', input_dir)
             assert False
 
         # reset buttons
-        if button == BUTTON1:
+        if button == NOOP:
+            pass
+        elif button == BUTTON1:
             self.button1 = True
-        if button == BUTTON2:
+        elif button == BUTTON2:
             self.button2 = True
         else:
             assert False
@@ -167,7 +173,7 @@ class State(object):
         frame = np.zeros(size, dtype='uint8')
         frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         _lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
-        return np.reshape(frame, (h,w))
+        return np.reshape(frame, (h,w,1))
 
 class Toybox():
 
