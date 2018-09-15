@@ -55,7 +55,8 @@ pub mod screen {
     pub const PADDLE_START_Y: i32 = FRAME_TO_PADDLE + BOARD_TOP_Y;
     pub const PADDLE_START_SIZE: (i32, i32) = (48, 6);
 
-    pub const BALL_ANGLE_MAX: f64 = 75.0;
+    pub const BALL_ANGLE_MIN: f64 = 30.0;
+    pub const BALL_ANGLE_RANGE: f64 = 120.0;
     pub const BALL_SPEED_START: f64 = 4.0;
 }
 
@@ -224,13 +225,17 @@ impl State {
             let paddle_ball_same_y =
                 (self.paddle.position.y - self.ball.position.y).abs() < self.ball_radius;
             if paddle_ball_same_x && paddle_ball_same_y {
-                // self.ball.velocity.y *= -1.0;
-                // get middle of paddle
-                let paddle_normalized_relative_intersect_x = (self.paddle.position.x - self.ball.position.x) / (self.paddle_width / 2.0);
-                let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_MAX;
+                // get x location of ball hit relative to paddle
+                let ball_hit_x = self.ball.position.x - (self.paddle.position.x - (self.paddle_width/ 2.0));
+                // get normalized location of ball hit along paddle
+                let paddle_normalized_relative_intersect_x =  1.0 - ball_hit_x / self.paddle_width;
+                // convert this normalized parameter to the degree of the bounce angle
+                let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE + screen::BALL_ANGLE_MIN;
 
-                self.ball.velocity = Vec2D::from_polar(4.0, bounce_angle)
-
+                self.ball.velocity = Vec2D::from_polar(4.0, bounce_angle.to_radians());
+                // calculations use non-graphics polar orientation
+                // to quickly fix, we reflect over the x-axis
+                self.ball.velocity.y *= -1.0;
             }
 
             // check lose?
