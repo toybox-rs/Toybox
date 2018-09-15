@@ -1,5 +1,6 @@
 /// Think NES-style controls: directions, and two buttons.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[repr(C)]
 pub struct Input {
     pub left: bool,
     pub right: bool,

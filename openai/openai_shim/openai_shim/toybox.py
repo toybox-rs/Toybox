@@ -81,13 +81,19 @@ class Simulator(object):
         print('sim', self.__sim)
         self.__width = _lib.frame_width(sim)
         self.__height = _lib.frame_height(sim)
+        self.deleted = False
+
+    def __del__(self):
+        if not self.deleted:
+            self.deleted = True
+            _lib.free_game_simulator(self.__sim)
+            self.__sim = None
 
     def __enter__(self):
         return self
     
     def __exit__(self, exc_type, exc_value, traceback):
-        _lib.free_game_simulator(self.__sim)
-        self.__sim = None
+        self.__del__()
 
     def get_frame_width(self):
         return self.__width
@@ -102,13 +108,19 @@ class Simulator(object):
 class State(object):
     def __init__(self, sim):
         self.__state = _lib.alloc_game_state(sim.get_simulator())
+        self.deleted = False
 
     def __enter__(self):
         return self
 
+    def __del__(self):
+        if not self.deleted:
+            self.deleted = True
+            _lib.free_game_state(self.__state)
+            self.__state = None
+
     def __exit__(self, exc_type, exc_value, traceback):
-        _lib.free_game_state(self.__state)
-        self.__state = None
+        self.__del__()
 
     def get_state(self):
         return self.__state
@@ -130,12 +142,13 @@ class Toybox():
         self.rstate = State(self.rsimulator)
         # OpenAI state is a 4-frame sequence
         self.state = tuple([self.rstate.render_frame(self.rsimulator)] * 4)
+        self.deleted = False
 
     def get_state(self):
         return self.state
 
     def apply_action(self, action_input_obj):
-        _lib.apply_action(self.rstate.get_state(), action_input_obj)
+        _lib.apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
         new_frame = self.rstate.render_frame(self.rsimulator)
         self.state = (self.state[1], self.state[2], self.state[3], new_frame)
         return new_frame
@@ -144,7 +157,19 @@ class Toybox():
         return -1
 
     def __del__(self):
-        pass
+        if not self.deleted:
+            self.deleted = True
+            del self.rstate
+            self.rstate = None
+            del self.rsimulator
+            self.rsimulator = None
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.__del__()
+
 
 
 if __name__ == "__main__":
@@ -158,6 +183,6 @@ if __name__ == "__main__":
             from PIL import Image
             img = Image.fromarray(frame, 'RGB')
             img.save('my.png')
-    tb = Toybox('breakout')
-    tb.apply_action(Input())
+    with Toybox('breakout') as tb:
+        tb.apply_action(Input())
         
