@@ -8,23 +8,23 @@ use failure;
 use serde_json;
 
 pub mod screen {
-    pub const GAME_SIZE: (i32, i32) = (480, 319);
-    pub const FRAME_OFFSET: i32 = 31;
-    pub const FRAME_THICKNESS: i32 = 23;
-    pub const FRAME_SUPPORT_WIDTH: i32 = 24;
+    pub const GAME_SIZE: (i32, i32) = (240, 160);
+    pub const FRAME_OFFSET: i32 = 15;
+    pub const FRAME_THICKNESS: i32 = 12;
+    pub const FRAME_SUPPORT_WIDTH: i32 = 12;
 
-    pub const FRAME_RIGHT_SUPPORT: (i32, i32) = (24, 9);
-    pub const FRAME_LEFT_SUPPORT: (i32, i32) = (24, 11);
-    pub const FRAME_LEFT_HEIGHT: i32 = 269;
-    pub const FRAME_RIGHT_HEIGHT: i32 = 267;
+    pub const FRAME_RIGHT_SUPPORT: (i32, i32) = (12, 4);
+    pub const FRAME_LEFT_SUPPORT: (i32, i32) = (12, 4);
+    pub const FRAME_LEFT_HEIGHT: i32 = 135;
+    pub const FRAME_RIGHT_HEIGHT: i32 = 135;
     pub const FRAME_LEFT_SUPPORT_COLOR: (u8, u8, u8) = (80, 156, 128);
     pub const FRAME_RIGHT_SUPPORT_COLOR: (u8, u8, u8) = (192, 88, 88);
 
-    pub const FRAME_TO_PADDLE: i32 = 236;
+    pub const FRAME_TO_PADDLE: i32 = 118;
 
     pub const FRAME_COLOR: (u8, u8, u8) = (144, 144, 144);
 
-    pub const SCORE_CHAR_SIZE: (i32, i32) = (36, 15);
+    pub const SCORE_CHAR_SIZE: (i32, i32) = (18, 7);
 
     pub const BOARD_LEFT_X: i32 = FRAME_SUPPORT_WIDTH;
     pub const BOARD_RIGHT_X: i32 = GAME_SIZE.0 - FRAME_SUPPORT_WIDTH;
@@ -46,18 +46,18 @@ pub mod screen {
     pub const PADDLE_COLOR: (u8, u8, u8) = (200, 72, 72);
     pub const BALL_COLOR: (u8, u8, u8) = (200, 72, 72);
 
-    pub const ROOF_SPACING: i32 = 37;
-    pub const FIELD_WIDTH: i32 = 432;
-    pub const BRICK_HEIGHT: i32 = 9;
-    pub const BRICK_WIDTH: i32 = 24;
+    pub const ROOF_SPACING: i32 = 18;
+    pub const FIELD_WIDTH: i32 = 216;
+    pub const BRICK_HEIGHT: i32 = 4;
+    pub const BRICK_WIDTH: i32 = 12;
     pub const BRICKS_ACROSS: i32 = (FIELD_WIDTH / BRICK_WIDTH);
 
     pub const PADDLE_START_Y: i32 = FRAME_TO_PADDLE + BOARD_TOP_Y;
-    pub const PADDLE_START_SIZE: (i32, i32) = (48, 6);
+    pub const PADDLE_START_SIZE: (i32, i32) = (24, 3);
 
     pub const BALL_ANGLE_MIN: f64 = 30.0;
     pub const BALL_ANGLE_RANGE: f64 = 120.0;
-    pub const BALL_SPEED_START: f64 = 4.0;
+    pub const BALL_SPEED_START: f64 = 2.0;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -196,9 +196,9 @@ impl super::Simulation for Breakout {
             ball: self.config.start_ball(),
             paddle: self.config.start_paddle(),
             points: 0,
-            ball_radius: 3.0,
+            ball_radius: 2.0,
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
-            paddle_speed: 4.0,
+            paddle_speed: 2.0,
             bricks,
         })
     }
@@ -242,7 +242,7 @@ impl State {
                 // convert this normalized parameter to the degree of the bounce angle
                 let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE + screen::BALL_ANGLE_MIN;
 
-                self.ball.velocity = Vec2D::from_polar(4.0, bounce_angle.to_radians());
+                self.ball.velocity = Vec2D::from_polar(self.ball.velocity.magnitude(), bounce_angle.to_radians());
                 // calculations use non-graphics polar orientation
                 // to quickly fix, we reflect over the x-axis
                 self.ball.velocity.y *= -1.0;
