@@ -6,7 +6,7 @@ extern crate toybox;
 
 
 use toybox::{Simulation, State};
-use toybox::graphics::{render_to_buffer, ImageBuffer};
+use toybox::graphics::{ImageBuffer, GrayscaleBuffer};
 use toybox::Input;
 use std::boxed::Box;
 use std::ffi::CStr;
@@ -92,6 +92,7 @@ pub extern "C" fn simulator_frame_height(ptr: *mut WrapSimulator) -> i32 {
 pub extern "C" fn render_current_frame(
     numpy_pixels: *mut u8, 
     numpy_pixels_len: usize,
+    grayscale: bool,
     sim_ptr: *mut WrapSimulator, 
     state_ptr: *mut WrapState) {
 
@@ -104,23 +105,25 @@ pub extern "C" fn render_current_frame(
         &mut *state_ptr
     };
     let (w, h) = simulator.game_size();
-    let mut img = ImageBuffer::alloc(w, h);
-    render_to_buffer(&mut img, &state.draw());
+
+    let imgdata = if grayscale {
+        let mut img = GrayscaleBuffer::alloc(w, h);
+        img.render(&state.draw());
+        img.data
+    } else {
+        let mut img = ImageBuffer::alloc(w, h);
+        img.render(&state.draw());
+        img.data
+    };
 
     let mut dat: Vec<u8> = unsafe {
         Vec::from_raw_parts(numpy_pixels, 0, numpy_pixels_len)
     };
-    assert_eq!(numpy_pixels_len, img.data.len());
+    assert_eq!(numpy_pixels_len, imgdata.len());
     assert_eq!(dat.len(), 0);
-    dat.extend(&img.data);
-    assert_eq!(dat.len(), img.data.len());
-
-    //for i in 0..h {
-        //for j in 0..w {
-            //let k = (j * w + i) as usize;
-            //dat[k] = img.data[k];
-        //}
-    //}
+    // Copy pixels at once (let LLVM/Rust optimize it as a linear copy).
+    dat.extend(&imgdata);
+    assert_eq!(dat.len(), imgdata.len());
     std::mem::forget(dat)
 }
 

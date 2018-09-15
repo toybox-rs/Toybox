@@ -76,6 +76,9 @@ _lib.simulator_frame_height.restype = ctypes.c_int
 
 _lib.state_lives.restype = ctypes.c_int
 _lib.state_score.restype = ctypes.c_int
+    
+_lib.render_current_frame.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p]
+ #(frame_ptr, size, sim.get_simulator(), self.__state)
 
 
 class Simulator(object):
@@ -141,23 +144,39 @@ class State(object):
     def game_over(self):
         return self.lives() <= 0
 
-    def render_frame(self, sim):
+    def render_frame(self, sim, grayscale=True):
+        if grayscale:
+            return self.render_frame_grayscale(sim)
+        else:
+            return self.render_frame_color(sim)
+
+    def render_frame_color(self, sim):
         h = sim.get_frame_height()
         w = sim.get_frame_width()
         rgba = 4
         size = h * w  * rgba
         frame = np.zeros(size, dtype='uint8')
         frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-        _lib.render_current_frame(frame_ptr, size, sim.get_simulator(), self.__state)
+        _lib.render_current_frame(frame_ptr, size, False, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,rgba))
+    
+    def render_frame_grayscale(self, sim):
+        h = sim.get_frame_height()
+        w = sim.get_frame_width()
+        size = h * w 
+        frame = np.zeros(size, dtype='uint8')
+        frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        _lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
+        return np.reshape(frame, (h,w))
 
 class Toybox():
 
-    def __init__(self, game_name):
+    def __init__(self, game_name, grayscale=True):
         self.rsimulator = Simulator(game_name)
         self.rstate = State(self.rsimulator)
+        self.grayscale = grayscale
         # OpenAI state is a 4-frame sequence
-        self.state = tuple([self.rstate.render_frame(self.rsimulator)] * 4)
+        self.state = tuple([self.rstate.render_frame(self.rsimulator, self.grayscale)] * 4)
         self.deleted = False
 
     def get_state(self):
@@ -170,12 +189,16 @@ class Toybox():
 
     def apply_action(self, action_input_obj):
         _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
-        new_frame = self.rstate.render_frame(self.rsimulator)
+        new_frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
         self.state = (self.state[1], self.state[2], self.state[3], new_frame)
         return new_frame
 
     def save_frame_image(self, path):
-        img = Image.fromarray(self.state[3], 'RGBA') 
+        img = None
+        if self.grayscale:
+            img = Image.fromarray(self.state[3], 'L') 
+        else:
+            img = Image.fromarray(self.state[3], 'RGBA')
         img.save(path)
 
     def get_score(self):
@@ -201,28 +224,18 @@ class Toybox():
     def __exit__(self, exc_type, exc_value, traceback):
         self.__del__()
 
-
-
 if __name__ == "__main__":
-    with Simulator('breakout') as sim:
-        with State(sim) as state:
-            print('sim in main', sim)
-            print('\tframe width:', sim.get_frame_width())
-            print('\tframe height:', sim.get_frame_height())
-            frame = state.render_frame(sim)
-            print(frame[0])
-    
-    # benchmark our games:
+    # benchmark our games (in grayscale)
     for game in ['amidar', 'breakout']:
         with Toybox(game) as tb:
             scores = []
             startTime = time.time()
-            N = 10000
+            N = 40000
             for i in range(N):
                 move_up = Input()
                 move_up.up = True
                 tb.apply_action(move_up)
-                #tb.save_frame_image('amidar%03d.png' % i)
+                #tb.save_frame_image('%s%03d.png' % (game, i))
                 if tb.game_over():
                     scores.append(tb.get_score())
                     tb.new_game()
