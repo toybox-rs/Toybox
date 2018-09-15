@@ -17,7 +17,7 @@ pub mod screen {
 
 mod world {
     use super::screen;
-    pub const SCALE: i32 = 16;
+    pub const SCALE: i32 = 8;
     pub const TILE_SIZE: (i32, i32) = (screen::TILE_SIZE.0 * SCALE, screen::TILE_SIZE.1 * SCALE);
 }
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");

@@ -1,5 +1,6 @@
 import ctypes
 import numpy as np
+from PIL import Image
 
 _lib_path = 'target/debug/libopenai.dylib'
 #_lib_path = 'target/release/libopenai.dylib'
@@ -159,6 +160,10 @@ class Toybox():
         self.state = (self.state[1], self.state[2], self.state[3], new_frame)
         return new_frame
 
+    def save_frame_image(self, path):
+        img = Image.fromarray(self.state[3], 'RGBA') 
+        img.save(path)
+
     def get_score(self):
         return -1
 
@@ -186,15 +191,13 @@ if __name__ == "__main__":
             print('\tframe height:', sim.get_frame_height())
             frame = state.render_frame(sim)
             print(frame[0])
-            from PIL import Image
-            img = Image.fromarray(frame, 'RGBA') # 8-bit pixels, grayscale is L, for some reason
-            img.save('my.png')
     
     with Toybox('amidar') as tb:
         for i in range(100):
             move_up = Input()
             move_up.up = True
             tb.apply_action(move_up)
+            tb.save_frame_image('amidar%03d.png' % i)
             if tb.rstate.game_over():
                 print(i, "amidar.game_over?", tb.rstate.game_over())
                 break
@@ -202,6 +205,7 @@ if __name__ == "__main__":
     with Toybox('breakout') as tb:
         for i in range(100):
             tb.apply_action(Input())
+            tb.save_frame_image('breakout%03d.png' % i)
             if tb.rstate.game_over():
                 print(i, "tb.game_over?", tb.rstate.game_over())
                 break
