@@ -1,11 +1,37 @@
 import ctypes
 import numpy as np
 from PIL import Image
+import os
+import platform
 import time
 
-#_lib_path = 'target/debug/libopenai.dylib'
-_lib_path = 'target/release/libopenai.dylib'
-_lib = ctypes.CDLL(_lib_path)
+platform = platform.system() 
+
+if platform == 'Darwin':
+    _lib_path_debug = 'target/debug/libopenai.dylib'
+    _lib_path_release = 'target/release/libopenai.dylib'
+
+    if os.path.exists(_lib_path_release):
+        _lib_path = _lib_path_release
+    elif os.path.exists(_lib_path_debug):
+        _lib_path = _lib_path_debug
+    else:
+        raise OSError('libopenai.dylib not found on this machine')
+
+elif platform == 'Linux':
+    _lib_path = 'libopenai.so'
+    
+else:
+    raise Exception('Unsupported platform: %s' % platform)
+
+
+try:
+    _lib = ctypes.CDLL(_lib_path)
+except Exception:
+    raise Exception('Could not load libopenai from path %s.' % _lib_path 
+    + """If you are on OSX, this may be due the relative path being different 
+    from `target/(target|release)/libopenai.dylib. If you are on Linux, try
+    prefixing your call with `LD_LIBRARY_PATH=/path/to/library`.""")
 
 class WrapSimulator(ctypes.Structure):
     pass

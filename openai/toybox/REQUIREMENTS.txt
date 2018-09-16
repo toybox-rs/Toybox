@@ -1,2 +1,4 @@
 gym
-cffi
+tensorflow
+scipy
+pyopencv
