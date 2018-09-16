@@ -32,6 +32,7 @@ except Exception:
     + """If you are on OSX, this may be due the relative path being different 
     from `target/(target|release)/libopenai.dylib. If you are on Linux, try
     prefixing your call with `LD_LIBRARY_PATH=/path/to/library`.""")
+    exit(1)
 
 class WrapSimulator(ctypes.Structure):
     pass

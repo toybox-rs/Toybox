@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
 
 class ToyboxBaseEnv(Env, ABC):
+    metadata = {'render.modes': ['human']}
     
     def __init__(self, toybox, grayscale=True, alpha=False, actions=None):
         self.toybox = toybox
