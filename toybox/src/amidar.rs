@@ -661,7 +661,6 @@ impl State {
         for enemy in &mut self.enemies {
             enemy.reset(&self.player_start, &self.board);
         }
-        self.lives -= 1;
     }
     pub fn board_size(&self) -> WorldPoint {
         let th = self.board.height as i32;
@@ -710,6 +709,7 @@ impl super::State for State {
         }
 
         if dead {
+            self.lives -= 1;
             self.reset();
         }
     }
