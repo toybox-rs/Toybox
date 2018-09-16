@@ -25,7 +25,7 @@ class ToyboxBaseEnv(Env, ABC):
     
     @abstractmethod
     def _action_to_input(self, action):
-        pass
+        raise NotImplementedError
 
     def step(self, action_index):
         obs = None
@@ -35,6 +35,7 @@ class ToyboxBaseEnv(Env, ABC):
     
         assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
+
     
         # Convert the input action (string or int) into the ctypes struct.
         action = self._action_to_input(self._action_set[action_index])

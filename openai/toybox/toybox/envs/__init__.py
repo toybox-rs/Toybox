@@ -1,1 +1,2 @@
-from .breakout import BreakoutEnv, AmidarEnv
+from .breakout import BreakoutEnv
+from .amidar import AmidarEnv
