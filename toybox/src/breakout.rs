@@ -86,7 +86,7 @@ impl Config {
     fn start_ball(&self) -> Body2D {
         let (w,h) = screen::GAME_SIZE;
         let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
-        ball.velocity = Vec2D::from_polar(screen::BALL_SPEED_START, 0.5);
+        ball.velocity = Vec2D::from_polar(screen::BALL_SPEED_START, (97.0 as f64).to_radians());
         ball
     }
 }

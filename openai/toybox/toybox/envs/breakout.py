@@ -9,11 +9,10 @@ from toybox.toybox import Toybox, Input
 class BreakoutEnv(ToyboxBaseEnv):
   metadata = {'render.modes': ['human']}
 
-  def __init__(self, grayscale=True, alpha=False):       
-    super().__init__(Toybox('breakout', grayscale), grayscale=True, alpha=False)
-    self._action_set = [NOOP_ID, LEFT_ID, RIGHT_ID]
+  def __init__(self, grayscale=True, alpha=False): 
+    super().__init__(Toybox('breakout', grayscale), grayscale=True, alpha=False, actions=[NOOP_ID, LEFT_ID, RIGHT_ID])
 
-  def action_to_input(self, action):
+  def _action_to_input(self, action):
     input = Input()
     if action == NOOP_STR or action == NOOP_ID:
       return input

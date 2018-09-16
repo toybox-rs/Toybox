@@ -3,10 +3,12 @@ from gym import Env, error, spaces, utils
 
 class ToyboxBaseEnv(Env, ABC):
     
-    def __init__(self, toybox, grayscale=True, alpha=False):
+    def __init__(self, toybox, grayscale=True, alpha=False, actions=None):
         self.toybox = toybox
         self.score = self.toybox.get_score()
 
+        assert(actions is not None)
+        self._action_set = actions
         self._obs_type = 'image'
         self._rgba = 1 if grayscale else 4 if alpha else 3
         self._pixel_high = 255
@@ -19,14 +21,9 @@ class ToyboxBaseEnv(Env, ABC):
         self.action_space = spaces.Discrete(len(self._action_set))
         self.observation_space = spaces.Box(low=0, high=self._pixel_high, shape=self._dim, dtype='uint8')
 
-
-    @property
-    def _action_set(self):
-        raise NotImplementedError
     
-
     @abstractmethod
-    def action_to_input(self, action):
+    def _action_to_input(self, action):
         pass
 
     def step(self, action_index):
@@ -55,18 +52,18 @@ class ToyboxBaseEnv(Env, ABC):
     
         return obs, reward, done, info
 
-  def reset(self):
-    self.toybox.new_game()
-    self.score = self.toybox.get_score()
-    obs = self.toybox.rstate.render_frame(
-      self.toybox.rsimulator, grayscale=self.toybox.grayscale)
-    return obs
+    def reset(self):
+        self.toybox.new_game()
+        self.score = self.toybox.get_score()
+        obs = self.toybox.rstate.render_frame(
+        self.toybox.rsimulator, grayscale=self.toybox.grayscale)
+        return obs
 
-  def render(self, mode='human', close=False):
-    # obs = self.toybox.rstate.render_frame_color(
-    #   self.toybox.rsimulator)
-    pass
+    def render(self, mode='human', close=False):
+        # obs = self.toybox.rstate.render_frame_color(
+        #   self.toybox.rsimulator)
+        pass
 
-  def close(self):
-    del self.toybox
-    self.toybox = None
+    def close(self):
+        del self.toybox
+        self.toybox = None
