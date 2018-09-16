@@ -10,7 +10,7 @@ class AmidarEnv(ToyboxBaseEnv):
 
     
     def __init__(self, grayscale=True, alpha=False):
-        super().__init__(Toybox('breakout', grayscale),
+        super().__init__(Toybox('amidar', grayscale),
             grayscale=grayscale,
             alpha=alpha,
             actions=_action_ids)
