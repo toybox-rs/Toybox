@@ -204,12 +204,12 @@ class State(object):
 
 class Toybox():
 
-    def __init__(self, game_name, grayscale=True):
+    def __init__(self, game_name, grayscale=True, frameskip=0):
+        self.frames_per_action = frameskip+1
         self.rsimulator = Simulator(game_name)
         self.rstate = State(self.rsimulator)
         self.grayscale = grayscale
-        # OpenAI state is a 4-frame sequence
-        self.state = tuple([self.rstate.render_frame(self.rsimulator, self.grayscale)] * 4)
+        self.state = self.rstate.render_frame(self.rsimulator, self.grayscale)
         self.deleted = False
 
     def get_state(self):
@@ -227,17 +227,19 @@ class Toybox():
         return self.rsimulator.get_frame_width()
 
     def apply_action(self, action_input_obj):
-        _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
+        # implement frameskip(k) by sending the action (k+1) times every time we have an action.
+        for _ in range(self.frames_per_action):
+            _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
         new_frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
-        self.state = (self.state[1], self.state[2], self.state[3], new_frame)
+        self.state = new_frame
         return new_frame
 
     def save_frame_image(self, path):
         img = None
         if self.grayscale:
-            img = Image.fromarray(self.state[3], 'L') 
+            img = Image.fromarray(self.state, 'L') 
         else:
-            img = Image.fromarray(self.state[3], 'RGBA')
+            img = Image.fromarray(self.state, 'RGBA')
         img.save(path)
 
     def get_score(self):
