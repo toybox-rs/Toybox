@@ -1,3 +1,4 @@
+from collections import deque
 import ctypes
 import numpy as np
 from PIL import Image
@@ -32,7 +33,6 @@ except Exception:
     + """If you are on OSX, this may be due the relative path being different 
     from `target/(target|release)/libopenai.dylib. If you are on Linux, try
     prefixing your call with `LD_LIBRARY_PATH=/path/to/library`.""")
-    exit(1)
 
 class WrapSimulator(ctypes.Structure):
     pass
@@ -172,8 +172,10 @@ class State(object):
     
     def lives(self):
         return _lib.state_lives(self.__state)
+
     def score(self):
         return _lib.state_score(self.__state)
+
     def game_over(self):
         return self.lives() <= 0
 
@@ -202,24 +204,35 @@ class State(object):
         _lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,1))
 
-class Toybox():
-
-    def __init__(self, game_name, grayscale=True, frameskip=0):
+class Toybox(object):
+    def __init__(self, game_name, grayscale=True, frameskip=0, k=4):
         self.frames_per_action = frameskip+1
         self.rsimulator = Simulator(game_name)
         self.rstate = State(self.rsimulator)
         self.grayscale = grayscale
-        self.state = self.rstate.render_frame(self.rsimulator, self.grayscale)
+        self.k = k 
+        # OpenAI state is a 4-frame sequence
+        self.state = None
+        self._set_state(k)
         self.deleted = False
 
+    def _set_state(self, k):
+        self.state = deque([], maxlen=k)
+        frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
+        for _ in range(k):
+            self.state.append(frame)
+        assert (self.state)
+
     def get_state(self):
+        assert(self.state)
         return self.state
 
     def new_game(self):
         old_state = self.rstate
         del old_state
         self.rstate = self.rsimulator.new_game()
-
+        self._set_state(self.k)
+        
     def get_height(self):
         return self.rsimulator.get_frame_height()
 
@@ -231,7 +244,7 @@ class Toybox():
         for _ in range(self.frames_per_action):
             _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
         new_frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
-        self.state = new_frame
+        self.state.append(new_frame)
         return new_frame
 
     def save_frame_image(self, path):
@@ -265,6 +278,7 @@ class Toybox():
     def __exit__(self, exc_type, exc_value, traceback):
         self.__del__()
 
+
 if __name__ == "__main__":
     # benchmark our games (in grayscale)
     for game in ['amidar', 'breakout']:
@@ -284,4 +298,3 @@ if __name__ == "__main__":
             FPS = N / (endTime - startTime)
             print("%s-FPS: %3.4f" % (game, FPS))
             print("\t", scores)
-        
