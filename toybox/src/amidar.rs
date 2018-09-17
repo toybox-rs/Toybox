@@ -157,10 +157,10 @@ impl GridBox {
         let y1 = self.top_left.ty;
         let y2 = self.bottom_right.ty;
 
-        let top_and_bottom = (x1..=x2).all(|xi| {
+        let top_and_bottom = (x1..(x2+1)).all(|xi| {
             board.is_painted(&TilePoint::new(xi, y1)) && board.is_painted(&TilePoint::new(xi, y2))
         });
-        let left_and_right = (y1..=y2).all(|yi| {
+        let left_and_right = (y1..(y2+1)).all(|yi| {
             board.is_painted(&TilePoint::new(x1, yi)) && board.is_painted(&TilePoint::new(x2, yi))
         });
 
