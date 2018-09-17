@@ -34,6 +34,7 @@ class ToyboxBaseEnv(Env, ABC):
     metadata = {'render.modes': ['human']}
     
     def __init__(self, toybox, grayscale=True, alpha=False, actions=None):
+        assert(toybox.state)
         self.toybox = toybox
         self.score = self.toybox.get_score()
 
@@ -59,19 +60,26 @@ class ToyboxBaseEnv(Env, ABC):
     def _action_to_input(self, action):
         raise NotImplementedError
 
+    # From OpenAI Gym Baselines
+    # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
+    def _get_obs(self):
+        assert len(self.toybox.state) == self.toybox.k
+        return LazyFrames(list(self.toybox.get_state()))
+
     def step(self, action_index):
         obs = None
         reward = None
         done = False
         info = {}
     
+        assert(self.toybox.state)
         assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
     
         # Convert the input action (string or int) into the ctypes struct.
         action = self._action_to_input(self._action_set[action_index])
         frame = self.toybox.apply_action(action)
-        obs = LazyFrames(self.toybox.get_state())
+        obs = self._get_obs()
         
         # Compute the reward from the current score and reset the current score.
         score = self.toybox.get_score()
@@ -90,7 +98,7 @@ class ToyboxBaseEnv(Env, ABC):
     def reset(self):
         self.toybox.new_game()
         self.score = self.toybox.get_score()
-        obs = self.toybox.get_state()
+        obs = self._get_obs()
         return obs
 
     def render(self, mode='human', close=False):
