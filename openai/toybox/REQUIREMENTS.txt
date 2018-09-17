@@ -1,4 +1,4 @@
 gym
 tensorflow
 scipy
-pyopencv
+opencv-python

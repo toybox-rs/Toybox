@@ -157,10 +157,10 @@ impl GridBox {
         let y1 = self.top_left.ty;
         let y2 = self.bottom_right.ty;
 
-        let top_and_bottom = (x1..=x2).all(|xi| {
+        let top_and_bottom = (x1..(x2+1)).all(|xi| {
             board.is_painted(&TilePoint::new(xi, y1)) && board.is_painted(&TilePoint::new(xi, y2))
         });
-        let left_and_right = (y1..=y2).all(|yi| {
+        let left_and_right = (y1..(y2+1)).all(|yi| {
             board.is_painted(&TilePoint::new(x1, yi)) && board.is_painted(&TilePoint::new(x2, yi))
         });
 
@@ -203,8 +203,8 @@ pub enum MovementAI {
 impl MovementAI {
     fn reset(&mut self) {
         match self {
-            MovementAI::Player => {}
-            MovementAI::EnemyLookupAI { next, .. } => {
+            &mut MovementAI::Player => {}
+            &mut MovementAI::EnemyLookupAI { ref mut next, .. } => {
                 *next = 0;
             }
         }
@@ -216,7 +216,7 @@ impl MovementAI {
         board: &Board,
     ) -> Option<TilePoint> {
         match self {
-            MovementAI::Player => {
+            &mut MovementAI::Player => {
                 let mut input: Option<Direction> = None;
                 if buttons.left {
                     input = Some(Direction::Left);
@@ -237,11 +237,11 @@ impl MovementAI {
                     }
                 })
             }
-            MovementAI::EnemyLookupAI {
-                next,
+            &mut MovementAI::EnemyLookupAI {
+                ref mut next,
                 default_route_index,
             } => {
-                let path = &DEFAULT_ENEMY_ROUTES[*default_route_index as usize];
+                let path = &DEFAULT_ENEMY_ROUTES[default_route_index as usize];
                 *next = (*next + 1) % (path.len() as u32);
                 Some(board.lookup_position(path[*next as usize]))
             }
@@ -445,7 +445,7 @@ impl Board {
                     let neighbors = [(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1)];
                     let walkable_neighbors = neighbors
                         .iter()
-                        .filter(|(nx, ny)| self.get_tile(&TilePoint::new(*nx, *ny)).walkable())
+                        .filter(|&&(nx, ny)| self.get_tile(&TilePoint::new(nx, ny)).walkable())
                         .count();
                     if walkable_neighbors > 2 || self.is_corner(x, y) {
                         let y = y as u32;
@@ -517,8 +517,15 @@ impl Board {
     }
 
     fn get_junction_id(&self, tile: &TilePoint) -> Option<u32> {
-        self.tile_id(tile)
-            .filter(|num| self.junctions.contains(num))
+        if let Some(num) = self.tile_id(tile) {
+            if self.junctions.contains(&num) {
+                Some(num)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
     /// Check whether the painting of segment t1 .. t2 filled any boxes, and return the count if so.
@@ -527,8 +534,8 @@ impl Board {
             .boxes
             .iter()
             .enumerate()
-            .filter(|(_, b)| b.matches(t1) || b.matches(t2))
-            .filter(|(_, b)| b.should_update_paint(self))
+            .filter(|&(_, b)| b.matches(t1) || b.matches(t2))
+            .filter(|&(_, b)| b.should_update_paint(self))
             .map(|(i, _)| i)
             .collect();
 
@@ -661,7 +668,6 @@ impl State {
         for enemy in &mut self.enemies {
             enemy.reset(&self.player_start, &self.board);
         }
-        self.lives -= 1;
     }
     pub fn board_size(&self) -> WorldPoint {
         let th = self.board.height as i32;
@@ -710,6 +716,7 @@ impl super::State for State {
         }
 
         if dead {
+            self.lives -= 1;
             self.reset();
         }
     }
@@ -735,9 +742,9 @@ impl super::State for State {
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
                 let tile_color = match tile {
-                    Tile::Painted => self.config.painted_color,
-                    Tile::Unpainted => self.config.unpainted_color,
-                    Tile::Empty => continue,
+                    &Tile::Painted => self.config.painted_color,
+                    &Tile::Unpainted => self.config.unpainted_color,
+                    &Tile::Empty => continue,
                 };
                 output.push(Drawable::rect(
                     tile_color,

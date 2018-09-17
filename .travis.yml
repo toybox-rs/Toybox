@@ -1,0 +1,7 @@
+language: rust
+rust:
+  1.25.0
+cache: cargo
+script:
+  cd toybox && cargo test --verbose --all
+  cd openai && cargo build --verbose --all

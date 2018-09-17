@@ -1,6 +1,13 @@
-# The Machine Learning Toybox
+# The Machine Learning Toybox [![Build Status](https://travis-ci.com/jjfiv/toybox.svg?token=wqGZxUYsDSPaq1jz2zn6&branch=master)](https://travis-ci.com/jjfiv/toybox)
 
 A set of games designed for causal experimentation with deep RL agents.
+
+## Target Rust Version
+
+For building on older GPU clusters, we target rustc 1.25:
+```bash
+rustup override set 1.25.0
+```
 
 ## Projects
 
