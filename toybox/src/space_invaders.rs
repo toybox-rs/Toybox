@@ -174,12 +174,12 @@ impl State {
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
         let mut shields = Vec::new();
 
-        for (x, y) in &[
+        for &(x, y) in &[
             screen::SHIELD1_POS,
             screen::SHIELD2_POS,
             screen::SHIELD3_POS,
         ] {
-            shields.push(SHIELD_SPRITE.translate(*x, *y))
+            shields.push(SHIELD_SPRITE.translate(x, y))
         }
         State {
             lives: 0,
@@ -238,7 +238,7 @@ impl super::State for State {
                 Direction::Up,
             ));
         }
-        let delete_laser = if let Some(ref mut laser) = &mut self.ship_laser {
+        let delete_laser = if let &mut Some(ref mut laser) = &mut self.ship_laser {
             laser.update_mut() && laser.y < 0
         } else {
             false

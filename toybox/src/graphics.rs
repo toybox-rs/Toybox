@@ -164,15 +164,15 @@ impl GrayscaleBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
-                Drawable::Rectangle { color, x, y, w, h } => {
+                &Drawable::Rectangle { color, x, y, w, h } => {
                     let fill = color.grayscale_byte();
-                    for yi in *y..(y + h) {
-                        for xi in *x..(x + w) {
+                    for yi in y..(y + h) {
+                        for xi in x..(x + w) {
                             self.set_pixel(xi, yi, fill)
                         }
                     }
                 }
-                Drawable::Sprite(sprite) => {
+                &Drawable::Sprite(ref sprite) => {
                     let w = sprite.width();
                     let h = sprite.height();
                     let (x, y) = sprite.position();
@@ -236,14 +236,14 @@ impl ImageBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
-                Drawable::Rectangle { color, x, y, w, h } => {
-                    for yi in *y..(y + h) {
-                        for xi in *x..(x + w) {
-                            self.set_pixel(xi, yi, *color)
+                &Drawable::Rectangle { color, x, y, w, h } => {
+                    for yi in y..(y + h) {
+                        for xi in x..(x + w) {
+                            self.set_pixel(xi, yi, color)
                         }
                     }
                 }
-                Drawable::Sprite(sprite) => {
+                &Drawable::Sprite(ref sprite) => {
                     let w = sprite.width();
                     let h = sprite.height();
                     let (x, y) = sprite.position();
