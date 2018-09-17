@@ -172,8 +172,10 @@ class State(object):
     
     def lives(self):
         return _lib.state_lives(self.__state)
+
     def score(self):
         return _lib.state_score(self.__state)
+
     def game_over(self):
         return self.lives() <= 0
 
@@ -202,14 +204,13 @@ class State(object):
         _lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,1))
 
-class Toybox():
-
+class Toybox(object):
     def __init__(self, game_name, grayscale=True):
         self.rsimulator = Simulator(game_name)
         self.rstate = State(self.rsimulator)
         self.grayscale = grayscale
         # OpenAI state is a 4-frame sequence
-        self.state = tuple([self.rstate.render_frame(self.rsimulator, self.grayscale)] * 4)
+        self.state = [self.rstate.render_frame(self.rsimulator, self.grayscale)] * 4
         self.deleted = False
 
     def get_state(self):
@@ -229,7 +230,7 @@ class Toybox():
     def apply_action(self, action_input_obj):
         _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
         new_frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
-        self.state = (self.state[1], self.state[2], self.state[3], new_frame)
+        self.state = [self.state[1], self.state[2], self.state[3], new_frame]
         return new_frame
 
     def save_frame_image(self, path):
@@ -262,6 +263,7 @@ class Toybox():
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.__del__()
+
 
 if __name__ == "__main__":
     # benchmark our games (in grayscale)

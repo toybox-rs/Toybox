@@ -1,6 +1,35 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
 
+import numpy as np
+
+# LazyFrames taken from OpenAI Baselines
+# https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
+# commit 8c2aea2addc9f3ba36d4a0c937e6a2d09830afc7
+class LazyFrames(object):
+    def __init__(self, frames):
+        self._frames = frames
+        self._out = None
+
+    def _force(self):
+        if self._out is None:
+            self._out = np.concatenate(self._frames, axis=2)
+            self._frames = None
+        return self._out
+
+    def __array__(self, dtype='uint8'):
+        out = self._force()
+        if dtype is not None:
+            out = out.astype(dtype)
+        return out
+
+    def __len__(self):
+        return len(self._force())
+
+    def __getitem__(self, i):
+        return self._force()[i]
+
+
 class ToyboxBaseEnv(Env, ABC):
     metadata = {'render.modes': ['human']}
     
@@ -16,12 +45,15 @@ class ToyboxBaseEnv(Env, ABC):
 
         self._height = self.toybox.get_height()
         self._width = self.toybox.get_width()
-        self._dim = (self._height, self._width, self._rgba) 
+        self._dim = (self._height, self._width, self._rgba * len(self.toybox.get_state())) 
         
         self.reward_range = (0, float('inf'))
         self.action_space = spaces.Discrete(len(self._action_set))
-        self.observation_space = spaces.Box(low=0, high=self._pixel_high, shape=self._dim, dtype='uint8')
-
+        self.observation_space = spaces.Box(
+            low=0, 
+            high=self._pixel_high, 
+            shape=self._dim, 
+            dtype='uint8')
     
     @abstractmethod
     def _action_to_input(self, action):
@@ -35,11 +67,11 @@ class ToyboxBaseEnv(Env, ABC):
     
         assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
-
     
         # Convert the input action (string or int) into the ctypes struct.
         action = self._action_to_input(self._action_set[action_index])
-        obs = self.toybox.apply_action(action)
+        frame = self.toybox.apply_action(action)
+        obs = LazyFrames(self.toybox.get_state())
         
         # Compute the reward from the current score and reset the current score.
         score = self.toybox.get_score()
@@ -51,14 +83,14 @@ class ToyboxBaseEnv(Env, ABC):
     
         # Send back dignostic information
         info['lives'] = self.toybox.get_lives()
+        info['frame'] = frame
     
         return obs, reward, done, info
 
     def reset(self):
         self.toybox.new_game()
         self.score = self.toybox.get_score()
-        obs = self.toybox.rstate.render_frame(
-        self.toybox.rsimulator, grayscale=self.toybox.grayscale)
+        obs = self.toybox.get_state()
         return obs
 
     def render(self, mode='human', close=False):
