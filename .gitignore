@@ -4,3 +4,6 @@ target
 images
 .env
 .vscode
+*.err
+*.out
+*.sbatch
