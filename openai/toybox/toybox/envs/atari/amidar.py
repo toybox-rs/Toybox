@@ -25,3 +25,4 @@ class AmidarEnv(ToyboxBaseEnv):
             return input
         else:
             raise ValueError('Unsupported action: %s' % action)
+

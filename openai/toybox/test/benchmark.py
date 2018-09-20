@@ -14,9 +14,8 @@ class RandomAgent(object):
         return self.action_space.sample()
 
 def env_test(game_name, system):
-    game = ('toybox-%s-v0' % game_name) if system == 'toybox' \
-        else 'AmidarNoFrameskip-v0' if game_name == 'amidar' \
-        else 'BreakoutNoFrameskip-v0'
+    game = ('Amidar%sNoFrameskip-v0' % ('Toybox' if system=='toybox' else '')) if game_name == 'amidar' \
+           else ('Breakout%sNoFrameskip-v0' % ('Toybox' if system=='toybox' else ''))
     #env = gym.envs.atari.AtariEnv(game=game, obs_type='image', frameskip=0)
     print('Gym name:', game)
     env = gym.make(game)

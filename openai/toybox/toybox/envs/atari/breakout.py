@@ -24,3 +24,4 @@ class BreakoutEnv(ToyboxBaseEnv):
                 else ACTION_ID_TO_STR_LOOKUP[action]
             raise ValueError('Unsupported action: %s' % action)
         return input
+
