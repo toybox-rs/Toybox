@@ -120,7 +120,6 @@ class Simulator(object):
         # sim should be a pointer
         #self.__sim = ctypes.pointer(ctypes.c_int(sim))
         self.__sim = sim 
-        print('sim', self.__sim)
         self.__width = _lib.simulator_frame_width(sim)
         self.__height = _lib.simulator_frame_height(sim)
         self.deleted = False
@@ -280,21 +279,4 @@ class Toybox(object):
 
 
 if __name__ == "__main__":
-    # benchmark our games (in grayscale)
-    for game in ['amidar', 'breakout']:
-        with Toybox(game) as tb:
-            scores = []
-            startTime = time.time()
-            N = 40000
-            for i in range(N):
-                move_up = Input()
-                move_up.up = True
-                tb.apply_action(move_up)
-                #tb.save_frame_image('%s%03d.png' % (game, i))
-                if tb.game_over():
-                    scores.append(tb.get_score())
-                    tb.new_game()
-            endTime = time.time()
-            FPS = N / (endTime - startTime)
-            print("%s-FPS: %3.4f" % (game, FPS))
-            print("\t", scores)
+    pass
