@@ -22,7 +22,7 @@ for game in ['amidar', 'breakout']:
         endTime = time.time()
         FPS = N / (endTime - startTime)
         print("toybox-%s-FPS: %3.4f" % (game, FPS))
-        print("\t", scores[0])
+        print("\t", scores[0], len(scores))
 
     # benchmark stella
     scores = [0]
@@ -31,15 +31,17 @@ for game in ['amidar', 'breakout']:
     aleobj.loadROM(atari.get_game_path(game))
     aleobj.reset_game()
     score = 0
-    for _ in range(N):
+    action_set = list(aleobj.getLegalActionSet())
+    for i in range(N):
+        action_index = i % len(action_set)
+        action = action_set[action_index]
         if aleobj.game_over():
             aleobj.reset_game()
             scores.append(score)
             score = 0
         else:
-            move_up = 2
-            score += aleobj.act(move_up)
+            score += aleobj.act(action)
     endTime = time.time()
     FPS = N / (endTime - startTime)
     print("atari-%s-FPS: %3.4f" % (game, FPS))
-    print("\t", scores[0])
+    print("\t", scores[0], len(scores))
