@@ -1,6 +1,6 @@
 envs="toybox-amidar-v0 AmidarNoFrameskip-v0 toybox-breakout-v0 BreakoutNoFrameskip-v0"
 algs="ppo2 acer a2c trpo_mpi deepq"
-timesteps="3e6 3e7"
+timesteps="3e6 1e7"
 work1=/mnt/nfs/work1/jensen/etosch
 
 # make sure we have all the pip dependencies we want installed
@@ -8,17 +8,17 @@ pip3 install gym[atari] --user
 pip3 install 'tensorboard<1.8.0,>=1.7.0' --user
 
 # Run for 3e6 on titanx-short
-# Run for 3e7 on titanx-long
+# Run for 1e7 on titanx-long
 
-for env in $envs; do
-    if [[ "`echo $env | cut -d'-' -f1`" = "toybox" ]]; then
-	runner="toybox_baselines.py"
-    else
-	runner="ale_baselines.py"
-    fi
-
+for steps in $timesteps; do
     for alg in $algs; do 
-	for steps in $timesteps; do
+	for env in $envs; do
+	    if [[ "`echo $env | cut -d'-' -f1`" = "toybox" ]]; then
+		runner="toybox_baselines.py"
+	    else
+		runner="ale_baselines.py"
+	    fi
+
 	    model=$work1/$env.$alg.$steps.model
 	    
 	    if [[ "$steps" = "3e6" ]]; then 
