@@ -9,3 +9,5 @@ register(
     id='toybox-amidar-v0',
     entry_point='toybox.envs:AmidarEnv'
 )
+
+print("Loaded Toybox environments.")
