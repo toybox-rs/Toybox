@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
+from gym.spaces import np_random
+from toybox.envs.atari.constants import ACTION_MEANING
 
 import numpy as np
 
@@ -29,6 +31,13 @@ class LazyFrames(object):
     def __getitem__(self, i):
         return self._force()[i]
 
+class MockALE():
+    def __init__(self, toybox):
+        self.toybox = toybox
+
+    def lives(self):
+        return self.toybox.get_lives()
+
 
 class ToyboxBaseEnv(Env, ABC):
     metadata = {'render.modes': ['human']}
@@ -38,6 +47,10 @@ class ToyboxBaseEnv(Env, ABC):
         self.toybox = toybox
         self.score = self.toybox.get_score()
 
+        # Required for compatability with OpenAI Gym's Atari wrappers
+        self.np_random = np_random
+        self.ale = MockALE(toybox)
+
         assert(actions is not None)
         self._action_set = actions
         self._obs_type = 'image'
@@ -46,7 +59,7 @@ class ToyboxBaseEnv(Env, ABC):
 
         self._height = self.toybox.get_height()
         self._width = self.toybox.get_width()
-        self._dim = (self._height, self._width, self._rgba * len(self.toybox.get_state())) 
+        self._dim = (self._height, self._width, self._rgba) # * len(self.toybox.get_state())) 
         
         self.reward_range = (0, float('inf'))
         self.action_space = spaces.Discrete(len(self._action_set))
@@ -60,11 +73,17 @@ class ToyboxBaseEnv(Env, ABC):
     def _action_to_input(self, action):
         raise NotImplementedError
 
+    # This is required to "trick" baselines into treating us as a regular Atari game
+    # Implementation copied from baselines
+    def get_action_meanings(self):
+        return [ACTION_MEANING[i] for i in self._action_set]
+
     # From OpenAI Gym Baselines
     # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
     def _get_obs(self):
         assert len(self.toybox.state) == self.toybox.k
-        return LazyFrames(list(self.toybox.get_state()))
+        #return LazyFrames(list(self.toybox.get_state()))
+        return self.toybox.get_state()[-1]
 
     def step(self, action_index):
         obs = None
@@ -73,13 +92,16 @@ class ToyboxBaseEnv(Env, ABC):
         info = {}
     
         assert(self.toybox.state)
-        assert(type(action_index) == int)
+        # Sometimes the action_index is a numpy integer...
+        #print('Action index and type', action_index, type(action_index))
+        #assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
     
         # Convert the input action (string or int) into the ctypes struct.
         action = self._action_to_input(self._action_set[action_index])
         frame = self.toybox.apply_action(action)
         obs = self._get_obs()
+        
         
         # Compute the reward from the current score and reset the current score.
         score = self.toybox.get_score()

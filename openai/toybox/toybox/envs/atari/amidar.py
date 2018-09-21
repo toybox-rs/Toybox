@@ -1,5 +1,5 @@
-from toybox.envs.base import ToyboxBaseEnv
-from toybox.envs.constants import *
+from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox.envs.atari.constants import *
 from toybox.toybox import Toybox, Input
 import sys
 
@@ -25,3 +25,4 @@ class AmidarEnv(ToyboxBaseEnv):
             return input
         else:
             raise ValueError('Unsupported action: %s' % action)
+

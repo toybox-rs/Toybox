@@ -1,0 +1,1 @@
+PYTHONPATH=toybox python toybox/test/benchmark.py

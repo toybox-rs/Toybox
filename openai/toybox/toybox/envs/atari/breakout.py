@@ -1,5 +1,5 @@
-from toybox.envs.base import ToyboxBaseEnv
-from toybox.envs.constants import *
+from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox.envs.atari.constants import *
 from toybox.toybox import Toybox, Input
 
 
@@ -24,3 +24,4 @@ class BreakoutEnv(ToyboxBaseEnv):
                 else ACTION_ID_TO_STR_LOOKUP[action]
             raise ValueError('Unsupported action: %s' % action)
         return input
+
