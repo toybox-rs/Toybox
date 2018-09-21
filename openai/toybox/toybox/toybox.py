@@ -13,12 +13,15 @@ if platform == 'Darwin':
     _lib_path_debug = 'target/debug/libopenai.dylib'
     _lib_path_release = 'target/release/libopenai.dylib'
 
-    if os.path.exists(_lib_path_release):
-        _lib_path = _lib_path_release
-    elif os.path.exists(_lib_path_debug):
-        _lib_path = _lib_path_debug
-    else:
+    _lib_ts_release = os.stat(_lib_path_release).st_birthtime \
+        if os.path.exists(_lib_path_release) else 0
+    _lib_ts_debug   = os.stat(_lib_path_debug).st_birthtime \
+        if os.path.exists(_lib_path_debug) else 0
+        
+    if (not (_lib_ts_debug or _lib_ts_release)):
         raise OSError('libopenai.dylib not found on this machine')
+
+    _lib_path = _lib_path_debug if _lib_ts_debug > _lib_ts_release else _lib_path_release
 
 elif platform == 'Linux':
     _lib_path = 'libopenai.so'

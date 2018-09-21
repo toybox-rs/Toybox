@@ -11,14 +11,13 @@ def all_but_one(toybox):
     for i in range(num_bricks):
         # i is the one brick we want remaining
         for j in range(num_bricks):
-            if j == i:
-                continue
-            breakout.remove_brick(toybox, j)
-            new_js = breakout.get_json()
-            tbs.append(toybox.from_json(new_js))
+            if j is not i:
+                breakout.remove_brick(toybox, j)
+                new_js = breakout.get_json()
+                tbs.append(toybox.from_json(new_js))
     return tbs
 
 
 if __name__ == '__main__':
     with Toybox('breakout') as tb:
-        print(all_but_one(tb))
+        print(len(all_but_one(tb)))

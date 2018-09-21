@@ -11,3 +11,5 @@ register(
     entry_point='toybox.envs.atari:AmidarEnv',
     nondeterministic=False
 )
+
+print("Loaded Toybox environments.")

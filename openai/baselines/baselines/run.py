@@ -198,7 +198,6 @@ def parse_cmdline_kwargs(args):
     return {k: parse(v) for k,v in parse_unknown_args(args).items()}
 
 
-
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
 
@@ -224,7 +223,11 @@ def main():
         logger.log("Running trained model")
         env = build_env(args)
         obs = env.reset()
-        while True:
+
+        score_total = 0
+        continue_play = True
+
+        while continue_play:
             actions = model.step(obs)[0]
             obs, _, done, _ = env.step(actions)
             env.render()
@@ -232,8 +235,22 @@ def main():
             done = done.any() if isinstance(done, np.ndarray) else done
 
             if done:
+                tb = atari_wrappers.try_get_toybox(env)
+                if tb is not None:
+                    print(tb.get_score())
+
+                else: 
+                    print("openai")
+                    e = atari_wrappers.get_innermost(env)
+
+                score_total = score_total + 1
                 obs = env.reset()
 
+            if score_total > 9: 
+                continue_play = False
+
+
+        print("Total score: %s" % score_total)
         env.close()
 
 if __name__ == '__main__':
