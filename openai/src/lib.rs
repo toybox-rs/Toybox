@@ -5,7 +5,8 @@ extern crate libc;
 extern crate toybox;
 
 use std::boxed::Box;
-use std::ffi::CStr;
+use std::ffi::{CStr, CString};
+use libc::c_char;
 use toybox::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox::Input;
 use toybox::{Simulation, State};
@@ -152,12 +153,28 @@ pub extern "C" fn state_score(state_ptr: *mut WrapState) -> i32 {
     state.score()
 }
 
-// fn simulate_n_frames(game_state: &mut State, n: u32) {
-//   for _ in range(n) {
-//     game_state.update_mut();
-//   }
-// }
+#[no_mangle]
+pub extern "C" fn to_json(state_ptr: *mut WrapState) -> *const c_char {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
 
-// // Going to need score() on State (abstractly) so we can calculate reward in python-land.
+    let json : String = state.to_json();
+    let cjson : CString = CString::new(json).expect("crap!");
+    CString::into_raw(cjson)
+}
 
-// void simulate_n_frames(void* game_state, unsigned int n);
+#[no_mangle]
+pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mut WrapState {
+    let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
+    let json_str: &str = json_str.to_str().expect("shit!");
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let state = simulator.new_state_from_json(json_str)
+                         .expect("scheisse!");
+    let state = Box::new(WrapState { state });
+    Box::into_raw(state)
+}
