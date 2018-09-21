@@ -5,32 +5,6 @@ from toybox.envs.atari.constants import ACTION_MEANING
 
 import numpy as np
 
-# LazyFrames taken from OpenAI Baselines
-# https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
-# commit 8c2aea2addc9f3ba36d4a0c937e6a2d09830afc7
-class LazyFrames(object):
-    def __init__(self, frames):
-        self._frames = frames
-        self._out = None
-
-    def _force(self):
-        if self._out is None:
-            self._out = np.concatenate(self._frames, axis=2)
-            self._frames = None
-        return self._out
-
-    def __array__(self, dtype='uint8'):
-        out = self._force()
-        if dtype is not None:
-            out = out.astype(dtype)
-        return out
-
-    def __len__(self):
-        return len(self._force())
-
-    def __getitem__(self, i):
-        return self._force()[i]
-
 class MockALE():
     def __init__(self, toybox):
         self.toybox = toybox

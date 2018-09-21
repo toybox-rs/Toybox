@@ -5,6 +5,7 @@ from PIL import Image
 import os
 import platform
 import time
+import json
 
 platform = platform.system() 
 
@@ -113,6 +114,12 @@ _lib.state_score.restype = ctypes.c_int
 _lib.render_current_frame.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p]
  #(frame_ptr, size, sim.get_simulator(), self.__state)
 
+_lib.to_json.argtypes = [ctypes.POINTER(WrapState)]
+_lib.to_json.restype = ctypes.c_char_p
+
+_lib.from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
+_lib.from_json.restype = ctypes.POINTER(WrapState)
+
 
 class Simulator(object):
     def __init__(self, game_name):
@@ -148,10 +155,19 @@ class Simulator(object):
     def new_game(self):
         return State(self)
 
+    def from_json(self, js):
+        if type(js) is dict:
+            js = json.dumps(js)
+        elif type(js) is not str:
+            raise ValueError('Unknown json type: %s (only str and dict supported)' % type(js))
+        state = _lib.from_json(self.get_simulator(), js.encode('utf-8'))
+        return State(self, state=state)
+
+
 
 class State(object):
-    def __init__(self, sim):
-        self.__state = _lib.state_alloc(sim.get_simulator())
+    def __init__(self, sim, state=None):
+        self.__state = state or _lib.state_alloc(sim.get_simulator())
         self.deleted = False
 
     def __enter__(self):
@@ -202,6 +218,10 @@ class State(object):
         frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         _lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,1))
+
+    def to_json(self):
+        json_str = _lib.to_json(self.__state).decode('utf-8')
+        return json.loads(str(json_str))
 
 class Toybox(object):
     def __init__(self, game_name, grayscale=True, frameskip=0, k=4):
@@ -263,6 +283,12 @@ class Toybox(object):
     def game_over(self):
         return self.get_lives() <= 0
 
+    def to_json(self):
+        return self.rstate.to_json()
+
+    def from_json(self, js):
+        return self.rsimulator.from_json(js)
+
     def __del__(self):
         if not self.deleted:
             self.deleted = True
@@ -279,4 +305,5 @@ class Toybox(object):
 
 
 if __name__ == "__main__":
-    pass
+    with Toybox('amidar') as tb:
+        print(tb.to_json())
