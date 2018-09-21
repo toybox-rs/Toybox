@@ -106,6 +106,7 @@ impl Default for Config {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[repr(C)]
 pub struct Brick {
     /// Brick position describes the upper-left of the brick.
     pub position: Vec2D,
@@ -139,6 +140,7 @@ impl Brick {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[repr(C)]
 pub struct State {
     pub config: Config,
     pub lives: i32,
