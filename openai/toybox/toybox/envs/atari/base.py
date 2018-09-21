@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
 from gym.spaces import np_random
+from gym.envs.classic_control.rendering import SimpleImageViewer
 from toybox.envs.atari.constants import ACTION_MEANING
 
 import numpy as np
@@ -20,6 +21,7 @@ class ToyboxBaseEnv(Env, ABC):
         assert(toybox.state)
         self.toybox = toybox
         self.score = self.toybox.get_score()
+        self.viewer = None
 
         # Required for compatability with OpenAI Gym's Atari wrappers
         self.np_random = np_random
@@ -98,10 +100,15 @@ class ToyboxBaseEnv(Env, ABC):
         return obs
 
     def render(self, mode='human', close=False):
-        # obs = self.toybox.rstate.render_frame_color(
-        #   self.toybox.rsimulator)
-        pass
+        if mode == 'human':
+            # the following is copied from gym's AtariEnv
+            if self.viewer is None:
+                self.viewer = SimpleImageViewer()
+            self.viewer.imshow(self.toybox.get_rgb_frame())
+            return self.viewer.isopen
 
     def close(self):
+        if self.viewer is not None:
+            self.viewer.close()
         del self.toybox
         self.toybox = None

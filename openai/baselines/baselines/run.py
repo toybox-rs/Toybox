@@ -1,5 +1,6 @@
 import toybox
 
+import time
 import sys
 import multiprocessing
 import os.path as osp
@@ -227,6 +228,7 @@ def main():
             actions = model.step(obs)[0]
             obs, _, done, _ = env.step(actions)
             env.render()
+            time.sleep(1.0/30.0)
             done = done.any() if isinstance(done, np.ndarray) else done
 
             if done:

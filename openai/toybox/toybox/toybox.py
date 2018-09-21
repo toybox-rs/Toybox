@@ -209,6 +209,10 @@ class State(object):
         frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         _lib.render_current_frame(frame_ptr, size, False, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,rgba))
+
+    def render_frame_rgb(self, sim):
+        rgba_frame = self.render_frame_color(sim)
+        return rgba_frame[:,:,:3]
     
     def render_frame_grayscale(self, sim):
         h = sim.get_frame_height()
@@ -273,6 +277,9 @@ class Toybox(object):
         else:
             img = Image.fromarray(self.state, 'RGBA')
         img.save(path)
+
+    def get_rgb_frame(self):
+        return self.rstate.render_frame_rgb(self.rsimulator)
 
     def get_score(self):
         return self.rstate.score()
