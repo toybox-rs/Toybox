@@ -1,4 +1,6 @@
 from toybox.envs.atari.base import ToyboxBaseEnv
+from baselines.common.vec_env.vec_frame_stack import VecFrameStack
+from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 import numpy as np
 import os
 os.environ.setdefault('PATH', '')
@@ -11,8 +13,17 @@ cv2.ocl.setUseOpenCL(False)
 # Get innermost gym.Env (skip all Wrapper)
 def get_innermost(env):
     env = env
-    while (isinstance(env, gym.Wrapper)):
-        env = env.env
+    while True:
+        if (isinstance(env, VecFrameStack)):
+            env = env.venv
+        elif (isinstance(env, gym.Wrapper)):
+            env = env.env
+        elif (isinstance(env, DummyVecEnv)):
+            env = env.envs[0]
+        elif (isinstance(env, gym.Env)):
+            break
+        else:
+            syntaxerror
     return env
 
 # Get toybox inside if possible.
@@ -20,6 +31,7 @@ def try_get_toybox(env):
     env = get_innermost(env)
     if isinstance(env, ToyboxBaseEnv):
         return env.toybox
+    print(env)
     return None
 
 
