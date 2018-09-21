@@ -1,3 +1,4 @@
+from toybox.envs.atari.base import ToyboxBaseEnv
 import numpy as np
 import os
 os.environ.setdefault('PATH', '')
@@ -6,6 +7,21 @@ import gym
 from gym import spaces
 import cv2
 cv2.ocl.setUseOpenCL(False)
+
+# Get innermost gym.Env (skip all Wrapper)
+def get_innermost(env):
+    env = env
+    while (isinstance(env, gym.Wrapper)):
+        env = env.env
+    return env
+
+# Get toybox inside if possible.
+def try_get_toybox(env):
+    env = get_innermost(env)
+    if isinstance(env, ToyboxBaseEnv):
+        return env.toybox
+    return None
+
 
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
@@ -128,6 +144,7 @@ class ClipRewardEnv(gym.RewardWrapper):
         """Bin reward to {+1, 0, -1} by its sign."""
         return np.sign(reward)
 
+
 class WarpFrame(gym.ObservationWrapper):
     def __init__(self, env):
         """Warp frames to 84x84 as done in the Nature paper and later work."""
@@ -138,7 +155,9 @@ class WarpFrame(gym.ObservationWrapper):
             shape=(self.height, self.width, 1), dtype=np.uint8)
 
     def observation(self, frame):
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        toybox = try_get_toybox(self)
+        if toybox is None:
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         return frame[:, :, None]
 
