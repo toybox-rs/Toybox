@@ -1,3 +1,0 @@
-[submodule "openai/baselines"]
-	path = openai/baselines
-	url = https://github.com/openai/baselines.git
