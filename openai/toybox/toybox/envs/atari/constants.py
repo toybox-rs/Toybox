@@ -1,31 +1,16 @@
-from toybox.toybox import LEFT, RIGHT, NOOP, UP, DOWN
+from toybox.toybox import LEFT, RIGHT, NOOP, UP, DOWN, BUTTON1
 
 NOOP_STR = NOOP 
+FIRE_STR = "FIRE"
 UP_STR = UP
 RIGHT_STR = RIGHT
 LEFT_STR = LEFT
 DOWN_STR = DOWN
-
-
-NOOP_ID = 0
-UP_ID = 2
-RIGHT_ID = 3
-LEFT_ID = 4
-DOWN_ID = 5
-
-
-ACTION_STR_TO_ID_LOOKUP = {
-  NOOP_STR: NOOP_ID,
-  UP_STR: UP_ID,
-  RIGHT_STR: RIGHT_ID, 
-  LEFT_STR: LEFT_ID,
-  DOWN_STR: DOWN_ID
-}
-
-ACTION_ID_TO_STR_LOOKUP = {
-  v : k for (k, v) in 
-    ACTION_STR_TO_ID_LOOKUP.items()
-  }
+UPFIRE_STR = "UPFIRE"
+RIGHTFIRE_STR = "RIGHTFIRE"
+LEFTFIRE_STR = "LEFTFIRE"
+DOWNFIRE_STR = "DOWNFIRE"
+BUTTON1_STR = BUTTON1
 
 # Copied from, and required by, baselines
 ACTION_MEANING = {
@@ -48,3 +33,5 @@ ACTION_MEANING = {
     16 : "DOWNRIGHTFIRE",
     17 : "DOWNLEFTFIRE",
 }
+
+ACTION_LOOKUP = { v : k for (k, v) in ACTION_MEANING.items() }
