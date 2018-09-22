@@ -83,6 +83,21 @@ impl FixedSpriteData {
     pub fn height(&self) -> i32 {
         self.data.len() as i32
     }
+    pub fn make_black_version(&self) -> FixedSpriteData {
+        let mut output = Vec::new();
+        for pix_row in self.data.iter() {
+            let mut row: Vec<Color> = Vec::new();
+            for pixel in pix_row.iter() {
+                if pixel.is_visible() {
+                    row.push(Color::black());
+                } else {
+                    row.push(Color::invisible());
+                }
+            }
+            output.push(row);
+        }
+        FixedSpriteData::new(output)
+    }
 
     /// Given an include_bytes! png, convert it to a FixedSpriteData.
     pub fn load_png(data: &[u8]) -> FixedSpriteData {

@@ -35,7 +35,9 @@ pub mod images {
     lazy_static! {
         pub static ref PLAYER_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::PLAYER_L1);
         pub static ref ENEMY_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L1);
+        pub static ref ENEMY_JUMP_L1: FixedSpriteData = ENEMY_L1.make_black_version();
         pub static ref ENEMY_CHASE_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L1);
+        pub static ref ENEMY_CAUGHT_L1: FixedSpriteData = ENEMY_CHASE_L1.make_black_version();
         pub static ref PAINTED_BOX_BAR: FixedSpriteData = FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
         pub static ref BLOCK_TILE_PAINTED_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L1);
         pub static ref BLOCK_TILE_UNPAINTED_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L1);
@@ -59,8 +61,11 @@ pub struct Config {
     enemy_color: Color,
     inner_painted_color: Color,
     start_lives: i32,
+    start_jumps: i32,
     render_images: bool,
     chase_time: i32,
+    chase_score_bonus: i32,
+    jump_time: i32,
     box_bonus: i32,
 }
 
@@ -80,7 +85,10 @@ impl Default for Config {
             enemy_color: Color::rgb(255, 50, 100),
             inner_painted_color: Color::rgb(255, 255, 0),
             start_lives: 3,
-            chase_time: 30 * 10,
+            start_jumps: 4,
+            chase_time: 10 * 30, // 10 seconds
+            chase_score_bonus: 100,
+            jump_time: 3 * 30, // 3 seconds
             render_images: true,
             box_bonus: 50,
         }
@@ -291,6 +299,7 @@ impl MovementAI {
 pub struct Mob {
     pub ai: MovementAI,
     pub position: WorldPoint,
+    pub caught: bool,
     speed: i32,
     step: Option<TilePoint>,
     history: VecDeque<u32>,
@@ -301,6 +310,7 @@ impl Mob {
             ai,
             position,
             step: None,
+            caught: false,
             speed: 8,
             history: VecDeque::new(),
         }
@@ -310,6 +320,7 @@ impl Mob {
             ai: MovementAI::Player,
             position,
             step: None,
+            caught: false,
             speed: 8,
             history: VecDeque::new(),
         }
@@ -588,13 +599,17 @@ impl Board {
             .collect();
 
         let updated = indices.len() as i32;
-        let mut triggers_chase = false;
+        let mut chase_change = false;
         for i in indices {
             self.boxes[i].painted = true;
-            if (self.boxes[i].triggers_chase) {
-                triggers_chase = true;
+            if self.boxes[i].triggers_chase {
+                chase_change = true;
             }
         }
+
+        let triggers_chase = chase_change && self.boxes.iter()
+            .filter(|b| b.triggers_chase)
+            .all(|b| b.painted);
 
         (triggers_chase, updated)
     }
@@ -681,7 +696,9 @@ pub struct State {
     pub config: Config,
     pub score: i32,
     pub lives: i32,
+    pub jumps: i32,
     pub chase_timer: i32,
+    pub jump_timer: i32,
     pub player: Mob,
     pub player_start: TilePoint,
     pub enemies: Vec<Mob>,
@@ -706,6 +723,8 @@ impl State {
             lives: config.start_lives,
             score: 0,
             chase_timer: 0,
+            jumps: 0,
+            jump_timer: 0,
             player,
             player_start,
             enemies,
@@ -728,6 +747,33 @@ impl State {
         let tw = self.board.width as i32;
         TilePoint::new(tw + 1, th + 1).to_world()
     }
+    /// Determine whether an enemy and a player are colliding and what to do about it.
+    /// returns: (player_dead, enemy_caught)
+    fn check_enemy_player_collision(&self, enemy: &Mob, enemy_id: usize) -> EnemyPlayerState {
+        if self.player.position.to_tile() == enemy.position.to_tile() {
+            if self.chase_timer > 0 {
+                if !enemy.caught {
+                    EnemyPlayerState::EnemyCatch(enemy_id)
+                } else {
+                    EnemyPlayerState::Miss
+                }
+            } else if self.jump_timer > 0 {
+                EnemyPlayerState::Miss
+            } else {
+                EnemyPlayerState::PlayerDeath
+            }
+        } else {
+            // No overlap.
+            EnemyPlayerState::Miss
+        }
+    }
+}
+
+#[derive(PartialEq,Eq,Clone,Copy)]
+enum EnemyPlayerState {
+    Miss,
+    PlayerDeath,
+    EnemyCatch(usize),
 }
 
 pub struct Amidar;
@@ -765,19 +811,57 @@ impl super::State for State {
 
         if self.chase_timer > 0 {
             self.chase_timer -= 1;
+        } else if self.jump_timer > 0 { // only support jump when not chasing.
+            self.jump_timer -= 1;
+        } else if buttons.button1 || buttons.button2 {
+            self.jump_timer = self.config.jump_time;
         }
 
         let mut dead = false;
-        for enemy in &mut self.enemies {
-            enemy.update(Input::default(), &mut self.board);
+        let mut changes: Vec<EnemyPlayerState> = Vec::new();
+        
+        // check-collisions after player move:
+        for (i,e) in self.enemies.iter().enumerate() {
+            let state = self.check_enemy_player_collision(e, i);
+            if state != EnemyPlayerState::Miss {
+                changes.push(state);
+            } 
+        }
 
-            if self.chase_timer == 0 && self.player.position.to_tile() == enemy.position.to_tile() {
-                dead = true;
-                break;
+        // move enemies:
+        for e in self.enemies.iter_mut() {
+            e.update(Input::default(), &mut self.board);
+        }
+        
+        // check-collisions again (so we can't run through enemies):
+        for (i,e) in self.enemies.iter().enumerate() {
+            let state = self.check_enemy_player_collision(e, i);
+            if state != EnemyPlayerState::Miss {
+                changes.push(state);
+            } 
+        }
+        
+        // Process EnemyPlayerState that were interesting!
+        for change in changes {
+            match change {
+                EnemyPlayerState::Miss => {
+                    // This was filtered out.
+                },
+                EnemyPlayerState::PlayerDeath => {
+                    dead = true;
+                    break;
+                },
+                EnemyPlayerState::EnemyCatch(eid) => {
+                    if !self.enemies[eid].caught {
+                        self.score += self.config.chase_score_bonus;
+                        self.enemies[eid].caught = true;
+                    }
+                },
             }
         }
 
         if dead {
+            self.jumps = self.config.start_jumps;
             self.lives -= 1;
             self.reset();
         }
@@ -890,7 +974,17 @@ impl super::State for State {
                 output.push(Drawable::sprite(
                     offset_x + x - 1, 
                     offset_y + y - 1,
-                    if self.chase_timer == 0 { images::ENEMY_L1.clone() } else { images::ENEMY_CHASE_L1.clone() }
+                    if self.chase_timer > 0 { 
+                        if enemy.caught {
+                            images::ENEMY_JUMP_L1.clone()
+                        } else {
+                            images::ENEMY_CHASE_L1.clone() 
+                        }
+                    } else if self.jump_timer > 0 {
+                        images::ENEMY_JUMP_L1.clone()
+                    } else { 
+                        images::ENEMY_L1.clone() 
+                    }
                 ))
             } else {
                 output.push(Drawable::rect(
