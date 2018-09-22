@@ -3,32 +3,37 @@ extern crate failure;
 extern crate human_play;
 extern crate toybox;
 
+use std::sync::Arc;
+
 extern crate quicksilver;
 use clap::{App, Arg};
 use human_play::color_convert;
 use quicksilver::{
     geom::{Rectangle, Vector},
-    graphics::{Color, Draw, View, Window, WindowBuilder, Image, PixelFormat},
+    graphics::{Color, Draw, Image, PixelFormat, View, Window, WindowBuilder},
     run,
 };
-use toybox::graphics::{ImageBuffer, Drawable, SpriteData};
+use toybox::graphics::{Drawable, FixedSpriteData, ImageBuffer};
 
 static mut GAME_ID: usize = 0;
 
 struct AbstractGame {
     factory: Box<toybox::Simulation>,
     state: Box<toybox::State>,
+    cached_images: Vec<(FixedSpriteData, Image)>,
 }
 
 impl quicksilver::State for AbstractGame {
     fn new() -> AbstractGame {
         let game_to_play = toybox::GAME_LIST[unsafe { GAME_ID }];
-        let factory = toybox::get_simulation_by_name(&game_to_play).unwrap_or_else(|_| panic!(
-            "We should be able to get a game for `{}`",
-            game_to_play
-        ));
+        let factory = toybox::get_simulation_by_name(&game_to_play)
+            .unwrap_or_else(|_| panic!("We should be able to get a game for `{}`", game_to_play));
         let state = factory.new_game();
-        AbstractGame { factory, state }
+        AbstractGame {
+            factory,
+            state,
+            cached_images: Vec::new(),
+        }
     }
     fn update(&mut self, window: &mut Window) {
         let buttons = human_play::process_keys(window);
@@ -44,24 +49,55 @@ impl quicksilver::State for AbstractGame {
         window.clear(Color::black());
 
         let drawables = self.state.draw();
-        for dw in drawables {
+        for (z, dw) in drawables.iter().enumerate() {
+            let z = z as i32;
             match dw {
-                Drawable::Rectangle { color, x, y, w, h } => {
+                &Drawable::Rectangle { color, x, y, w, h } => {
                     window.draw(
                         &Draw::rectangle(Rectangle::new(x, y, w, h))
-                            .with_color(color_convert(color)),
+                            .with_color(color_convert(color))
+                            .with_z(z)
                     );
                 }
-                Drawable::Sprite(sprite) => {
+                &Drawable::StaticSprite {
+                    x,
+                    y,
+                    data: ref sprite,
+                } => {
+                    // TODO(jfoley); why do we suddenly need to shift these? Is this a quicksilver bug?
+                    let x = x+w/2;
+                    let y = y+h/2;
+
+                    let change = if let Some((_, ref img)) = self
+                        .cached_images
+                        .iter_mut()
+                        .find(|(toybox_image, _)| Arc::ptr_eq(&toybox_image.data, &sprite.data))
+                    {
+                        window.draw(&Draw::image(img, Vector::new(x, y)).with_z(z));
+                        None
+                    } else {
+                        println!("First-render: ({},{})", x, y);
+                        let mut buf = ImageBuffer::alloc(w, h);
+                        buf.render(&[Drawable::sprite(0, 0, sprite.clone())]);
+                        let img = Image::from_raw(&buf.data, w as u32, h as u32, PixelFormat::RGBA);
+                        window.draw(&Draw::image(&img, Vector::new(x, y)).with_z(z));
+                        Some((sprite.clone(), img))
+                    };
+                    // Keep software-rendered image around for future frames of the game!
+                    if let Some(pair) = change {
+                        self.cached_images.push(pair);
+                    }
+                }
+                &Drawable::DestructibleSprite(ref sprite) => {
                     let x = sprite.x;
                     let y = sprite.y;
                     let w = sprite.width() * sprite.scale();
                     let h = sprite.height() * sprite.scale();
 
-                    let mut buf = ImageBuffer::alloc(w,h);
+                    let mut buf = ImageBuffer::alloc(w, h);
                     buf.render_sprite(sprite.scale, &sprite.data);
                     let img = Image::from_raw(&buf.data, w as u32, h as u32, PixelFormat::RGBA);
-                    window.draw(&Draw::image(&img, Vector::new(x,y)));
+                    window.draw(&Draw::image(&img, Vector::new(x, y)).with_z(z));
                 }
             }
         }

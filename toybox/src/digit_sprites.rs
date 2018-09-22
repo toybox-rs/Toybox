@@ -3,8 +3,8 @@ use super::graphics::{Color, FixedSpriteData, Drawable};
 const RAW_NUMBER_DATA: &str = include_str!("resources/number_sprites.txt");
 const SET: char = '1';
 const IGNORE: char = '.';
-const DIGIT_WIDTH: i32 = 8;
-const DIGIT_HEIGHT: i32 = 7;
+pub const DIGIT_WIDTH: i32 = 8;
+pub const DIGIT_HEIGHT: i32 = 7;
 
 lazy_static! {
     static ref DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites();
