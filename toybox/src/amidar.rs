@@ -1,4 +1,4 @@
-use super::graphics::{Color, Drawable, SpriteData};
+use super::graphics::{Color, Drawable, FixedSpriteData};
 use super::Direction;
 use super::Input;
 use super::digit_sprites::draw_score;
@@ -25,7 +25,11 @@ pub mod raw_images {
 pub mod images {
     use super::*;
     lazy_static! {
-        pub static ref PLAYER_L1: SpriteData = SpriteData::load_png(raw_images::PLAYER_L1);
+        pub static ref PLAYER_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::PLAYER_L1);
+        pub static ref ENEMY_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L1);
+        pub static ref PAINTED_BOX_BAR: FixedSpriteData = FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
+        pub static ref BLOCK_TILE_PAINTED_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L1);
+        pub static ref BLOCK_TILE_UNPAINTED_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L1);
     }
 }
 
@@ -757,18 +761,32 @@ impl super::State for State {
             let ty = ty as i32;
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
-                let tile_color = match tile {
-                    &Tile::Painted => self.config.painted_color,
-                    &Tile::Unpainted => self.config.unpainted_color,
-                    &Tile::Empty => continue,
-                };
-                output.push(Drawable::rect(
-                    tile_color,
-                    offset_x + tx * tile_w,
-                    offset_y + ty * tile_h,
-                    tile_w,
-                    tile_h,
-                ));
+
+                if self.config.render_images {
+                    let tile_sprite: &FixedSpriteData = match tile {
+                        &Tile::Painted => &images::BLOCK_TILE_PAINTED_L1,
+                        &Tile::Unpainted => &images::BLOCK_TILE_UNPAINTED_L1,
+                        &Tile::Empty => continue,
+                    };
+                    output.push(Drawable::sprite(
+                        offset_x + tx * tile_w,
+                        offset_y + ty * tile_h,
+                        tile_sprite.clone(),
+                    ));
+                } else {
+                    let tile_color = match tile {
+                        &Tile::Painted => self.config.painted_color,
+                        &Tile::Unpainted => self.config.unpainted_color,
+                        &Tile::Empty => continue,
+                    };
+                    output.push(Drawable::rect(
+                        tile_color,
+                        offset_x + tx * tile_w,
+                        offset_y + ty * tile_h,
+                        tile_w,
+                        tile_h,
+                    ));
+                }
             }
         }
 
@@ -789,11 +807,12 @@ impl super::State for State {
 
         let (player_x, player_y) = self.player.position.to_screen().pixels();
         let (player_w, player_h) = screen::PLAYER_SIZE;
-        if (self.config.render_images) {
-            output.push(Drawable::Sprite(images::PLAYER_L1.translate(
-                offset_x + player_x + 2, 
-                offset_y + player_y + 2,
-            )))
+        if self.config.render_images {
+            output.push(Drawable::sprite(
+                offset_x + player_x, 
+                offset_y + player_y,
+                images::PLAYER_L1.clone()
+            ))
         } else {
             output.push(Drawable::rect(
                 self.config.player_color,
@@ -808,13 +827,21 @@ impl super::State for State {
             let (x, y) = enemy.position.to_screen().pixels();
             let (w, h) = screen::ENEMY_SIZE;
 
-            output.push(Drawable::rect(
-                self.config.enemy_color,
-                offset_x + x - 1,
-                offset_y + y - 1,
-                w,
-                h,
-            ));
+            if self.config.render_images {
+                output.push(Drawable::sprite(
+                    offset_x + x, 
+                    offset_y + y,
+                    images::ENEMY_L1.clone()
+                ))
+            } else {
+                output.push(Drawable::rect(
+                    self.config.enemy_color,
+                    offset_x + x - 1,
+                    offset_y + y - 1,
+                    w,
+                    h,
+                ));
+            }
         }
 
         output.extend(draw_score(self.score, 104, 198));

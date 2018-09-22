@@ -278,7 +278,7 @@ impl super::State for State {
         ));
 
         for shield in &self.shields {
-            output.push(Drawable::Sprite(shield.clone()));
+            output.push(Drawable::DestructibleSprite(shield.clone()));
         }
 
         if let Some(ref laser) = self.ship_laser {
