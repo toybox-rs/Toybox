@@ -83,7 +83,6 @@ class ToyboxBaseEnv(Env, ABC):
         score = self.toybox.get_score()
         reward = max(score - self.score, 0)
         self.score = score
-        #print("base", score)
     
         # Check whether the episode is done
         done = self.toybox.game_over()
