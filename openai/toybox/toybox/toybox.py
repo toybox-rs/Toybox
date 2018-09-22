@@ -195,7 +195,7 @@ class State(object):
         return _lib.state_score(self.__state)
 
     def game_over(self):
-        return self.lives() <= 0
+        return self.lives() < 0
 
     def render_frame(self, sim, grayscale=True):
         if grayscale:
@@ -291,7 +291,7 @@ class Toybox(object):
         return self.rstate.lives()
     
     def game_over(self):
-        return self.get_lives() <= 0
+        return self.get_lives() < 0
 
     def to_json(self):
         return self.rstate.to_json()
