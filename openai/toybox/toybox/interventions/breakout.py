@@ -19,6 +19,11 @@ def get_bricks():
 
 
 @checktoybox
+def get_brick(i):
+    return _toybox_json['bricks'][i]
+
+
+@checktoybox
 def num_bricks():
     assert(_toybox_json)
     return len(_toybox_json['bricks'])

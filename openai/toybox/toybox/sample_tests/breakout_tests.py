@@ -49,11 +49,36 @@ def channels(toybox:Toybox):
 def create_channels(toybox:Toybox):
     # Like a combination of the previous two tests
     # Find the stack where all of the bricks except one are removed
-    pass
+    original_json = toybox.to_json()
+    stacks = inter.get_stacks(toybox)
+    index, channel = None, None
     
+    for i, stack in enumerate(stacks):
+        alive = [1 for i in stack if inter.is_alive(inter.get_brick(i))]
+        if sum(alive) == 1:
+            index, channel = i, stack
+            break
+    
+    assert(not (index and channel))
+    
+    tbs = []
+    for i, stack in enumerate(stacks):
+        for j in stack:
+            # j will be the "last brick"
+            this_tb = tb.from_json(tb.to_json(toybox))
+            inter.add_brick(this_tb, j)
+            for k in stack:
+                if j == k:
+                    continue
+                inter.remove_brick(this_tb, k)
+            new_js = inter.get_json()
+            tbs.append(tb.from_json(new_js))
+
+    return tbs
         
 
 if __name__ == '__main__':
     with Toybox('breakout') as tb:
         print(len(all_but_one(tb)))
         print(len(channels(tb)))
+        print(len(create_channels(tb)))
