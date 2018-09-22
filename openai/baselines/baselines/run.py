@@ -114,25 +114,6 @@ def build_env(args):
             frame_stack_size = 4
             env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed), frame_stack_size)
 
-    elif env_type == 'retro':
-        import retro
-        gamestate = args.gamestate or 'Level1-1'
-        env = retro_wrappers.make_retro(game=args.env, state=gamestate, max_episode_steps=10000,
-                                        use_restricted_actions=retro.Actions.DISCRETE)
-        env.seed(args.seed)
-        env = bench.Monitor(env, logger.get_dir())
-        env = retro_wrappers.wrap_deepmind_retro(env)
-
-    else:
-       get_session(tf.ConfigProto(allow_soft_placement=True,
-                                   intra_op_parallelism_threads=1,
-                                   inter_op_parallelism_threads=1))
-
-       env = make_vec_env(env_id, env_type, args.num_env or 1, seed, reward_scale=args.reward_scale)
-
-       if env_type == 'mujoco':
-           env = VecNormalize(env)
-
     return env
 
 
@@ -159,12 +140,7 @@ def get_default_network(env_type):
 
 def get_alg_module(alg, submodule=None):
     submodule = submodule or alg
-    try:
-        # first try to import the alg module from baselines
-        alg_module = import_module('.'.join(['baselines', alg, submodule]))
-    except ImportError:
-        # then from rl_algs
-        alg_module = import_module('.'.join(['rl_' + 'algs', alg, submodule]))
+    alg_module = import_module('.'.join(['baselines', alg, submodule]))
 
     return alg_module
 
@@ -241,7 +217,6 @@ def main():
 
                 else: 
                     print("openai")
-                    e = atari_wrappers.get_innermost(env)
 
                 score_total = score_total + 1
                 obs = env.reset()
