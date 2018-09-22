@@ -216,7 +216,7 @@ def main():
 
             if tb is not None and not done:
                 score = tb.get_score()
-                print("run", info['score'])
+                print("run", info[0]['score'])
 
             if done:
                 num_games += 1
