@@ -1,4 +1,4 @@
-use super::graphics::{Color, Drawable};
+use super::graphics::{Color, Drawable, SpriteData};
 use super::Direction;
 use super::Input;
 use super::digit_sprites::draw_score;
@@ -13,6 +13,20 @@ pub mod screen {
     pub const PLAYER_SIZE: (i32, i32) = (7, 7);
     pub const ENEMY_SIZE: (i32, i32) = (7, 7);
     pub const TILE_SIZE: (i32, i32) = (4, 5);
+}
+pub mod raw_images {
+    pub const PLAYER_L1: &[u8] = include_bytes!("resources/amidar/player_l1.png");
+    pub const ENEMY_L1: &[u8] = include_bytes!("resources/amidar/enemy_l1.png");
+    pub const ENEMY_CHASE_L1: &[u8] = include_bytes!("resources/amidar/enemy_chase.png");
+    pub const PAINTED_BOX_BAR: &[u8] = include_bytes!("resources/amidar/painted_box_bar.png");
+    pub const BLOCK_TILE_PAINTED_L1: &[u8] = include_bytes!("resources/amidar/block_tile_painted_l1.png");
+    pub const BLOCK_TILE_UNPAINTED_L1: &[u8] = include_bytes!("resources/amidar/block_tile_unpainted_l1.png");
+}
+pub mod images {
+    use super::*;
+    lazy_static! {
+        pub static ref PLAYER_L1: SpriteData = SpriteData::load_png(raw_images::PLAYER_L1);
+    }
 }
 
 mod world {
@@ -32,6 +46,7 @@ pub struct Config {
     enemy_color: Color,
     inner_painted_color: Color,
     start_lives: i32,
+    render_images: bool,
 }
 
 impl Config {
@@ -50,6 +65,7 @@ impl Default for Config {
             enemy_color: Color::rgb(255, 50, 100),
             inner_painted_color: Color::rgb(255, 255, 0),
             start_lives: 1,
+            render_images: true
         }
     }
 }
@@ -773,13 +789,20 @@ impl super::State for State {
 
         let (player_x, player_y) = self.player.position.to_screen().pixels();
         let (player_w, player_h) = screen::PLAYER_SIZE;
-        output.push(Drawable::rect(
-            self.config.player_color,
-            offset_x + player_x - 1,
-            offset_y + player_y - 1,
-            player_w,
-            player_h,
-        ));
+        if (self.config.render_images) {
+            output.push(Drawable::Sprite(images::PLAYER_L1.translate(
+                offset_x + player_x + 2, 
+                offset_y + player_y + 2,
+            )))
+        } else {
+            output.push(Drawable::rect(
+                self.config.player_color,
+                offset_x + player_x - 1,
+                offset_y + player_y - 1,
+                player_w,
+                player_h,
+            ));
+        }
 
         for enemy in &self.enemies {
             let (x, y) = enemy.position.to_screen().pixels();
@@ -852,5 +875,10 @@ mod tests {
             println!("Box-found: {:?}", gb.top_left);
         }
         assert_eq!(board.boxes.len(), 29);
+    }
+
+    #[test]
+    fn test_load_png() {
+        let img = &images::PLAYER_L1;
     }
 }

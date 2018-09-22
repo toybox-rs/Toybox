@@ -1,3 +1,5 @@
+use png;
+
 /// For now we only support RGB colors so we don't have to do alpha-blending in our software renderer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Color {
@@ -11,6 +13,9 @@ impl Color {
     /// Create a color from (r, g, b) components.
     pub fn rgb(r: u8, g: u8, b: u8) -> Color {
         Color { r, g, b, a: 255 }
+    }
+    fn rgba(r: u8, g: u8, b: u8, a: u8) -> Color {
+        Color { r, g, b, a }
     }
     pub fn invisible() -> Color {
         Color {
@@ -109,9 +114,33 @@ impl SpriteData {
             data: self.data.clone(),
         }
     }
+
+    /// Given an include_bytes! png, convert it to a SpriteData.
+    pub fn load_png(data: &[u8]) -> SpriteData {
+        let decoder = png::Decoder::new(data);
+        let (info, mut reader) = decoder.read_info().unwrap();
+        let width = info.width as usize;
+        let height = info.height as usize;
+        assert_eq!(info.color_type, png::ColorType::RGBA);
+        assert_eq!(info.bit_depth, png::BitDepth::Eight);
+        
+        let mut buf = vec![0; info.buffer_size()];
+        reader.next_frame(&mut buf).unwrap();
+
+        let mut output = Vec::new();
+        for pix_row in buf.chunks(width*4) {
+            let mut row = Vec::new();
+            for pix in pix_row.chunks(4) {
+                row.push(Color::rgba(pix[0], pix[1], pix[2], pix[3]));
+            }
+            output.push(row);
+        }
+
+        SpriteData { x: 0, y: 0, scale: 1, data: output }
+    }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub enum Drawable {
     Rectangle {
         color: Color,
@@ -209,6 +238,8 @@ impl ImageBuffer {
             data: vec![0; (width * height * 4) as usize],
         }
     }
+
+
     #[inline(always)]
     fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
         debug_assert!(color.is_visible());
@@ -247,8 +278,6 @@ impl ImageBuffer {
             }
         }
     }
-
-
 
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
