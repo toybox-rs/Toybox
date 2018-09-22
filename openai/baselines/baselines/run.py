@@ -209,14 +209,14 @@ def main():
 
         while continue_play:
             actions = model.step(obs)[0]
-            obs, _, done, _ = env.step(actions)
+            obs, _, done, info = env.step(actions)
             env.render()
             time.sleep(1.0/30.0)
             done = done.any() if isinstance(done, np.ndarray) else done
 
             if tb is not None and not done:
                 score = tb.get_score()
-                print("run", score)
+                print("run", info['score'])
 
             if done:
                 num_games += 1
