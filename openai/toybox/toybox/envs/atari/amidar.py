@@ -26,7 +26,9 @@ class AmidarEnv(ToyboxBaseEnv):
 
         if action in self._amidar_action_strs:
             # Action ids < 6 are atomic actions
-            if action < 6:
+            if action == FIRE_STR:
+                input.set_input(NOOP_STR, button=BUTTON1_STR)
+            elif ACTION_LOOKUP[action] < 6:
                 input.set_input(action)
             else:
                 # All of the valid compound inputs for amidar end in "FIRE"
