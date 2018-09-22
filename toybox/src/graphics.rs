@@ -66,8 +66,8 @@ impl<'a> From<&'a (u8, u8, u8)> for Color {
 pub struct SpriteData {
     pub x: i32,
     pub y: i32,
-    scale: i32,
-    data: Vec<Vec<Color>>,
+    pub scale: i32,
+    pub data: Vec<Vec<Color>>,
 }
 impl SpriteData {
     pub fn new(data: Vec<Vec<Color>>, scale: i32) -> SpriteData {
@@ -232,6 +232,23 @@ impl ImageBuffer {
             self.set_pixel(x, y, color)
         }
     }
+    
+    pub fn render_sprite(&mut self, scale: i32, data: &Vec<Vec<Color>>) {
+        let h = data.len() as i32;
+        let w = data[0].len() as i32;
+        for yi in 0..h {
+            for xi in 0..w {
+                let color = data[yi as usize][xi as usize];
+                for xt in 0..scale {
+                    for yt in 0..scale {
+                        self.set_pixel_alpha(xi + xt, yi + yt, color)
+                    }
+                }
+            }
+        }
+    }
+
+
 
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {

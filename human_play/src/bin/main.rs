@@ -7,11 +7,11 @@ extern crate quicksilver;
 use clap::{App, Arg};
 use human_play::color_convert;
 use quicksilver::{
-    geom::Rectangle,
-    graphics::{Color, Draw, View, Window, WindowBuilder},
+    geom::{Rectangle, Vector},
+    graphics::{Color, Draw, View, Window, WindowBuilder, Image, PixelFormat},
     run,
 };
-use toybox::graphics::Drawable;
+use toybox::graphics::{ImageBuffer, Drawable, SpriteData};
 
 static mut GAME_ID: usize = 0;
 
@@ -57,12 +57,11 @@ impl quicksilver::State for AbstractGame {
                     let y = sprite.y;
                     let w = sprite.width() * sprite.scale();
                     let h = sprite.height() * sprite.scale();
-                    if let Some(color) = sprite.find_visible_color() {
-                        window.draw(
-                            &Draw::rectangle(Rectangle::new(x, y, w, h))
-                                .with_color(color_convert(color)),
-                        );
-                    }
+
+                    let mut buf = ImageBuffer::alloc(w,h);
+                    buf.render_sprite(sprite.scale, &sprite.data);
+                    let img = Image::from_raw(&buf.data, w as u32, h as u32, PixelFormat::RGBA);
+                    window.draw(&Draw::image(&img, Vector::new(x,y)));
                 }
             }
         }
