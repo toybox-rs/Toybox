@@ -1,4 +1,5 @@
 use png;
+use std::sync::Arc;
 
 /// For now we only support RGB colors so we don't have to do alpha-blending in our software renderer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,6 +68,73 @@ impl<'a> From<&'a (u8, u8, u8)> for Color {
     }
 }
 
+#[derive(PartialEq, Eq, Clone)]
+pub struct FixedSpriteData {
+    pub data: Arc<Vec<Vec<Color>>>,
+    // TODO: cache grayscale and rgba renders as Arc<Option<Vec<u8>>>?
+}
+impl FixedSpriteData {
+    pub fn new(data: Vec<Vec<Color>>) -> FixedSpriteData {
+        FixedSpriteData { data: Arc::new(data) }
+    }
+    pub fn width(&self) -> i32 {
+        self.data[0].len() as i32
+    }
+    pub fn height(&self) -> i32 {
+        self.data.len() as i32
+    }
+    pub fn make_black_version(&self) -> FixedSpriteData {
+        let mut output = Vec::new();
+        for pix_row in self.data.iter() {
+            let mut row: Vec<Color> = Vec::new();
+            for pixel in pix_row.iter() {
+                if pixel.is_visible() {
+                    row.push(Color::black());
+                } else {
+                    row.push(Color::invisible());
+                }
+            }
+            output.push(row);
+        }
+        FixedSpriteData::new(output)
+    }
+
+    /// Given an include_bytes! png, convert it to a FixedSpriteData.
+    pub fn load_png(data: &[u8]) -> FixedSpriteData {
+        let decoder = png::Decoder::new(data);
+        let (info, mut reader) = decoder.read_info().unwrap();
+        let width = info.width as usize;
+        let height = info.height as usize;
+        assert_eq!(info.color_type, png::ColorType::RGBA);
+        assert_eq!(info.bit_depth, png::BitDepth::Eight);
+        
+        let mut buf = vec![0; info.buffer_size()];
+        reader.next_frame(&mut buf).unwrap();
+
+        let mut output = Vec::new();
+        for pix_row in buf.chunks(width*4) {
+            let mut row = Vec::new();
+            for pix in pix_row.chunks(4) {
+                row.push(Color::rgba(pix[0], pix[1], pix[2], pix[3]));
+            }
+            output.push(row);
+        }
+
+        FixedSpriteData::new(output)
+    }
+    
+    pub fn find_visible_color(&self) -> Option<Color> {
+        for row in self.data.iter() {
+            for px in row {
+                if px.is_visible() {
+                    return Some(*px);
+                }
+            }
+        }
+        None
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpriteData {
     pub x: i32,
@@ -114,30 +182,6 @@ impl SpriteData {
             data: self.data.clone(),
         }
     }
-
-    /// Given an include_bytes! png, convert it to a SpriteData.
-    pub fn load_png(data: &[u8]) -> SpriteData {
-        let decoder = png::Decoder::new(data);
-        let (info, mut reader) = decoder.read_info().unwrap();
-        let width = info.width as usize;
-        let height = info.height as usize;
-        assert_eq!(info.color_type, png::ColorType::RGBA);
-        assert_eq!(info.bit_depth, png::BitDepth::Eight);
-        
-        let mut buf = vec![0; info.buffer_size()];
-        reader.next_frame(&mut buf).unwrap();
-
-        let mut output = Vec::new();
-        for pix_row in buf.chunks(width*4) {
-            let mut row = Vec::new();
-            for pix in pix_row.chunks(4) {
-                row.push(Color::rgba(pix[0], pix[1], pix[2], pix[3]));
-            }
-            output.push(row);
-        }
-
-        SpriteData { x: 0, y: 0, scale: 1, data: output }
-    }
 }
 
 #[derive(Clone)]
@@ -149,12 +193,22 @@ pub enum Drawable {
         w: i32,
         h: i32,
     },
-    Sprite(SpriteData),
+    /// For space_invaders.
+    DestructibleSprite(SpriteData),
+    /// For static images.
+    StaticSprite {
+        x: i32,
+        y: i32,
+        data: FixedSpriteData
+    }
 }
 
 impl Drawable {
     pub fn rect(color: Color, x: i32, y: i32, w: i32, h: i32) -> Drawable {
         Drawable::Rectangle { color, x, y, w, h }
+    }
+    pub fn sprite(x: i32, y: i32, sprite: FixedSpriteData) -> Drawable {
+        Drawable::StaticSprite { x, y, data: sprite }
     }
 }
 
@@ -201,7 +255,7 @@ impl GrayscaleBuffer {
                         }
                     }
                 }
-                &Drawable::Sprite(ref sprite) => {
+                &Drawable::DestructibleSprite(ref sprite) => {
                     let w = sprite.width();
                     let h = sprite.height();
                     let (x, y) = sprite.position();
@@ -215,6 +269,16 @@ impl GrayscaleBuffer {
                                     self.set_pixel_alpha(xi + x + xt, yi + y + yt, color)
                                 }
                             }
+                        }
+                    }
+                }
+                &Drawable::StaticSprite { x, y, data: ref sprite } => {
+                    let w = sprite.width();
+                    let h = sprite.height();
+                    for yi in 0..h {
+                        for xi in 0..w {
+                            let color = sprite.data[yi as usize][xi as usize];
+                            self.set_pixel_alpha(xi + x, yi + y, color)
                         }
                     }
                 }
@@ -289,7 +353,17 @@ impl ImageBuffer {
                         }
                     }
                 }
-                &Drawable::Sprite(ref sprite) => {
+                &Drawable::StaticSprite { x, y, data: ref sprite } => {
+                    let w = sprite.width();
+                    let h = sprite.height();
+                    for yi in 0..h {
+                        for xi in 0..w {
+                            let color = sprite.data[yi as usize][xi as usize];
+                            self.set_pixel_alpha(xi + x, yi + y, color)
+                        }
+                    }
+                }
+                &Drawable::DestructibleSprite(ref sprite) => {
                     let w = sprite.width();
                     let h = sprite.height();
                     let (x, y) = sprite.position();
