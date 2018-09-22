@@ -90,6 +90,7 @@ class ToyboxBaseEnv(Env, ABC):
         # Send back dignostic information
         info['lives'] = self.toybox.get_lives()
         info['frame'] = frame
+        info['score'] = 0 if done else self.score
     
         return obs, reward, done, info
 

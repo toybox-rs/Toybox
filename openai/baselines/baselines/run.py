@@ -205,7 +205,7 @@ def main():
 
         while continue_play:
             actions = model.step(obs)[0]
-            obs, _, done, _ = env.step(actions)
+            obs, _, done, info = env.step(actions)
             env.render()
             time.sleep(1.0/30.0)
             done = done.any() if isinstance(done, np.ndarray) else done
@@ -213,7 +213,7 @@ def main():
             if done:
                 tb = atari_wrappers.try_get_toybox(env)
                 if tb is not None:
-                    print(tb.get_score())
+                    print(info['score'])
 
                 else: 
                     print("openai")
