@@ -204,10 +204,20 @@ def main():
 
         score_total = 0
         score = 0
+        prev_score = 0
         num_games = 0
         continue_play = True
+        done = False
 
         while continue_play:
+            if done:
+                num_games += 1
+                print("game %s: %s" % (num_games, score))
+
+                score_total = score_total + score
+                score = 0
+                obs = env.reset()
+
             actions = model.step(obs)[0]
             obs, _, done, info = env.step(actions)
             env.render()
@@ -216,17 +226,9 @@ def main():
 
             if tb is not None and not done:
                 score = tb.get_score()
-                print("run", info[0]['score'])
-
-            if done:
-                num_games += 1
-                print("game %s: %s" % (num_games, score))
-
-                score_total = score_total + score
-                score = 0
-                obs = env.reset()
-                obs = env.reset()
-
+                if score != prev_score: 
+                    prev_score = score
+                    print("run", score)
 
             if num_games == 10: 
                 continue_play = False
