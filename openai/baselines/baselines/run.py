@@ -200,7 +200,11 @@ def main():
         env = build_env(args)
         obs = env.reset()
 
+        tb = atari_wrappers.try_get_toybox(env)
+
         score_total = 0
+        score = 0
+        num_games = 0
         continue_play = True
 
         while continue_play:
@@ -210,18 +214,19 @@ def main():
             time.sleep(1.0/30.0)
             done = done.any() if isinstance(done, np.ndarray) else done
 
+            if tb is not None and not done:
+                score = tb.get_score()
+                #print("run", info[0]['score'])
+
             if done:
-                tb = atari_wrappers.try_get_toybox(env)
-                if tb is not None:
-                    print(info['score'])
+                num_games += 1
+                print("game %s: %s" % (num_games, score))
 
-                else: 
-                    print("openai")
-
-                score_total = score_total + 1
+                score_total = score_total + score
+                score = 0
                 obs = env.reset()
 
-            if score_total > 9: 
+            if num_games == 10: 
                 continue_play = False
 
 
