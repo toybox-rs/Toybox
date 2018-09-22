@@ -99,7 +99,7 @@ impl Default for Config {
             ball_color: (&screen::BALL_COLOR).into(),
             row_colors: screen::ROW_COLORS.iter().cloned().map(|c| c.into()).collect(),
             row_scores: screen::ROW_SCORES.iter().cloned().collect(),
-            start_lives: 1,
+            start_lives: 5,
         }
     }
 }
@@ -144,6 +144,7 @@ impl Brick {
 pub struct State {
     pub config: Config,
     pub lives: i32,
+    pub is_dead: bool,
     pub points: i32,
     /// ball position describes the center of the ball.
     pub ball: Body2D,
@@ -195,8 +196,9 @@ impl super::Simulation for Breakout {
         Box::new(State {
             config: self.config.clone(),
             lives: self.config.start_lives,
-            ball: self.config.start_ball(),
+            ball: Body2D::new_pos(w as f64 + 10.0, h as f64 + 20.0),
             paddle: self.config.start_paddle(),
+            is_dead: true,
             points: 0,
             ball_radius: 2.0,
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
@@ -224,10 +226,23 @@ impl State {
             self.paddle.velocity.x = 0.0;
         }
     }
+    fn keep_paddle_on_screen(&mut self) {
+        let left = screen::BOARD_LEFT_X as f64 - self.paddle_width/2.0;
+        let right = screen::BOARD_RIGHT_X as f64 + self.paddle_width/2.0;
+        if (self.paddle.position.x < left) {
+            self.paddle.position.x = left;
+            self.paddle.velocity.x = 0.0;
+        } else if (self.paddle.position.x > right) {
+            self.paddle.position.x = right;
+            self.paddle.velocity.x = 0.0;
+        }
+    }
     fn update_time_slice(&mut self, time_step: f64) {
         // Update positions.
         self.ball.integrate_mut(time_step);
         self.paddle.integrate_mut(time_step);
+        
+        self.keep_paddle_on_screen();
 
         // Handle collisions:
         if self.ball.velocity.y > 0.0 {
@@ -253,8 +268,7 @@ impl State {
             // check lose?
             if self.ball.position.y + self.ball_radius > screen::BOARD_BOTTOM_Y.into() {
                 self.lives-=1;
-                self.ball = self.config.start_ball();
-                self.paddle = self.config.start_paddle();
+                self.is_dead = true;
                 return;
             }
         } else {
@@ -316,6 +330,13 @@ impl super::State for State {
     fn update_mut(&mut self, buttons: Input) {
         self.update_paddle_movement(buttons);
 
+        if (self.is_dead) {
+            if (buttons.button1 || buttons.button2) {
+                self.ball = self.config.start_ball();
+                self.is_dead = false;
+            }
+        }
+
         let distance_limit = self.ball_radius as i32;
         let total_time = 1.0;
         let distance_limit = distance_limit as f64; // m
@@ -375,7 +396,6 @@ impl super::State for State {
             screen::FRAME_RIGHT_HEIGHT,
         ));
 
-        /* Let's not be perfect!
         // Draw frame left "colored spot"
         output.push(Drawable::rect(
             (&screen::FRAME_LEFT_SUPPORT_COLOR).into(),
@@ -393,7 +413,6 @@ impl super::State for State {
             screen::FRAME_RIGHT_SUPPORT.0,
             screen::FRAME_RIGHT_SUPPORT.1,
         ));
-        */
 
         if self.lives <= 0 {
             return output;
@@ -427,7 +446,10 @@ impl super::State for State {
             ball_r * 2,
         ));
 
+        // Draw points:
         output.extend(draw_score(self.points, screen::BOARD_RIGHT_X, 5));
+        // Draw lives:
+        output.extend(draw_score(self.lives, screen::BOARD_LEFT_X + 50, 5));
 
         output
     }
