@@ -72,6 +72,8 @@ class Input(ctypes.Structure):
 
     def set_input(self, input_dir, button=NOOP):
         self._set_default()
+        input_dir = input_dir.lower()
+        button = button.lower()
 
         # reset all directions
         if input_dir == NOOP:

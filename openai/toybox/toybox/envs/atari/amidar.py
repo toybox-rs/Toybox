@@ -21,8 +21,8 @@ class AmidarEnv(ToyboxBaseEnv):
 
     def _action_to_input(self, action):
         input = Input()
-        action = action if type(action) == str \
-                else ACTION_LOOKUP[action]
+        action = action.upper() if type(action) == str \
+                else ACTION_MEANING[action]
 
         if action in self._amidar_action_strs:
             # Action ids < 6 are atomic actions

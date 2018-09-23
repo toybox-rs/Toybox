@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
 from gym.spaces import np_random
-from gym.envs.classic_control.rendering import SimpleImageViewer
-from toybox.envs.atari.constants import ACTION_MEANING
+from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
 
 import numpy as np
 
@@ -52,7 +51,8 @@ class ToyboxBaseEnv(Env, ABC):
     # This is required to "trick" baselines into treating us as a regular Atari game
     # Implementation copied from baselines
     def get_action_meanings(self):
-        return [ACTION_MEANING[i] for i in self._action_set]
+        #return [ACTION_MEANING[i] for i in self._action_set]
+        return list(ACTION_MEANING.values())
 
     # From OpenAI Gym Baselines
     # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
@@ -72,9 +72,12 @@ class ToyboxBaseEnv(Env, ABC):
         #print('Action index and type', action_index, type(action_index))
         #assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
+        assert(type(self._action_set)== list)
     
         # Convert the input action (string or int) into the ctypes struct.
-        action = self._action_to_input(self._action_set[action_index])
+        action = self._action_to_input(\
+            self._action_set[int(action_index)])
+        action.button1 = True
         frame = self.toybox.apply_action(action)
         obs = self._get_obs()
         
@@ -104,6 +107,7 @@ class ToyboxBaseEnv(Env, ABC):
         if mode == 'human':
             # the following is copied from gym's AtariEnv
             if self.viewer is None:
+                from gym.envs.classic_control.rendering import SimpleImageViewer
                 self.viewer = SimpleImageViewer()
             self.viewer.imshow(self.toybox.get_rgb_frame())
             return self.viewer.isopen
