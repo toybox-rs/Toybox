@@ -15,7 +15,6 @@ class BreakoutEnv(ToyboxBaseEnv):
 
     def _action_to_input(self, action):
         input = Input()
-        print("ACTION:", action)
         action = action.upper() if type(action) == str else ACTION_MEANING[action]
         # Remove this later:
         if action == NOOP_STR:
