@@ -158,7 +158,6 @@ pub struct State {
     pub paddle: Body2D,
     pub paddle_width: f64,
     pub paddle_speed: f64,
-    pub double_speed: bool,
     pub bricks: Vec<Brick>,
 }
 
@@ -217,7 +216,6 @@ impl super::Simulation for Breakout {
             ball_radius: 2.0,
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
             paddle_speed: 4.0,
-            double_speed: false,
             rand: random::Gen::new_child(&mut self.rand),
             bricks,
         };
@@ -334,9 +332,8 @@ impl State {
             if hit {
                 brick.alive = false;
                 self.points += brick.points;
-                if brick.depth >= self.config.ball_speed_row_depth && !self.double_speed {
-                    self.double_speed = true;
-                    // speed up the ball.
+                if brick.depth >= self.config.ball_speed_row_depth {
+                    // Potentially speed up the ball. This will be a no-op if it's already fast.
                     let theta = self.ball.velocity.angle();
                     self.ball.velocity = Vec2D::from_polar(self.config.ball_speed_fast, theta);
                 }
