@@ -18,6 +18,38 @@ from importlib import import_module
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common import atari_wrappers, retro_wrappers
 
+
+# Hot patch atari env so we can get the score
+# This is exactly the same, except we put the result of act into the info
+from gym.envs.atari import AtariEnv
+def hotpatch_step(self, a):
+    reward = 0.0
+    action = self._action_set[a]
+    # Since reward appears to be incremental, dynamically add an instance variable to track.
+    # So there's a __getattribute__ function, but no __hasattribute__ function? Bold, Python.
+    try:
+        self.score = self.score
+    except AttributeError:
+        self.score = 0.0
+
+    if isinstance(self.frameskip, int):
+        num_steps = self.frameskip
+    else:
+        num_steps = self.np_random.randint(self.frameskip[0], self.frameskip[1])
+    
+    for _ in range(num_steps):
+        reward += self.ale.act(action)
+    ob = self._get_obs()
+    done = self.ale.game_over()
+    # Update score
+
+    score = self.score
+    self.score = 0.0 if done else self.score + reward
+    # Return score as part of info
+    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
+
+AtariEnv.step = hotpatch_step
+
 try:
     from mpi4py import MPI
 except ImportError:
@@ -200,41 +232,35 @@ def main():
         env = build_env(args)
         obs = env.reset()
 
-        tb = atari_wrappers.try_get_toybox(env)
-
-        score_total = 0
-        score = 0
-        prev_score = 0
+        scores = []
+        session_scores = []
         num_games = 0
-        continue_play = True
-        done = False
 
-        while continue_play:
-            if done:
-                num_games += 1
-                print("game %s: %s" % (num_games, score))
-
-                score_total = score_total + score
-                score = 0
-                obs = env.reset()
-
+        while num_games < 30:
             actions = model.step(obs)[0]
             obs, _, done, info = env.step(actions)
             env.render()
             time.sleep(1.0/30.0)
             done = done.any() if isinstance(done, np.ndarray) else done
 
-            if tb is not None and not done:
-                score = tb.get_score()
-                if score != prev_score: 
-                    prev_score = score
-                    print("run", score)
+            if isinstance(info, list) or isinstance(info, tuple):
+                session_scores.append(np.average([d['score'] for d in info]))
+            elif isinstance(info, dict):
+                session_scores.append(info['score'])
+            else:
+                session_scores.append(-1)
 
-            if num_games == 10: 
-                continue_play = False
+            if done:
+                num_games += 1
+                score = max(session_scores)
+                session_scores = []
+                scores.append(score)
+
+                print("game %s: %s" % (num_games, score))
+                obs = env.reset()
 
 
-        print("Total score: %s" % score_total)
+        print("Avg score: %f" % (sum(scores) / len(scores)))
         env.close()
 
 if __name__ == '__main__':

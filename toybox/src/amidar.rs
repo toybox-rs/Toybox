@@ -723,7 +723,7 @@ impl State {
             lives: config.start_lives,
             score: 0,
             chase_timer: 0,
-            jumps: 0,
+            jumps: config.start_jumps,
             jump_timer: 0,
             player,
             player_start,
@@ -814,8 +814,9 @@ impl super::State for State {
             self.chase_timer -= 1;
         } else if self.jump_timer > 0 { // only support jump when not chasing.
             self.jump_timer -= 1;
-        } else if buttons.button1 || buttons.button2 {
+        } else if (buttons.button1 || buttons.button2) && self.jumps > 0 {
             self.jump_timer = self.config.jump_time;
+            self.jumps-=1;
         }
 
         let mut dead = false;
