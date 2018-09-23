@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
 from gym.spaces import np_random
 from gym.envs.classic_control.rendering import SimpleImageViewer
-from toybox.envs.atari.constants import ACTION_MEANING
+from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
 
 import numpy as np
 
@@ -73,9 +73,12 @@ class ToyboxBaseEnv(Env, ABC):
         #print('Action index and type', action_index, type(action_index))
         #assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
+        assert(type(self._action_set)== list)
     
         # Convert the input action (string or int) into the ctypes struct.
-        action = self._action_to_input(self._action_set[action_index])
+        action = self._action_to_input(\
+            self._action_set[int(action_index)])
+        action.button1 = True
         frame = self.toybox.apply_action(action)
         obs = self._get_obs()
         
