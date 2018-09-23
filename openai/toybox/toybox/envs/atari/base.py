@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
 from gym.spaces import np_random
-from gym.envs.classic_control.rendering import SimpleImageViewer
 from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
 
 import numpy as np
@@ -109,6 +108,7 @@ class ToyboxBaseEnv(Env, ABC):
         if mode == 'human':
             # the following is copied from gym's AtariEnv
             if self.viewer is None:
+                from gym.envs.classic_control.rendering import SimpleImageViewer
                 self.viewer = SimpleImageViewer()
             self.viewer.imshow(self.toybox.get_rgb_frame())
             return self.viewer.isopen
