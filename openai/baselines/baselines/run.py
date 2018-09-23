@@ -40,10 +40,13 @@ def hotpatch_step(self, a):
     for _ in range(num_steps):
         reward += self.ale.act(action)
     ob = self._get_obs()
+    done = self.ale.game_over()
     # Update score
-    self.score += reward
+
+    score = self.score
+    self.score = 0.0 if done else self.score + reward
     # Return score as part of info
-    return ob, reward, self.ale.game_over(), {"ale.lives": self.ale.lives(), "score": self.score}
+    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
 
 AtariEnv.step = hotpatch_step
 
