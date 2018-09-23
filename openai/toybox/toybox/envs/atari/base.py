@@ -52,7 +52,8 @@ class ToyboxBaseEnv(Env, ABC):
     # This is required to "trick" baselines into treating us as a regular Atari game
     # Implementation copied from baselines
     def get_action_meanings(self):
-        return [ACTION_MEANING[i] for i in self._action_set]
+        #return [ACTION_MEANING[i] for i in self._action_set]
+        return list(ACTION_MEANING.values())
 
     # From OpenAI Gym Baselines
     # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
