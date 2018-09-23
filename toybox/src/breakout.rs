@@ -68,7 +68,10 @@ pub struct Config {
     ball_color: Color,
     row_colors: Vec<Color>,
     row_scores: Vec<i32>,
-    start_lives: i32
+    start_lives: i32,
+    ball_speed_row_depth: u32, 
+    ball_speed_slow: f64,
+    ball_speed_fast: f64,
 }
 impl Config {
     fn unique_colors(&self) -> Vec<&Color> {
@@ -86,7 +89,7 @@ impl Config {
     fn start_ball(&self) -> Body2D {
         let (w,h) = screen::GAME_SIZE;
         let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
-        ball.velocity = Vec2D::from_polar(screen::BALL_SPEED_START, (97.0 as f64).to_radians());
+        ball.velocity = Vec2D::from_polar(self.ball_speed_slow, (97.0 as f64).to_radians());
         ball
     }
 }
@@ -100,6 +103,9 @@ impl Default for Config {
             row_colors: screen::ROW_COLORS.iter().cloned().map(|c| c.into()).collect(),
             row_scores: screen::ROW_SCORES.iter().cloned().collect(),
             start_lives: 5,
+            ball_speed_row_depth: 3, // orange is 0..1..2..3
+            ball_speed_slow: 2.0,
+            ball_speed_fast: 4.0,
         }
     }
 }
@@ -116,18 +122,21 @@ pub struct Brick {
     pub points: i32,
     /// This starts as true and moves to false when hit.
     pub alive: bool,
-    // What color is this brick.
+    /// What color is this brick.
     pub color: Color,
+    /// How deep is this brick? Will trigger speedup?
+    pub depth: u32, 
 }
 
 impl Brick {
-    pub fn new(position: Vec2D, size: Vec2D, points: i32, color: Color) -> Brick {
+    pub fn new(position: Vec2D, size: Vec2D, points: i32, color: Color, depth: u32) -> Brick {
         Brick {
             position,
             size,
             points,
             alive: true,
             color,
+            depth,
         }
     }
 
@@ -153,6 +162,7 @@ pub struct State {
     pub paddle: Body2D,
     pub paddle_width: f64,
     pub paddle_speed: f64,
+    pub double_speed: bool,
     pub bricks: Vec<Brick>,
 }
 
@@ -189,7 +199,9 @@ impl super::Simulation for Breakout {
                 let color_tuple = self.config.row_colors[y];
                 let score = self.config.row_scores[y];
                 let bpos = Vec2D::new(x * xs, (y as f64) * ys).translate(&offset);
-                bricks.push(Brick::new(bpos, bsize.clone(), score, color_tuple.into()));
+                // Reverse depth:
+                let depth = num_bricks_deep - y - 1;
+                bricks.push(Brick::new(bpos, bsize.clone(), score, color_tuple.into(), depth as u32));
             }
         }
 
@@ -202,7 +214,8 @@ impl super::Simulation for Breakout {
             points: 0,
             ball_radius: 2.0,
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
-            paddle_speed: 2.0,
+            paddle_speed: 4.0,
+            double_speed: false,
             bricks,
         })
     }
@@ -229,10 +242,10 @@ impl State {
     fn keep_paddle_on_screen(&mut self) {
         let left = screen::BOARD_LEFT_X as f64 - self.paddle_width/2.0;
         let right = screen::BOARD_RIGHT_X as f64 + self.paddle_width/2.0;
-        if (self.paddle.position.x < left) {
+        if self.paddle.position.x < left {
             self.paddle.position.x = left;
             self.paddle.velocity.x = 0.0;
-        } else if (self.paddle.position.x > right) {
+        } else if self.paddle.position.x > right {
             self.paddle.position.x = right;
             self.paddle.velocity.x = 0.0;
         }
@@ -267,7 +280,9 @@ impl State {
 
             // check lose?
             if self.ball.position.y + self.ball_radius > screen::BOARD_BOTTOM_Y.into() {
-                self.lives-=1;
+                if !self.is_dead {
+                    self.lives-=1;
+                }
                 self.is_dead = true;
                 return;
             }
@@ -300,6 +315,12 @@ impl State {
             if hit {
                 brick.alive = false;
                 self.points += brick.points;
+                if brick.depth >= self.config.ball_speed_row_depth && !self.double_speed {
+                    self.double_speed = true;
+                    // speed up the ball.
+                    let theta = self.ball.velocity.angle();
+                    self.ball.velocity = Vec2D::from_polar(self.config.ball_speed_fast, theta);
+                }
                 break;
             }
         }
@@ -330,7 +351,7 @@ impl super::State for State {
     fn update_mut(&mut self, buttons: Input) {
         self.update_paddle_movement(buttons);
 
-        if (self.is_dead) {
+        if self.is_dead {
             if (buttons.button1 || buttons.button2) {
                 self.ball = self.config.start_ball();
                 self.is_dead = false;
@@ -354,6 +375,10 @@ impl super::State for State {
                 return;
             } else {
                 self.update_time_slice(time_step);
+                if self.is_dead {
+                    // Don't simulate if dead.
+                    return;
+                }
                 time_simulated += time_step;
             }
         }
