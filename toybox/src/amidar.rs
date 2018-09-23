@@ -778,10 +778,12 @@ enum EnemyPlayerState {
 
 pub struct Amidar;
 impl super::Simulation for Amidar {
+    fn reset_seed(&mut self, seed: u32) {
+    }
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
-    fn new_game(&self) -> Box<super::State> {
+    fn new_game(&mut self) -> Box<super::State> {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, Error> {

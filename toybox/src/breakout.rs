@@ -3,6 +3,7 @@ use super::vec2d::Vec2D;
 use super::Body2D;
 use super::Input;
 use super::digit_sprites::draw_score;
+use super::random;
 
 use failure;
 use serde_json;
@@ -86,12 +87,6 @@ impl Config {
         let (w,h) = screen::GAME_SIZE;
         Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into())
     }
-    fn start_ball(&self) -> Body2D {
-        let (w,h) = screen::GAME_SIZE;
-        let mut ball = Body2D::new_pos(f64::from(w) / 2.0, f64::from(h) / 2.0);
-        ball.velocity = Vec2D::from_polar(self.ball_speed_slow, (97.0 as f64).to_radians());
-        ball
-    }
 }
 impl Default for Config {
     fn default() -> Self {
@@ -152,6 +147,7 @@ impl Brick {
 #[repr(C)]
 pub struct State {
     pub config: Config,
+    pub rand: random::Gen,
     pub lives: i32,
     pub is_dead: bool,
     pub points: i32,
@@ -168,20 +164,24 @@ pub struct State {
 
 pub struct Breakout {
     pub config: Config,
+    pub rand: random::Gen,
 }
 impl Default for Breakout {
     fn default() -> Self {
-        Breakout { config: Config::default() }
+        Breakout { config: Config::default(), rand: random::Gen::new_from_seed(13) }
     }
 }
 
 impl super::Simulation for Breakout {
+    fn reset_seed(&mut self, seed: u32) {
+        self.rand.reset_seed(seed);
+    }
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
 
     /// Create a new game of breakout.
-    fn new_game(&self) -> Box<super::State> {
+    fn new_game(&mut self) -> Box<super::State> {
         let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
 
@@ -205,19 +205,24 @@ impl super::Simulation for Breakout {
             }
         }
 
-        Box::new(State {
+        let mut state = State {
             config: self.config.clone(),
             lives: self.config.start_lives,
-            ball: Body2D::new_pos(w as f64 + 10.0, h as f64 + 20.0),
-            paddle: self.config.start_paddle(),
+            // offscreen, and dead
+            ball: Body2D::new_pos(-100.0, -100.0),
             is_dead: true,
+            // paddle starts in middle
+            paddle: self.config.start_paddle(),
             points: 0,
             ball_radius: 2.0,
             paddle_width: screen::PADDLE_START_SIZE.0.into(),
             paddle_speed: 4.0,
             double_speed: false,
+            rand: random::Gen::new_child(&mut self.rand),
             bricks,
-        })
+        };
+        state.start_ball();
+        Box::new(state)
     }
 
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, failure::Error> {
@@ -227,6 +232,20 @@ impl super::Simulation for Breakout {
 }
 
 impl State {
+    fn start_ball(&mut self) {
+        let (w,h) = screen::GAME_SIZE;
+        let w = w as f64;
+        let h = h as f64;
+        // four options: left-> <-center center-> <-right 
+        let angles: [f64; 4] = [30.0, 30.0, 150.0, 150.0];
+        let positions = [0.1*w, 0.5*w, 0.5*w, 0.9*w];
+
+        let index = (self.rand.next_u32() % 4) as usize;
+
+        self.ball.position.x = positions[index];
+        self.ball.position.y = h / 2.0;
+        self.ball.velocity = Vec2D::from_polar(self.config.ball_speed_slow, angles[index].to_radians());
+    }
     fn update_paddle_movement(&mut self, buttons: Input) {
         let left = buttons.left;
         let right = buttons.right;
@@ -353,7 +372,7 @@ impl super::State for State {
 
         if self.is_dead {
             if (buttons.button1 || buttons.button2) {
-                self.ball = self.config.start_ball();
+                self.start_ball();
                 self.is_dead = false;
             }
         }

@@ -14,6 +14,8 @@ extern crate png;
 pub mod graphics;
 pub mod digit_sprites;
 
+mod random;
+
 mod direction;
 /// Direction represents an enum of Left,Right,Up and Down.
 pub use direction::Direction;
@@ -48,8 +50,10 @@ pub trait State {
 
 /// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.
 pub trait Simulation {
+    /// Seed simulation.
+    fn reset_seed(&mut self, seed: u32);
     /// Generate a new State. This is in a Box<State> because it may be 1 of many unknown types as far as calling code is concerned.
-    fn new_game(&self) -> Box<State>;
+    fn new_game(&mut self) -> Box<State>;
     /// Return a tuple of game size in pixels, e.g., (100,100).
     fn game_size(&self) -> (i32, i32);
     /// Generate a new state from JSON String.

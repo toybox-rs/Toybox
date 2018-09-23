@@ -105,7 +105,7 @@ fn main() {
 
     println!("output={:?} grayscale={:?}", matches.value_of("output"), grayscale);
 
-    let simulator = toybox::get_simulation_by_name(game).unwrap();
+    let mut simulator = toybox::get_simulation_by_name(game).unwrap();
     let (w, h) = simulator.game_size();
     let mut state = simulator.new_game();
     let mut images = VecDeque::with_capacity(max_frames.unwrap_or(num_steps));

@@ -162,11 +162,13 @@ impl Default for GridWorld {
     }
 }
 impl super::Simulation for GridWorld {
+    fn reset_seed(&mut self, seed: u32) {
+    }
     fn game_size(&self) -> (i32, i32) {
         self.config.game_size
     }
 
-    fn new_game(&self) -> Box<super::State> {
+    fn new_game(&mut self) -> Box<super::State> {
         Box::new(State::from_config(&self.config))
     }
 

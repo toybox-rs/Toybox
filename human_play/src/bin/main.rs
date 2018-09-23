@@ -26,7 +26,7 @@ struct AbstractGame {
 impl quicksilver::State for AbstractGame {
     fn new() -> AbstractGame {
         let game_to_play = toybox::GAME_LIST[unsafe { GAME_ID }];
-        let factory = toybox::get_simulation_by_name(&game_to_play)
+        let mut factory = toybox::get_simulation_by_name(&game_to_play)
             .unwrap_or_else(|_| panic!("We should be able to get a game for `{}`", game_to_play));
         let state = factory.new_game();
         AbstractGame {
