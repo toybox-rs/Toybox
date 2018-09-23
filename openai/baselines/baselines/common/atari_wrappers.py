@@ -1,6 +1,7 @@
 from toybox.envs.atari.base import ToyboxBaseEnv
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
+from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 import numpy as np
 import os
 os.environ.setdefault('PATH', '')
@@ -11,7 +12,7 @@ import cv2
 cv2.ocl.setUseOpenCL(False)
 
 # Get innermost gym.Env (skip all Wrapper)
-def get_innermost(env):
+def get_turtle(env):
     env = env
     while True:
         if (isinstance(env, VecFrameStack)):
@@ -20,19 +21,14 @@ def get_innermost(env):
             env = env.env
         elif (isinstance(env, DummyVecEnv)):
             env = env.envs[0]
-        elif (isinstance(env, gym.Env)):
-            break
+        elif isinstance(env, ToyboxBaseEnv):
+            return env
+        elif isinstance(env, SubprocVecEnv):
+            env = env.example_env 
+        elif isinstance(env, gym.Env):
+            return env
         else:
-            syntaxerror
-    return env
-
-# Get toybox inside if possible.
-def try_get_toybox(env):
-    env = get_innermost(env)
-    if isinstance(env, ToyboxBaseEnv):
-        return env.toybox
-    print(env)
-    return None
+            raise ValueError("Can't unwrap", env)
 
 
 class NoopResetEnv(gym.Wrapper):
@@ -167,8 +163,8 @@ class WarpFrame(gym.ObservationWrapper):
             shape=(self.height, self.width, 1), dtype=np.uint8)
 
     def observation(self, frame):
-        toybox = try_get_toybox(self)
-        if toybox is None:
+        env = get_turtle(self)
+        if not isinstance(env, ToyboxBaseEnv):
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_AREA)
         return frame[:, :, None]

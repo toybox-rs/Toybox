@@ -12,6 +12,9 @@ class MockALE():
     def lives(self):
         return self.toybox.get_lives()
 
+    def get_score(self):
+        return self.toybox.get_score()
+
 
 class ToyboxBaseEnv(Env, ABC):
     metadata = {'render.modes': ['human']}
