@@ -798,6 +798,7 @@ impl super::State for State {
         self.score
     }
     fn update_mut(&mut self, buttons: Input) {
+        let pre_update_score : i32 = self.score();
         if let Some(score_change) = self.player.update(buttons, &mut self.board) {
             self.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
@@ -864,6 +865,7 @@ impl super::State for State {
         if dead {
             self.jumps = self.config.start_jumps;
             self.lives -= 1;
+            self.score = pre_update_score;
             self.reset();
         }
     }
