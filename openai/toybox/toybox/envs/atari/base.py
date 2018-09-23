@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
 from gym.spaces import np_random
+from gym.utils import seeding
 from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
 
 import numpy as np
@@ -50,6 +51,22 @@ class ToyboxBaseEnv(Env, ABC):
     @abstractmethod
     def _action_to_input(self, action):
         raise NotImplementedError
+    
+    def seed(self, seed=None):
+        """
+        This is totally the implementation in AtariEnv in openai/gym.
+        """
+        self.np_random, seed1 = seeding.np_random(seed)
+        # Derive a random seed. This gets passed as a uint, but gets
+        # checked as an int elsewhere, so we need to keep it below
+        # 2**31.
+        # Toybox takes a uint seed, but we're copying the ALE seed for reasons above. 
+        # They're unclear who checks, so being safe here.
+        seed2 = seeding.hash_seed(seed1 + 1) % 2**31
+        self.toybox.set_seed(seed2)
+        # Start a new game to ensure that the seed gets used!.
+        self.toybox.new_game()
+        return [seed1, seed2]
 
     # This is required to "trick" baselines into treating us as a regular Atari game
     # Implementation copied from baselines

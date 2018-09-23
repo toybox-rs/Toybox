@@ -42,6 +42,16 @@ pub extern "C" fn simulator_free(ptr: *mut WrapSimulator) {
     }
 }
 
+// Reset the simulator RNG to a given seed.
+#[no_mangle]
+pub extern "C" fn simulator_seed(ptr: *mut WrapSimulator, seed: u32) {
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    simulator.reset_seed(seed);
+}
+
 // STATE ALLOC + FREE
 #[no_mangle]
 pub extern "C" fn state_alloc(ptr: *mut WrapSimulator) -> *mut WrapState {

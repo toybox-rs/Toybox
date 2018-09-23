@@ -104,6 +104,9 @@ class Input(ctypes.Structure):
 _lib.simulator_alloc.argtypes = [ctypes.c_char_p]
 _lib.simulator_alloc.restype = ctypes.POINTER(WrapSimulator)
 
+_lib.simulator_seed.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_uint]
+_lib.simulator_seed.restype = None
+
 _lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.state_alloc.restype = ctypes.POINTER(WrapState)
 
@@ -147,6 +150,9 @@ class Simulator(object):
     
     def __exit__(self, exc_type, exc_value, traceback):
         self.__del__()
+    
+    def set_seed(self, value):
+        _lib.simulator_seed(self.__sim, value)
 
     def get_frame_width(self):
         return self.__width
@@ -274,6 +280,9 @@ class Toybox(object):
         new_frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
         self.state.append(new_frame)
         return new_frame
+    
+    def set_seed(self, seed):
+        self.rsimulator.set_seed(seed)
 
     def save_frame_image(self, path):
         img = None
