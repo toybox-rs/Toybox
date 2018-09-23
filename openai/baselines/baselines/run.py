@@ -239,8 +239,8 @@ def main():
         while num_games < 30:
             actions = model.step(obs)[0]
             obs, _, done, info = env.step(actions)
-            #env.render()
-            #time.sleep(1.0/30.0)
+            env.render()
+            time.sleep(1.0/30.0)
             done = done.any() if isinstance(done, np.ndarray) else done
 
             if isinstance(info, list) or isinstance(info, tuple):

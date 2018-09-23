@@ -115,6 +115,8 @@ class ToyboxBaseEnv(Env, ABC):
                 self.viewer = SimpleImageViewer()
             self.viewer.imshow(self.toybox.get_rgb_frame())
             return self.viewer.isopen
+        elif mode == 'rgb_array':
+            return self.toybox.get_rgb_frame()
 
     def close(self):
         if self.viewer is not None:
