@@ -61,7 +61,7 @@ class PolicyWithValue(object):
 
     def _evaluate(self, variables, observation, **extra_feed):
         sess = self.sess or tf.get_default_session()
-        feed_dict = {self.X: adjust_shape(self.X, [observation]*4)}
+        feed_dict = {self.X: adjust_shape(self.X, observation)}
         for inpt_name, data in extra_feed.items():
             if inpt_name in self.__dict__.keys():
                 inpt = self.__dict__[inpt_name]
