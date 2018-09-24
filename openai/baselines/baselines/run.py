@@ -8,6 +8,7 @@ import gym
 from collections import defaultdict
 import tensorflow as tf
 import numpy as np
+from scipy.stats import sem
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -231,16 +232,18 @@ def main():
         logger.log("Running trained model")
         env = build_env(args)
         obs = env.reset()
+        turtle = atari_wrappers.get_turtle(env)
+        turtle.ale.saveScreenPNG(b'/Users/etosch/dev/toybox/start_screen.png')
 
         scores = []
         session_scores = []
         num_games = 0
 
-        while num_games < 30:
+        while num_games < 2:
             actions = model.step(obs)[0]
             obs, _, done, info = env.step(actions)
             env.render()
-            time.sleep(1.0/30.0)
+            #time.sleep(1.0/30.0)
             done = done.any() if isinstance(done, np.ndarray) else done
 
             if isinstance(info, list) or isinstance(info, tuple):
@@ -260,7 +263,8 @@ def main():
                 obs = env.reset()
 
 
-        print("Avg score: %f" % (sum(scores) / len(scores)))
+        print("Avg score: %f" % np.average(scores))
+        print("Std. score: %f" % sem(scores))
         env.close()
 
 if __name__ == '__main__':

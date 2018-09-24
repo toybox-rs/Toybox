@@ -287,10 +287,10 @@ class Toybox(object):
     def save_frame_image(self, path):
         img = None
         if self.grayscale:
-            img = Image.fromarray(self.state, 'L') 
+            img = Image.fromarray(self.rstate.render_frame_grayscale(self.rsimulator), 'L') 
         else:
-            img = Image.fromarray(self.state, 'RGBA')
-        img.save(path)
+            img = Image.fromarray(self.rstate.render_frame_color(self.rsimulator), 'RGBA')
+        img.save(path, format='png')
 
     def get_rgb_frame(self):
         return self.rstate.render_frame_rgb(self.rsimulator)
