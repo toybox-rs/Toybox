@@ -88,7 +88,7 @@ impl Default for Config {
             start_jumps: 4,
             chase_time: 10 * 30, // 10 seconds
             chase_score_bonus: 100,
-            jump_time: 3 * 30, // 3 seconds
+            jump_time: 2 * 30 + 15, // 2.5 seconds
             render_images: true,
             box_bonus: 50,
         }
