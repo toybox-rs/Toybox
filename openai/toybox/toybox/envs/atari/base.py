@@ -16,6 +16,14 @@ class MockALE():
     def get_score(self):
         return self.toybox.get_score()
 
+    def saveScreenPNG(self, name):
+        # Has to be bytes for ALE
+        name = name.decode('utf-8')
+        grayscale = self.toybox.grayscale
+        self.toybox.grayscale = False
+        self.toybox.save_frame_image(name)
+        self.toybox.grayscale = grayscale
+
 
 class ToyboxBaseEnv(Env, ABC):
     metadata = {'render.modes': ['human']}

@@ -853,7 +853,7 @@ impl super::State for State {
                 },
                 EnemyPlayerState::PlayerDeath => {
                     dead = true;
-                    println!("ded");
+                    //println!("ded");
                     break;
                 },
                 EnemyPlayerState::EnemyCatch(eid) => {
