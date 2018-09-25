@@ -268,7 +268,7 @@ impl super::State for State {
             screen::GAME_SIZE.1 - screen::SKY_TO_GROUND,
         ));
 
-        if self.lives() <= 0 {
+        if self.lives() < 0 {
             return output;
         }
 

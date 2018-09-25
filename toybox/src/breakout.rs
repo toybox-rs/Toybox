@@ -455,7 +455,7 @@ impl super::State for State {
             screen::FRAME_RIGHT_SUPPORT.1,
         ));
 
-        if self.lives <= 0 {
+        if self.lives < 0 {
             return output;
         }
 
