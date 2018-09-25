@@ -233,7 +233,7 @@ def main():
         env = build_env(args)
         obs = env.reset()
         turtle = atari_wrappers.get_turtle(env)
-        turtle.ale.saveScreenPNG(b'/Users/etosch/dev/toybox/start_screen.png')
+        #turtle.ale.saveScreenPNG(b'/Users/kclary/dev/toybox/start_screen.png')
 
         scores = []
         session_scores = []
