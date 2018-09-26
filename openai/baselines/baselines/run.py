@@ -233,31 +233,31 @@ def main():
         env = build_env(args)
         obs = env.reset()
         turtle = atari_wrappers.get_turtle(env)
-        #turtle.ale.saveScreenPNG(b'/Users/kclary/dev/toybox/start_screen.png')
-
         scores = []
-        session_scores = []
+        session_scores = set()
         num_games = 0
 
-        while num_games < 2:
+        while num_games < 100:
             actions = model.step(obs)[0]
+            num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             env.render()
-            #time.sleep(1.0/30.0)
-            done = done.any() if isinstance(done, np.ndarray) else done
+            time.sleep(1.0/60.0)
+            done = num_lives == 1 and done 
+            #done = done.any() if isinstance(done, np.ndarray) else done
 
             if isinstance(info, list) or isinstance(info, tuple):
-                session_scores.append(np.average([d['score'] for d in info]))
+                session_scores.add(np.average([d['score'] for d in info]))
             elif isinstance(info, dict):
-                session_scores.append(info['score'])
+                session_scores.add(['score'])
             else:
-                session_scores.append(-1)
+                session_scores.add(-1)
 
             if done:
                 num_games += 1
                 score = max(session_scores)
-                session_scores = []
                 scores.append(score)
+                session_scores = set()
 
                 print("game %s: %s" % (num_games, score))
                 obs = env.reset()

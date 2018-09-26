@@ -38,6 +38,7 @@ class NoopResetEnv(gym.Wrapper):
         """
         gym.Wrapper.__init__(self, env)
         self.noop_max = noop_max
+        print("Noop max:", self.noop_max)
         self.override_num_noops = None
         self.noop_action = 0
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
@@ -86,6 +87,7 @@ class EpisodicLifeEnv(gym.Wrapper):
         Done by DeepMind for the DQN and co. since it helps value estimation.
         """
         gym.Wrapper.__init__(self, env)
+        print('triggered')
         self.lives = 0
         self.was_real_done  = True
 

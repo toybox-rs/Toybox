@@ -16,6 +16,9 @@ class MockALE():
     def get_score(self):
         return self.toybox.get_score()
 
+    def game_over(self):
+        return self.toybox.game_over()
+
     def saveScreenPNG(self, name):
         # Has to be bytes for ALE
         name = name.decode('utf-8')
@@ -120,7 +123,7 @@ class ToyboxBaseEnv(Env, ABC):
     
         # Send back dignostic information
         info['lives'] = self.toybox.get_lives()
-        info['frame'] = frame
+        #info['frame'] = frame
         info['score'] = 0 if done else self.score
     
         return obs, reward, done, info
