@@ -371,7 +371,7 @@ impl super::State for State {
         self.update_paddle_movement(buttons);
 
         if self.is_dead {
-            if (buttons.button1 || buttons.button2) {
+            if buttons.button1 || buttons.button2 {
                 self.start_ball();
                 self.is_dead = false;
             }
@@ -400,6 +400,14 @@ impl super::State for State {
                 }
                 time_simulated += time_step;
             }
+        }
+        
+        let reset_level = self.bricks.clone().into_iter().all(|b| !b.alive);
+        if reset_level {
+            for b in self.bricks.iter_mut() {
+                b.alive = true;
+            }
+            self.start_ball();
         }
     }
 
