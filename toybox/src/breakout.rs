@@ -40,7 +40,7 @@ pub mod screen {
     pub const GREEN: (u8, u8, u8) = (72, 160, 72);
     pub const BLUE: (u8, u8, u8) = (66, 72, 200);
 
-    pub const ROW_SCORES: &[i32] = &[7, 7, 7, 4, 4, 1, 1];
+    pub const ROW_SCORES: &[i32] = &[7, 7, 4, 4, 1, 1];
     pub const ROW_COLORS: &[&(u8, u8, u8)] = &[&RED, &DARK_ORANGE, &ORANGE, &YELLOW, &GREEN, &BLUE];
 
     // Atari colors have paddle, ball, and red all being the same.
@@ -220,6 +220,7 @@ impl super::Simulation for Breakout {
             rand: random::Gen::new_child(&mut self.rand),
             bricks,
         };
+
         state.start_ball();
         Box::new(state)
     }
