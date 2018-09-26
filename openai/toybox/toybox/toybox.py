@@ -11,9 +11,10 @@ platform = platform.system()
 libopenai = 'LIBOPENAI'
 
 if platform == 'Darwin':
-    _lib_prefix = os.environ[libopenai] if libopenai in os.environ else ''
+    _lib_prefix = os.environ[libopenai] if libopenai in os.environ else '.'
     _lib_path_debug   = os.path.sep.join([_lib_prefix, 'target', 'debug', 'libopenai.dylib'])
     _lib_path_release = os.path.sep.join([_lib_prefix, 'target', 'release', 'libopenai.dylib'])
+    print(_lib_path_release)
 
     _lib_ts_release = os.stat(_lib_path_release).st_birthtime \
         if os.path.exists(_lib_path_release) else 0
