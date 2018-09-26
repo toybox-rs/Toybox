@@ -55,6 +55,7 @@ pub mod screen {
 
     pub const PADDLE_START_Y: i32 = FRAME_TO_PADDLE + BOARD_TOP_Y;
     pub const PADDLE_START_SIZE: (i32, i32) = (24, 3);
+    pub const PADDLE_SMALL_SIZE: (i32, i32) = (16, 3);
 
     pub const BALL_ANGLE_MIN: f64 = 30.0;
     pub const BALL_ANGLE_RANGE: f64 = 120.0;
@@ -72,7 +73,7 @@ pub struct Config {
     start_lives: i32,
     ball_speed_row_depth: u32, 
     ball_speed_slow: f64,
-    ball_speed_fast: f64,
+    ball_speed_fast: f64
 }
 impl Config {
     fn unique_colors(&self) -> Vec<&Color> {
@@ -299,6 +300,7 @@ impl State {
             if self.ball.position.y + self.ball_radius > screen::BOARD_BOTTOM_Y.into() {
                 if !self.is_dead {
                     self.lives-=1;
+                    self.paddle_width = screen::PADDLE_START_SIZE.0.into();
                 }
                 self.is_dead = true;
                 return;
@@ -307,6 +309,7 @@ impl State {
             // bounce ceiling?
             if self.ball.position.y - self.ball_radius < screen::BOARD_TOP_Y.into() {
                 self.ball.velocity.y *= -1.0;
+                self.paddle_width = screen::PADDLE_SMALL_SIZE.0.into();
             }
         }
 
