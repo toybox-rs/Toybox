@@ -241,9 +241,10 @@ def main():
             actions = model.step(obs)[0]
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
-            done = done and (num_lives == 1 or turtle.ale.game_over())
+            #done = done and (num_lives == 1 or turtle.ale.game_over())
             env.render()
             time.sleep(1.0/60.0)
+            done = num_lives == 1 and done 
             #done = done.any() if isinstance(done, np.ndarray) else done
 
             if isinstance(info, list) or isinstance(info, tuple):
@@ -257,6 +258,7 @@ def main():
                 num_games += 1
                 score = max(session_scores)
                 scores.append(score)
+                session_scores = set()
 
                 print("game %s: %s" % (num_games, score))
                 obs = env.reset()

@@ -8,10 +8,12 @@ import time
 import json
 
 platform = platform.system() 
+libopenai = 'LIBOPENAI'
 
 if platform == 'Darwin':
-    _lib_path_debug = 'target/debug/libopenai.dylib'
-    _lib_path_release = 'target/release/libopenai.dylib'
+    _lib_prefix = os.environ[libopenai] if libopenai in os.environ else ''
+    _lib_path_debug   = os.path.sep.join([_lib_prefix, 'target', 'debug', 'libopenai.dylib'])
+    _lib_path_release = os.path.sep.join([_lib_prefix, 'target', 'release', 'libopenai.dylib'])
 
     _lib_ts_release = os.stat(_lib_path_release).st_birthtime \
         if os.path.exists(_lib_path_release) else 0
@@ -203,7 +205,7 @@ class State(object):
         return _lib.state_score(self.__state)
 
     def game_over(self):
-        return self.lives() < 0
+        return self.lives() == 0
 
     def render_frame(self, sim, grayscale=True):
         if grayscale:
@@ -302,7 +304,7 @@ class Toybox(object):
         return self.rstate.lives()
     
     def game_over(self):
-        return self.get_lives() < 0
+        return self.rstate.game_over()
 
     def to_json(self):
         return self.rstate.to_json()
