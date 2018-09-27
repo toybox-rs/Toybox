@@ -368,34 +368,18 @@ class State(object):
         return json.loads(str(json_str))
 
 class Toybox(object):
-    def __init__(self, game_name, grayscale=True, frameskip=0, k=4):
+    def __init__(self, game_name, grayscale=True, frameskip=0):
         self.game_name = game_name
         self.frames_per_action = frameskip+1
         self.rsimulator = Simulator(game_name)
         self.rstate = State(self.rsimulator)
         self.grayscale = grayscale
-        self.k = k 
-        # OpenAI state is a 4-frame sequence
-        self.state = None
-        self._set_state(k)
         self.deleted = False
-
-    def _set_state(self, k):
-        self.state = deque([], maxlen=k)
-        frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
-        for _ in range(k):
-            self.state.append(frame)
-        assert (self.state)
-
-    def get_state(self):
-        assert(self.state)
-        return self.state
 
     def new_game(self):
         old_state = self.rstate
         del old_state
         self.rstate = self.rsimulator.new_game()
-        self._set_state(self.k)
         
     def get_height(self):
         return self.rsimulator.get_frame_height()
@@ -407,9 +391,7 @@ class Toybox(object):
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
             _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
-        new_frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
-        self.state.append(new_frame)
-        return new_frame
+        return self.rstate.render_frame(self.rsimulator, self.grayscale)
     
     def set_seed(self, seed):
         self.rsimulator.set_seed(seed)
@@ -439,6 +421,11 @@ class Toybox(object):
 
     def from_json(self, js):
         return self.rsimulator.from_json(js)
+
+    def write_json(self, js):
+        old_state = self.rstate
+        del old_state
+        self.rstate = self.from_json(js)
 
     def predicate_met(self, pred): 
         return False
