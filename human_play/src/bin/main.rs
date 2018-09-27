@@ -1,19 +1,19 @@
 extern crate clap;
 extern crate failure;
-extern crate human_play;
 extern crate toybox;
 
 use std::sync::Arc;
 
 extern crate quicksilver;
 use clap::{App, Arg};
-use human_play::color_convert;
 use quicksilver::{
+    input::Key,
     geom::{Rectangle, Vector},
     graphics::{Color, Draw, Image, PixelFormat, View, Window, WindowBuilder},
     run,
 };
-use toybox::graphics::{Drawable, FixedSpriteData, ImageBuffer};
+use toybox::graphics::{Drawable, FixedSpriteData, ImageBuffer, Color as TColor};
+use toybox::Input;
 
 static mut GAME_ID: usize = 0;
 
@@ -36,7 +36,7 @@ impl quicksilver::State for AbstractGame {
         }
     }
     fn update(&mut self, window: &mut Window) {
-        let buttons = human_play::process_keys(window);
+        let buttons = process_keys(window);
         if self.state.lives() < 0 {
             self.state = self.factory.new_game();
             return;
@@ -105,6 +105,7 @@ impl quicksilver::State for AbstractGame {
         window.present();
     }
 }
+
 fn main() {
     let matches = App::new("human_play")
         .arg(
@@ -126,4 +127,39 @@ fn main() {
     let factory = toybox::get_simulation_by_name(&game).unwrap();
     let (w, h) = factory.game_size();
     run::<AbstractGame>(WindowBuilder::new("Toybox::human_play", w as u32, h as u32));
+}
+
+pub fn process_keys(window: &Window) -> Input {
+    let keys = window.keyboard();
+    let mut buttons = Input::new();
+
+    if keys[Key::Up].is_down() || keys[Key::W].is_down() {
+        buttons.up = true;
+    }
+    if keys[Key::Down].is_down() || keys[Key::S].is_down() {
+        buttons.down = true;
+    }
+    if keys[Key::Left].is_down() || keys[Key::A].is_down() {
+        buttons.left = true;
+    }
+    if keys[Key::Right].is_down() || keys[Key::D].is_down() {
+        buttons.right = true;
+    }
+    if keys[Key::Z].is_down() || keys[Key::Space].is_down() {
+        buttons.button1 = true;
+    }
+    if keys[Key::X].is_down() {
+        buttons.button2 = true;
+    }
+
+    buttons
+}
+
+pub fn color_convert(color: TColor) -> Color {
+    Color {
+        r: color.r as f32 / 255.0,
+        g: color.g as f32 / 255.0,
+        b: color.b as f32 / 255.0,
+        a: 1.0,
+    }
 }
