@@ -36,7 +36,7 @@ impl quicksilver::State for AbstractGame {
         }
     }
     fn update(&mut self, window: &mut Window) {
-        let buttons = process_keys(window);
+        let buttons = process_keys(window, self.state.as_ref());
         if self.state.lives() < 0 {
             self.state = self.factory.new_game();
             return;
@@ -129,7 +129,7 @@ fn main() {
     run::<AbstractGame>(WindowBuilder::new("Toybox::human_play", w as u32, h as u32));
 }
 
-pub fn process_keys(window: &Window) -> Input {
+pub fn process_keys(window: &Window, state: &toybox::State) -> Input {
     let keys = window.keyboard();
     let mut buttons = Input::new();
 
@@ -150,6 +150,10 @@ pub fn process_keys(window: &Window) -> Input {
     }
     if keys[Key::X].is_down() {
         buttons.button2 = true;
+    }
+
+    if keys[Key::J].is_down() {
+        println!("{}", state.to_json());
     }
 
     buttons
