@@ -191,6 +191,17 @@ pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mu
 }
 
 #[no_mangle]
+pub extern "C" fn breakout_brick_live_by_index(state_ptr: *mut WrapState, brick_index: usize) -> bool {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let breakout: &toybox::breakout::State = state.as_any().downcast_ref().expect("Requires breakout State for bricks_remaining.");
+    queries::breakout::brick_live_by_index(breakout, brick_index)
+}
+
+#[no_mangle]
 pub extern "C" fn breakout_bricks_remaining(state_ptr: *mut WrapState) -> i32 {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());

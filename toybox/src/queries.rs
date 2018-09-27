@@ -3,7 +3,7 @@
 // ones from Rust will be helpful.
 
 pub mod amidar  {
-    use super::super::amidar::{State, Tile};
+    use super::super::amidar::{State};
     pub fn num_tiles_unpainted(state: &State) -> i32 {
         let mut sum = 0;
         for row in state.board.tiles.iter() {
@@ -87,6 +87,10 @@ mod amidar_q_tests {
 
 pub mod breakout {
     use super::super::breakout::{State, screen};
+
+    pub fn brick_live_by_index(state: &State, brick_index: usize) -> bool {
+        return state.bricks[brick_index].alive
+    }
 
     pub fn bricks_remaining(state : &State) -> i32 {
         state.bricks.iter().filter(|b| b.alive).count() as i32

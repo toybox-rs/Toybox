@@ -131,6 +131,9 @@ _lib.to_json.restype = ctypes.c_char_p
 _lib.from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.from_json.restype = ctypes.POINTER(WrapState)
 
+_lib.breakout_brick_live_by_index.argtypes = [ctypes.POINTER(WrapState), ctypes.c_size_t]
+_lib.breakout_brick_live_by_index.restype = ctypes.c_bool
+
 _lib.breakout_bricks_remaining.argtypes = [ctypes.POINTER(WrapState)]
 _lib.breakout_bricks_remaining.restype = ctypes.c_int32
 
@@ -249,6 +252,9 @@ class State(object):
     def game_over(self):
         return self.lives() == 0
 
+    def breakout_brick_live_by_index(self, index):
+        return _lib.breakout_brick_live_by_index(self.__state, index)
+
     def breakout_bricks_remaining(self):
         return _lib.breakout_bricks_remaining(self.__state)
     
@@ -260,6 +266,13 @@ class State(object):
 
     def breakout_num_rows(self):
         return _lib.breakout_num_rows(self.__state)
+
+    def breakout_channels(self):
+        NC = self.breakout_num_columns()
+        arr = np.zeros(NC, dtype='int32')
+        found = _lib.breakout_channels(self.__state, arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)), NC)
+        assert(found >= 0)
+        return arr.tolist()[:found]
 
     def amidar_num_tiles_unpainted(self):
         return _lib.amidar_num_tiles_unpainted(self.__state)
@@ -293,13 +306,6 @@ class State(object):
             out.append((x,y))
         return out
 
-    def breakout_channels(self):
-        NC = self.breakout_num_columns()
-        arr = np.zeros(NC, dtype='int32')
-        found = _lib.breakout_channels(self.__state, arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)), NC)
-        assert(found >= 0)
-        return arr.tolist()[:found]
-            
     def render_frame(self, sim, grayscale=True):
         if grayscale:
             return self.render_frame_grayscale(sim)
