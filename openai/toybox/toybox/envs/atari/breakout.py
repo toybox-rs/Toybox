@@ -16,6 +16,11 @@ class BreakoutEnv(ToyboxBaseEnv):
     def _action_to_input(self, action):
         input = Input()
         action = action.upper() if type(action) == str else ACTION_MEANING[action]
+
+        # The easiest way to test new queries is to stream them from here (we're sure it's breakout).
+        #print("Bricks_Remaining: ", self.toybox.rstate.breakout_bricks_remaining())
+        #print("Channels: ", self.toybox.rstate.breakout_channels())
+
         # Remove this later:
         if action == NOOP_STR:
             return input
