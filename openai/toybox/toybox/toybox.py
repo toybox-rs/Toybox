@@ -313,6 +313,9 @@ class Toybox(object):
     def from_json(self, js):
         return self.rsimulator.from_json(js)
 
+    def predicate_met(self, pred): 
+        return False
+
     def __del__(self):
         if not self.deleted:
             self.deleted = True
