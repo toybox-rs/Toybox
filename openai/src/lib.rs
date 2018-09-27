@@ -240,7 +240,6 @@ pub extern "C" fn breakout_channels(state_ptr: *mut WrapState, numpy_channels: *
 
     // This is Rust's answer.
     let src = queries::breakout::channels(breakout);
-    println!("breakout_channels(rs) {}", src.len());
     
     // Your array is too small!
     if src.len() >= numpy_channels_len {

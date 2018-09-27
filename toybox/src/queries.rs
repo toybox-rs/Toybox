@@ -71,6 +71,7 @@ mod tests {
         assert_eq!(empty, expected);
     }
 
+    #[test]
     fn test_breakout_channel_layout_assumptions() {
         let mut breakout = breakout::Breakout::default();
         let state = breakout.new_game();
