@@ -257,3 +257,116 @@ pub extern "C" fn breakout_channels(state_ptr: *mut WrapState, numpy_channels: *
     rc
 }
 
+#[no_mangle]
+pub extern "C" fn amidar_num_tiles_unpainted(state_ptr: *mut WrapState) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for num_tiles_unpainted.");
+    queries::amidar::num_tiles_unpainted(amidar)
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_num_enemies(state_ptr: *mut WrapState) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for num_enemies.");
+    queries::amidar::num_enemies(amidar) as i32
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_jumps_remaining(state_ptr: *mut WrapState) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for jumps_remaining.");
+    queries::amidar::jumps_remaining(amidar) as i32
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_regular_mode(state_ptr: *mut WrapState) -> bool {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for regular_mode.");
+    queries::amidar::regular_mode(amidar)
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_chase_mode(state_ptr: *mut WrapState) -> bool {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for chase_mode.");
+    queries::amidar::chase_mode(amidar)
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_jump_mode(state_ptr: *mut WrapState) -> bool {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for jump_mode.");
+    queries::amidar::jump_mode(amidar)
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_player_tile_x(state_ptr: *mut WrapState) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for player_tile_x.");
+    let (x, _) = queries::amidar::player_tile(amidar);
+    x
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_player_tile_y(state_ptr: *mut WrapState) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for player_tile_y.");
+    let (_, y) = queries::amidar::player_tile(amidar);
+    y
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_enemy_tile_x(state_ptr: *mut WrapState, enemy_id: i32) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for enemy_tile_x.");
+    let (x, _) = queries::amidar::enemy_tile(amidar, enemy_id as usize);
+    x
+}
+
+#[no_mangle]
+pub extern "C" fn amidar_enemy_tile_y(state_ptr: *mut WrapState, enemy_id: i32) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for enemy_tile_y.");
+    let (_, y) = queries::amidar::enemy_tile(amidar, enemy_id as usize);
+    y
+}

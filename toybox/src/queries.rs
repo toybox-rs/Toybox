@@ -15,6 +15,22 @@ pub mod amidar  {
         sum as i32
     }
 
+    pub fn regular_mode(state: &State) -> bool {
+        state.chase_timer == 0 && state.jump_timer == 0
+    }
+
+    pub fn chase_mode(state: &State) -> bool {
+        state.chase_timer > 0
+    }
+    
+    pub fn jump_mode(state: &State) -> bool {
+        state.chase_timer > 0
+    }
+
+    pub fn jumps_remaining(state: &State) -> i32 {
+        state.jumps
+    }
+
     pub fn num_enemies(state: &State) -> usize {
         state.enemies.len()
     }

@@ -672,7 +672,6 @@ impl Board {
             false
         } else {
             *val = Tile::Painted;
-            println!("painted: ({}, {})", tile.tx, tile.ty);
             true
         }
     }
@@ -873,7 +872,6 @@ impl super::State for State {
                 },
                 EnemyPlayerState::PlayerDeath => {
                     dead = true;
-                    //println!("ded");
                     break;
                 },
                 EnemyPlayerState::EnemyCatch(eid) => {
