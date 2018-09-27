@@ -1,14 +1,16 @@
 import toybox
+from toybox.envs.atari.base import ToyboxBaseEnv
 
 import time
 import sys
 import multiprocessing
 import os.path as osp
+from os import listdir
 import gym
 from collections import defaultdict
 import tensorflow as tf
 import numpy as np
-from scipy.stats import sem
+import json
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -235,7 +237,11 @@ def main():
         env = build_env(args)
         obs = env.reset()
         turtle = atari_wrappers.get_turtle(env)
+        if not isinstance(turtle, ToyboxBaseEnv): 
+            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
+
         found_seed = False
+        seed_state = None
 
         while not found_seed:
             actions = model.step(obs)[0]
@@ -244,20 +250,23 @@ def main():
             time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
 
-            if isinstance(info, list) or isinstance(info, tuple):
-                session_scores.add(np.average([d['score'] for d in info]))
-            elif isinstance(info, dict):
-                session_scores.add(['score'])
-            else:
-                session_scores.add(-1)
-
-            # find seed
-            if turtle.toybox.rstate.bricks_remaining() == 1:
+            # find single brick remaining seed
+            if turtle.toybox.rstate.breakout_bricks_remaining() == 1:
                 found_seed = True
+                print("Found seed for single brick remaining.")
+                seed_state = turtle.toybox.to_json()
+                print("Exported to JSON.")
+                 # save seed to openai/seed_states/json
+                num_seeds = len([f for f in listdir(osp.join('seed_states', 'json')) if 'single_brick' in f])
+                new_f = 'single_brick'+str(num_seeds)+'.json'
+                with open(osp.join('seed_states', 'json', new_f), 'w') as outfile:
+                    json.dump(seed_state, outfile)    
+                break
 
+            if done:
+                obs = env.reset()
+                print("Game ended before predicate met. New game.")
 
-        print("Avg score: %f" % np.average(scores))
-        print("Std. score: %f" % sem(scores))
         env.close()
 
 if __name__ == '__main__':
