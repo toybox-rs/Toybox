@@ -3,6 +3,70 @@
 // ones from Rust will be helpful.
 
 pub mod amidar  {
+    use super::super::amidar::{State, Tile};
+    pub fn num_tiles_unpainted(state: &State) -> i32 {
+        let mut sum = 0;
+        for row in state.board.tiles.iter() {
+            sum += row.iter()
+                .filter(|t| t.walkable())
+                .filter(|t| t.needs_paint())
+                .count();
+        }
+        sum as i32
+    }
+
+    pub fn num_enemies(state: &State) -> usize {
+        state.enemies.len()
+    }
+
+    pub fn enemy_tile(state: &State, enemy: usize) -> (i32, i32) {
+        let etp = state.enemies[enemy].position.to_tile();
+        (etp.tx, etp.ty)
+    }
+
+    pub fn player_tile(state: &State) -> (i32, i32) {
+        let tp = state.player.position.to_tile();
+        (tp.tx, tp.ty)
+    }
+}
+
+#[cfg(test)]
+mod amidar_q_tests {
+    use super::*;
+    use Simulation;
+    use super::amidar as q;
+    use super::super::amidar;
+    use super::super::Input;
+    use super::super::State as TState;
+
+    #[test]
+    fn test_q_num_tiles_unpainted() {
+        let mut state = amidar::State::try_new().unwrap();
+
+        let (px,py) = q::player_tile(&state);
+        let first = q::num_tiles_unpainted(&state);
+        
+        let mut go_up = Input::default();
+        go_up.up = true;
+
+        // Move the user up (be a little robust to how long the animation takes.)
+        for _ in 0..5000 {
+            state.update_mut(go_up);
+            if state.score > 0 {
+                // we must have painted something!
+                break;
+            }
+        }
+        let (nx,ny) = q::player_tile(&state);
+        if py == ny {
+            panic!("Player can't move upward!")
+        }
+        println!("Moved player to ({},{}) from ({},{})", nx, ny, px, py);
+        
+        let painted_now = q::num_tiles_unpainted(&state);
+        println!("painted_now: {} ... before: {}", painted_now, first);
+        assert!(painted_now < first);
+    }
 }
 
 pub mod breakout {
@@ -45,7 +109,7 @@ pub mod breakout {
 }
 
 #[cfg(test)]
-mod tests {
+mod breakout_q_tests {
     use super::*;
     use Simulation;
     use super::breakout as q;
