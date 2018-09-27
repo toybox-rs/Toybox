@@ -9,6 +9,7 @@ from collections import defaultdict
 import tensorflow as tf
 import numpy as np
 from scipy.stats import sem
+from statistics import stdev
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -268,7 +269,7 @@ def main():
         print("Avg score: %f" % np.average(scores))
         print("Median score: %f" % np.median(scores))
         print("Std error score: %f" % sem(scores))
-        print("Std dev score: %f" % statistics.stdev(scores))
+        print("Std dev score: %f" % stdev(scores))
         env.close()
 
 if __name__ == '__main__':
