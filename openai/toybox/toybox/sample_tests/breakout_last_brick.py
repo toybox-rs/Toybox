@@ -1,4 +1,7 @@
 import toybox
+from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox.envs.atari.amidar import AmidarEnv
+from toybox.envs.atari.breakout import BreakoutEnv
 
 import time
 import sys
@@ -210,7 +213,6 @@ def parse_cmdline_kwargs(args):
 
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
-
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -230,45 +232,38 @@ def main():
     env = build_env(args)
     obs = env.reset()
     turtle = atari_wrappers.get_turtle(env)
-    scores = []
-    session_scores = set()
-    num_games = 0
+    if not isinstance(turtle, ToyboxBaseEnv): 
+            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
 
-    n_bricks = turtle.toybox.breakout_bricks_remaining()
+    # get total number of bricks
+    n_bricks = turtle.toybox.rstate.breakout_bricks_remaining()
 
     # get initial state
     start_state = turtle.toybox.to_json()
 
-    # remove all bricks
-    for brick in n_bricks: 
-        start_state["bricks"][brick]["alive"] = False
+    for brick in range(n_bricks): 
+        # remove all bricks
+        for b in range(n_bricks): 
+            start_state["bricks"][b]["alive"] = False
 
-    for brick in n_bricks: 
         # turn on single brick
+        start_state["bricks"][brick]["alive"] = True
 
         # load env from manipulated state
+        state_at_last_brick = toybox.rsimulator.from_json()
+        turtle.toybox.write_state(state_at_last_brick)
 
-
-        # give it 72000 frames to win
-        turtle.toybox.query_brick_id(brick)
-
-        # if win, break 
-
-        # record number of steps to completion or end 
-
+        # n trials 
+        num_games = 0
+        n_steps = 0
         while num_games < 1:
             actions = model.step(obs)[0]
+            n_steps += 1
+
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             #env.render()
             done = num_lives == 1 and done 
-
-            if isinstance(info, list) or isinstance(info, tuple):
-                session_scores.add(np.average([d['score'] for d in info]))
-            elif isinstance(info, dict):
-                session_scores.add(['score'])
-            else:
-                session_scores.add(-1)
 
             if done:
                 num_games += 1
@@ -279,6 +274,13 @@ def main():
                 print("game %s: %s" % (num_games, score))
                 obs = env.reset()
                 session_scores = set()
+
+        # give it 72000 frames to win
+        #turtle.toybox.query_brick_id(brick)
+
+        # if win, break 
+
+        # record number of steps to completion or end 
 
 
     print("Avg score: %f" % np.average(scores))
