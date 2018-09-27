@@ -381,3 +381,14 @@ pub extern "C" fn amidar_enemy_tile_y(state_ptr: *mut WrapState, enemy_id: i32) 
     let (_, y) = queries::amidar::enemy_tile(amidar, enemy_id as usize);
     y
 }
+
+#[no_mangle]
+pub extern "C" fn amidar_enemy_caught(state_ptr: *mut WrapState, enemy_id: i32) -> bool {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let amidar: &toybox::amidar::State = state.as_any().downcast_ref().expect("Requires amidar State for enemy_caught.");
+    queries::amidar::enemy_caught(amidar, enemy_id as usize)
+}

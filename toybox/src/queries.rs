@@ -39,6 +39,11 @@ pub mod amidar  {
         let etp = state.enemies[enemy].position.to_tile();
         (etp.tx, etp.ty)
     }
+    
+    pub fn enemy_caught(state: &State, enemy: usize) -> bool {
+        state.enemies[enemy].caught
+    }
+
 
     pub fn player_tile(state: &State) -> (i32, i32) {
         let tp = state.player.position.to_tile();
