@@ -32,7 +32,7 @@ class ToyboxBaseEnv(Env, ABC):
     metadata = {'render.modes': ['human']}
     
     def __init__(self, toybox, grayscale=True, alpha=False, actions=None):
-        assert(toybox.state)
+        assert(toybox.rstate)
         self.toybox = toybox
         self.score = self.toybox.get_score()
         self.viewer = None
@@ -88,9 +88,7 @@ class ToyboxBaseEnv(Env, ABC):
     # From OpenAI Gym Baselines
     # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
     def _get_obs(self):
-        assert len(self.toybox.state) == self.toybox.k
-        #return LazyFrames(list(self.toybox.get_state()))
-        return self.toybox.get_state()[-1]
+        return self.toybox.get_state()
 
     def step(self, action_index):
         obs = None
@@ -98,7 +96,6 @@ class ToyboxBaseEnv(Env, ABC):
         done = False
         info = {}
     
-        assert(self.toybox.state)
         # Sometimes the action_index is a numpy integer...
         #print('Action index and type', action_index, type(action_index))
         #assert(type(action_index) == int)
