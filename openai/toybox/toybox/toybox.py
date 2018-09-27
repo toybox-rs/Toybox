@@ -114,13 +114,13 @@ _lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.state_alloc.restype = ctypes.POINTER(WrapState)
 
 _lib.simulator_frame_width.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.simulator_frame_width.restype = ctypes.c_int
+_lib.simulator_frame_width.restype = ctypes.c_int32
 
 _lib.simulator_frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.simulator_frame_height.restype = ctypes.c_int 
+_lib.simulator_frame_height.restype = ctypes.c_int32
 
-_lib.state_lives.restype = ctypes.c_int
-_lib.state_score.restype = ctypes.c_int
+_lib.state_lives.restype = ctypes.c_int32
+_lib.state_score.restype = ctypes.c_int32
     
 _lib.render_current_frame.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p]
  #(frame_ptr, size, sim.get_simulator(), self.__state)
@@ -132,16 +132,46 @@ _lib.from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.from_json.restype = ctypes.POINTER(WrapState)
 
 _lib.breakout_bricks_remaining.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_bricks_remaining.restype = ctypes.c_int
+_lib.breakout_bricks_remaining.restype = ctypes.c_int32
 
 _lib.breakout_num_rows.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_num_rows.restype = ctypes.c_int
+_lib.breakout_num_rows.restype = ctypes.c_int32
 
 _lib.breakout_num_columns.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_num_columns.restype = ctypes.c_int
+_lib.breakout_num_columns.restype = ctypes.c_int32
 
 _lib.breakout_channels.argtypes = [ctypes.POINTER(WrapState), ctypes.c_void_p, ctypes.c_size_t]
 _lib.breakout_channels.restype = ctypes.c_ssize_t
+
+_lib.amidar_num_tiles_unpainted.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_num_tiles_unpainted.restype = ctypes.c_int32
+
+_lib.amidar_num_enemies.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_num_enemies.restype = ctypes.c_int32
+
+_lib.amidar_jumps_remaining.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_jumps_remaining.restype = ctypes.c_int32
+
+_lib.amidar_regular_mode.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_regular_mode.restype = ctypes.c_bool
+
+_lib.amidar_chase_mode.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_chase_mode.restype = ctypes.c_bool
+
+_lib.amidar_jump_mode.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_jump_mode.restype = ctypes.c_bool
+
+_lib.amidar_player_tile_x.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_player_tile_x.restype = ctypes.c_int32
+
+_lib.amidar_player_tile_y.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_player_tile_y.restype = ctypes.c_int32
+
+_lib.amidar_enemy_tile_x.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
+_lib.amidar_enemy_tile_x.restype = ctypes.c_int32
+
+_lib.amidar_enemy_tile_y.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
+_lib.amidar_enemy_tile_y.restype = ctypes.c_int32
 
 class Simulator(object):
     def __init__(self, game_name):
@@ -230,6 +260,38 @@ class State(object):
 
     def breakout_num_rows(self):
         return _lib.breakout_num_rows(self.__state)
+
+    def amidar_num_tiles_unpainted(self):
+        return _lib.amidar_num_tiles_unpainted(self.__state)
+    
+    def amidar_player_tile(self):
+        x = _lib.amidar_player_tile_x(self.__state)
+        y = _lib.amidar_player_tile_y(self.__state)
+        return (x,y)
+    
+    def amidar_num_enemies(self):
+        return _lib.amidar_num_enemies(self.__state)
+    
+    def amidar_jumps_remaining(self):
+        return _lib.amidar_jumps_remaining(self.__state)
+
+    def amidar_regular_mode(self):
+        return _lib.amidar_regular_mode(self.__state)
+
+    def amidar_jump_mode(self):
+        return _lib.amidar_jump_mode(self.__state)
+
+    def amidar_chase_mode(self):
+        return _lib.amidar_chase_mode(self.__state)
+
+    def amidar_enemy_tiles(self):
+        num_enemies = self.amidar_num_enemies()
+        out = []
+        for eid in range(num_enemies):
+            x = _lib.amidar_enemy_tile_x(self.__state, eid)
+            y = _lib.amidar_enemy_tile_y(self.__state, eid)
+            out.append((x,y))
+        return out
 
     def breakout_channels(self):
         NC = self.breakout_num_columns()
