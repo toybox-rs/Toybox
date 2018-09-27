@@ -86,3 +86,5 @@ pub mod breakout;
 pub mod space_invaders;
 /// Gridworld
 pub mod gridworld;
+/// Queries
+pub mod queries;
