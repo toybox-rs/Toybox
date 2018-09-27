@@ -1,7 +1,10 @@
 import toybox
 from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox.envs.atari.amidar import AmidarEnv
+from toybox.envs.atari.breakout import BreakoutEnv
 
 import time
+import functools
 import sys
 import multiprocessing
 import os.path as osp
@@ -208,11 +211,17 @@ def parse_cmdline_kwargs(args):
 
     return {k: parse(v) for k,v in parse_unknown_args(args).items()}
 
+def save_seed_json(predicate, seed_state, model_path): 
+    print("Found seed for", predicate+".")
+    print("Exported to JSON.")
+
+     # save seed to openai/seed_states/json
+    new_f = predicate + '_'+str(osp.basename(model_path))+'.json'
+    with open(osp.join('seed_states', 'json', new_f), 'w') as outfile:
+        json.dump(seed_state, outfile)    
+
 
 def main():
-    # determine 
-
-
     # configure logger, disable logging in child MPI processes (with rank > 0)
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
@@ -237,31 +246,35 @@ def main():
         env = build_env(args)
         obs = env.reset()
         turtle = atari_wrappers.get_turtle(env)
-        if not isinstance(turtle, ToyboxBaseEnv): 
-            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
-
-        found_seed = False
+        found_seed = {}
         seed_state = None
 
-        while not found_seed:
+        if not isinstance(turtle, ToyboxBaseEnv): 
+            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
+        else: 
+            if isinstance(turtle, BreakoutEnv): 
+                found_seed['breakout_bricks_remaining'] = False
+                found_seed['breakout_channel_count'] = False
+
+        while not all(found_seed.values()):
             actions = model.step(obs)[0]
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
 
-            # find single brick remaining seed
-            if turtle.toybox.rstate.breakout_bricks_remaining() == 1:
-                found_seed = True
-                print("Found seed for single brick remaining.")
-                seed_state = turtle.toybox.to_json()
-                print("Exported to JSON.")
-                 # save seed to openai/seed_states/json
-                num_seeds = len([f for f in listdir(osp.join('seed_states', 'json')) if 'single_brick' in f])
-                new_f = 'single_brick'+str(num_seeds)+'.json'
-                with open(osp.join('seed_states', 'json', new_f), 'w') as outfile:
-                    json.dump(seed_state, outfile)    
-                break
+            if isinstance(turtle, AmidarEnv): 
+                pass
+
+            if isinstance(turtle, BreakoutEnv): 
+                # find single brick remaining seed
+                if turtle.toybox.rstate.breakout_bricks_remaining() == 1:
+                    found_seed['breakout_bricks_remaining'] = True
+                    save_seed_json('breakout_bricks_remaining', turtle.toybox.to_json(), extra_args['load_path'])
+
+                if turtle.toybox.rstate.breakout_channel_count() and not found_seed['breakout_channel_count'] == 1: 
+                    found_seed['breakout_channel_count'] = True
+                    save_seed_json('breakout_channel_count', turtle.toybox.to_json(), extra_args['load_path'])
 
             if done:
                 obs = env.reset()
