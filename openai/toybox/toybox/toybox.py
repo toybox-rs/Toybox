@@ -131,6 +131,12 @@ _lib.to_json.restype = ctypes.c_char_p
 _lib.from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.from_json.restype = ctypes.POINTER(WrapState)
 
+_lib.breakout_bricks_remaining.argtypes = [ctypes.POINTER(WrapState)]
+_lib.breakout_bricks_remaining.restype = ctypes.c_int
+
+_lib.breakout_channel_count.argtypes = [ctypes.POINTER(WrapState)]
+_lib.breakout_channel_count.restype = ctypes.c_int
+
 
 class Simulator(object):
     def __init__(self, game_name):
@@ -207,6 +213,12 @@ class State(object):
 
     def game_over(self):
         return self.lives() == 0
+
+    def breakout_bricks_remaining(self):
+        return _lib.breakout_bricks_remaining(self.__state)
+    
+    def breakout_channel_count(self):
+        return _lib.breakout_channel_count(self.__state)
 
     def render_frame(self, sim, grayscale=True):
         if grayscale:
