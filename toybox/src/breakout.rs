@@ -63,6 +63,18 @@ pub mod screen {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StartBall {
+    x: f64,
+    y: f64,
+    angle_degrees: f64,
+}
+impl StartBall {
+    fn new(x: f64, y: f64, angle_degrees: f64) -> StartBall {
+        StartBall { x, y, angle_degrees }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     bg_color: Color,
     frame_color: Color,
@@ -73,7 +85,8 @@ pub struct Config {
     start_lives: i32,
     ball_speed_row_depth: u32, 
     ball_speed_slow: f64,
-    ball_speed_fast: f64
+    ball_speed_fast: f64,
+    ball_start_positions: Vec<StartBall>
 }
 impl Config {
     fn unique_colors(&self) -> Vec<&Color> {
@@ -91,6 +104,10 @@ impl Config {
 }
 impl Default for Config {
     fn default() -> Self {
+        let (w,h) = screen::GAME_SIZE;
+        let w = w as f64;
+        let y = h as f64 / 2.0;
+
         Config {
             bg_color: Color::black(),
             frame_color: (&screen::FRAME_COLOR).into(),
@@ -102,6 +119,12 @@ impl Default for Config {
             ball_speed_row_depth: 3, // orange is 0..1..2..3
             ball_speed_slow: 2.0,
             ball_speed_fast: 4.0,
+            ball_start_positions: vec![
+                StartBall::new(0.1*w, y, 30.0),
+                StartBall::new(0.5*w, y, 30.0),
+                StartBall::new(0.5*w, y, 150.0),
+                StartBall::new(0.9*w, y, 150.0),
+            ]
         }
     }
 }
@@ -233,18 +256,14 @@ impl super::Simulation for Breakout {
 
 impl State {
     fn start_ball(&mut self) {
-        let (w,h) = screen::GAME_SIZE;
-        let w = w as f64;
-        let h = h as f64;
-        // four options: left-> <-center center-> <-right 
-        let angles: [f64; 4] = [30.0, 30.0, 150.0, 150.0];
-        let positions = [0.1*w, 0.5*w, 0.5*w, 0.9*w];
+        let options = &self.config.ball_start_positions;
+        let index = (self.rand.next_u32() as usize) % options.len();
 
-        let index = (self.rand.next_u32() % 4) as usize;
-
-        self.ball.position.x = positions[index];
-        self.ball.position.y = h / 2.0;
-        self.ball.velocity = Vec2D::from_polar(self.config.ball_speed_slow, angles[index].to_radians());
+        self.ball.position.x = options[index].x;
+        self.ball.position.y = options[index].y;
+        self.ball.velocity = Vec2D::from_polar(
+            self.config.ball_speed_slow,
+            options[index].angle_degrees.to_radians());
     }
     fn update_paddle_movement(&mut self, buttons: Input) {
         let left = buttons.left;
