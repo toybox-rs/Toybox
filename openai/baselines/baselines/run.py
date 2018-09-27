@@ -268,7 +268,7 @@ def main():
         print("Avg score: %f" % np.average(scores))
         print("Median score: %f" % np.median(scores))
         print("Std error score: %f" % sem(scores))
-        print("Std dev score: %f" % statistics.stdev(scores)
+        print("Std dev score: %f" % statistics.stdev(scores))
         env.close()
 
 if __name__ == '__main__':
