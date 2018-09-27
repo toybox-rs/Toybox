@@ -5,6 +5,8 @@ use super::Direction;
 use serde_json;
 use failure;
 use std::collections::HashMap;
+use std::any::Any;
+
 
 #[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct TileConfig {
@@ -162,8 +164,8 @@ impl Default for GridWorld {
     }
 }
 impl super::Simulation for GridWorld {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::GridWorld
+    fn as_any(&self) -> &Any {
+        self
     }
     fn reset_seed(&mut self, seed: u32) {
     }
@@ -182,8 +184,8 @@ impl super::Simulation for GridWorld {
 }
 
 impl super::State for State {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::GridWorld
+    fn as_any(&self) -> &Any {
+        self
     }
     fn lives(&self) -> i32 {
         if self.game_over {

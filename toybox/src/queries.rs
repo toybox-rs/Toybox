@@ -12,9 +12,7 @@ pub mod breakout {
         state.bricks.iter().filter(|b| b.alive).count() as i32
     }
 
-    /// Returns a number corresponding to the bitmask of 
-    /// the stacks that are channels. The leftmost stack is the 
-    /// lowest bit
+    /// Returns a set of numbers corresponding to the stacks that are channels. 
     pub fn channels(state : &State) -> Vec<i32> {
         let across = screen::BRICKS_ACROSS as i32;
         let down = screen::ROW_SCORES.len() as i32;

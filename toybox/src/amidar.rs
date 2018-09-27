@@ -6,6 +6,7 @@ use super::digit_sprites::draw_score;
 use failure::Error;
 use serde_json;
 use std::collections::{HashSet, VecDeque};
+use std::any::Any;
 
 // Window constants:
 pub mod screen {
@@ -778,8 +779,8 @@ enum EnemyPlayerState {
 
 pub struct Amidar;
 impl super::Simulation for Amidar {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::Amidar
+    fn as_any(&self) -> &Any {
+        self
     }
     fn reset_seed(&mut self, _seed: u32) {
     }
@@ -796,8 +797,8 @@ impl super::Simulation for Amidar {
 }
 
 impl super::State for State {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::Amidar
+    fn as_any(&self) -> &Any {
+        self
     }
     fn lives(&self) -> i32 {
         self.lives

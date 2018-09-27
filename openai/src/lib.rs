@@ -10,6 +10,7 @@ use libc::c_char;
 use toybox::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox::Input;
 use toybox::{Simulation, State};
+use toybox::queries;
 
 #[repr(C)]
 pub struct WrapSimulator {
@@ -188,3 +189,26 @@ pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mu
     let state = Box::new(WrapState { state });
     Box::into_raw(state)
 }
+
+#[no_mangle]
+pub extern "C" fn breakout_bricks_remaining(state_ptr: *mut WrapState) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let breakout: &toybox::breakout::State = state.as_any().downcast_ref().expect("Requires breakout State for bricks_remaining.");
+    queries::breakout::bricks_remaining(breakout)
+}
+
+#[no_mangle]
+pub extern "C" fn breakout_channel_count(state_ptr: *mut WrapState) -> i32 {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let breakout: &toybox::breakout::State = state.as_any().downcast_ref().expect("Requires breakout State for bricks_remaining.");
+    queries::breakout::channels(breakout).into_iter().count() as i32
+}
+

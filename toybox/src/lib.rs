@@ -11,6 +11,9 @@ extern crate serde_json;
 
 extern crate png;
 
+
+use std::any::Any;
+
 pub mod graphics;
 pub mod digit_sprites;
 
@@ -32,19 +35,10 @@ mod input;
 /// Input represents the buttons pressed given to our games.
 pub use input::Input;
 
-/// All games must be listed in this enum.
-#[derive(Clone,Copy,PartialEq,Eq,Debug,Serialize,Deserialize)]
-pub enum SimulatorKind {
-    Breakout,
-    Amidar,
-    SpaceInvaders,
-    GridWorld,
-}
-
 /// This trait models a single frame state for a Simulation.
 pub trait State {
-    /// To add a little more safety to our dynamic casting, each State knows what game it is.
-    fn kind(&self) -> SimulatorKind;
+    /// For dynamic casts.
+    fn as_any(&self) -> &Any;
     /// When < 0, this state should be replaced with a call to new_game() on the simulation.
     fn lives(&self) -> i32;
     /// Get the score from the game, i32 allows for negative scores.
@@ -59,8 +53,8 @@ pub trait State {
 
 /// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.
 pub trait Simulation {
-    /// To add a little more safety to our dynamic casting, each Simulator knows what game it is.
-    fn kind(&self) -> SimulatorKind;
+    /// For dynamic casts.
+    fn as_any(&self) -> &Any;
     /// Seed simulation.
     fn reset_seed(&mut self, seed: u32);
     /// Generate a new State. This is in a Box<State> because it may be 1 of many unknown types as far as calling code is concerned.

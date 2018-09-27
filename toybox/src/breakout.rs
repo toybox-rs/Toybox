@@ -7,6 +7,8 @@ use super::random;
 
 use failure;
 use serde_json;
+use std::any::Any;
+
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
@@ -196,8 +198,8 @@ impl Default for Breakout {
 }
 
 impl super::Simulation for Breakout {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::Breakout
+    fn as_any(&self) -> &Any {
+        self
     }
     fn reset_seed(&mut self, seed: u32) {
         self.rand.reset_seed(seed);
@@ -382,8 +384,8 @@ impl State {
 }
 
 impl super::State for State {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::Breakout
+    fn as_any(&self) -> &Any {
+        self
     }
     fn lives(&self) -> i32 {
         self.lives

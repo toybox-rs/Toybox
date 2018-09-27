@@ -2,6 +2,7 @@ use super::graphics::{Color, Drawable, SpriteData};
 use super::{Direction, Input};
 use failure::Error;
 use serde_json;
+use std::any::Any;
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (480, 319);
@@ -195,8 +196,8 @@ impl State {
 
 pub struct SpaceInvaders;
 impl super::Simulation for SpaceInvaders {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::SpaceInvaders
+    fn as_any(&self) -> &Any {
+        self
     }
     fn reset_seed(&mut self, _seed: u32) {
 
@@ -214,8 +215,8 @@ impl super::Simulation for SpaceInvaders {
 }
 
 impl super::State for State {
-    fn kind(&self) -> super::SimulatorKind {
-        super::SimulatorKind::SpaceInvaders
+    fn as_any(&self) -> &Any {
+        self
     }
     fn lives(&self) -> i32 {
         self.lives
