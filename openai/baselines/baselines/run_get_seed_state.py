@@ -237,10 +237,6 @@ def main():
     model, env = train(args, extra_args)
     env.close()
 
-    if args.save_path is not None and rank == 0:
-        save_path = osp.expanduser(args.save_path)
-        model.save(save_path)
-
     if args.play:
         logger.log("Running trained model")
         env = build_env(args)
@@ -260,7 +256,6 @@ def main():
             actions = model.step(obs)[0]
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
-            time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
 
             if isinstance(turtle, AmidarEnv): 
