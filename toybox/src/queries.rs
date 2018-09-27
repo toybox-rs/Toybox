@@ -2,10 +2,10 @@
 // These can all be implemented over json, but exporting some fast
 // ones from Rust will be helpful.
 
-pub mod amidarpreds  {
+pub mod amidar  {
 }
 
-pub mod breakoutpreds {
+pub mod breakout {
     use super::super::breakout::{State, screen};
 
     pub fn bricks_remaining(state : &State) -> i32 {

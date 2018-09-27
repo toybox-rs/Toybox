@@ -195,7 +195,10 @@ impl State {
 
 pub struct SpaceInvaders;
 impl super::Simulation for SpaceInvaders {
-    fn reset_seed(&mut self, seed: u32) {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::SpaceInvaders
+    }
+    fn reset_seed(&mut self, _seed: u32) {
 
     }
     fn game_size(&self) -> (i32, i32) {
@@ -211,6 +214,9 @@ impl super::Simulation for SpaceInvaders {
 }
 
 impl super::State for State {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::SpaceInvaders
+    }
     fn lives(&self) -> i32 {
         self.lives
     }

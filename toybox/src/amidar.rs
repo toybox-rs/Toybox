@@ -778,7 +778,10 @@ enum EnemyPlayerState {
 
 pub struct Amidar;
 impl super::Simulation for Amidar {
-    fn reset_seed(&mut self, seed: u32) {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::Amidar
+    }
+    fn reset_seed(&mut self, _seed: u32) {
     }
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
@@ -793,6 +796,9 @@ impl super::Simulation for Amidar {
 }
 
 impl super::State for State {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::Amidar
+    }
     fn lives(&self) -> i32 {
         self.lives
     }

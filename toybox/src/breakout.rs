@@ -196,6 +196,9 @@ impl Default for Breakout {
 }
 
 impl super::Simulation for Breakout {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::Breakout
+    }
     fn reset_seed(&mut self, seed: u32) {
         self.rand.reset_seed(seed);
     }
@@ -379,6 +382,9 @@ impl State {
 }
 
 impl super::State for State {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::Breakout
+    }
     fn lives(&self) -> i32 {
         self.lives
     }

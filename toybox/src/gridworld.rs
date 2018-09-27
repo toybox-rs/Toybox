@@ -162,6 +162,9 @@ impl Default for GridWorld {
     }
 }
 impl super::Simulation for GridWorld {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::GridWorld
+    }
     fn reset_seed(&mut self, seed: u32) {
     }
     fn game_size(&self) -> (i32, i32) {
@@ -179,6 +182,9 @@ impl super::Simulation for GridWorld {
 }
 
 impl super::State for State {
+    fn kind(&self) -> super::SimulatorKind {
+        super::SimulatorKind::GridWorld
+    }
     fn lives(&self) -> i32 {
         if self.game_over {
             1
