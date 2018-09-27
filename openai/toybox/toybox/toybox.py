@@ -393,6 +393,9 @@ class Toybox(object):
             _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
         return self.rstate.render_frame(self.rsimulator, self.grayscale)
     
+    def get_state(self):
+        return self.rstate.render_frame(self.rsimulator, self.grayscale)
+    
     def set_seed(self, seed):
         self.rsimulator.set_seed(seed)
 
