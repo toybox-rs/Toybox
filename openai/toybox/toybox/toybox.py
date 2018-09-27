@@ -134,9 +134,14 @@ _lib.from_json.restype = ctypes.POINTER(WrapState)
 _lib.breakout_bricks_remaining.argtypes = [ctypes.POINTER(WrapState)]
 _lib.breakout_bricks_remaining.restype = ctypes.c_int
 
-_lib.breakout_channel_count.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_channel_count.restype = ctypes.c_int
+_lib.breakout_num_rows.argtypes = [ctypes.POINTER(WrapState)]
+_lib.breakout_num_rows.restype = ctypes.c_int
 
+_lib.breakout_num_columns.argtypes = [ctypes.POINTER(WrapState)]
+_lib.breakout_num_columns.restype = ctypes.c_int
+
+_lib.breakout_channels.argtypes = [ctypes.POINTER(WrapState), ctypes.c_void_p, ctypes.c_size_t]
+_lib.breakout_channels.restype = ctypes.c_ssize_t
 
 class Simulator(object):
     def __init__(self, game_name):
@@ -218,8 +223,21 @@ class State(object):
         return _lib.breakout_bricks_remaining(self.__state)
     
     def breakout_channel_count(self):
-        return _lib.breakout_channel_count(self.__state)
+        return len(self.breakout_channels())
+    
+    def breakout_num_columns(self):
+        return _lib.breakout_num_columns(self.__state)
 
+    def breakout_num_rows(self):
+        return _lib.breakout_num_rows(self.__state)
+
+    def breakout_channels(self):
+        NC = self.breakout_num_columns()
+        arr = np.zeros(NC, dtype='int32')
+        found = _lib.breakout_channels(self.__state, arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)), NC)
+        assert(found >= 0)
+        return arr.tolist()[:found]
+            
     def render_frame(self, sim, grayscale=True):
         if grayscale:
             return self.render_frame_grayscale(sim)

@@ -30,4 +30,14 @@ pub mod breakout {
         }
         retval
     }
+
+    /// TODO: this will someday be derived from state.config
+    pub fn num_columns(_state: &State) -> i32 {
+        screen::BRICKS_ACROSS as i32
+    }
+
+    /// TODO: this will someday be derived from state.config
+    pub fn num_rows(_state: &State) -> i32 {
+        screen::ROW_SCORES.len() as i32
+    }
 }
