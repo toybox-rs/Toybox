@@ -232,10 +232,16 @@ impl Tile {
             _ => Err(format_err!("Cannot construct AmidarTile from '{}'", c)),
         }
     }
-    fn walkable(self) -> bool {
+    pub fn walkable(self) -> bool {
         match self {
             Tile::Empty => false,
             Tile::ChaseMarker | Tile::Painted | Tile::Unpainted => true,
+        }
+    }
+    pub fn needs_paint(self) -> bool {
+        match self {
+            Tile::Painted | Tile::Empty => false,
+            Tile::ChaseMarker | Tile::Unpainted => true
         }
     }
 }
@@ -661,11 +667,11 @@ impl Board {
     }
 
     pub fn paint(&mut self, tile: &TilePoint) -> bool {
-        let tile = &mut self.tiles[tile.ty as usize][tile.tx as usize];
-        if *tile == Tile::Painted {
+        let val = &mut self.tiles[tile.ty as usize][tile.tx as usize];
+        if *val == Tile::Painted {
             false
         } else {
-            *tile = Tile::Painted;
+            *val = Tile::Painted;
             true
         }
     }
@@ -777,7 +783,13 @@ enum EnemyPlayerState {
     EnemyCatch(usize),
 }
 
+#[derive(Clone)]
 pub struct Amidar;
+impl Default for Amidar {
+    fn default() -> Self {
+        Amidar.clone()
+    }
+}
 impl super::Simulation for Amidar {
     fn as_any(&self) -> &Any {
         self
@@ -860,7 +872,6 @@ impl super::State for State {
                 },
                 EnemyPlayerState::PlayerDeath => {
                     dead = true;
-                    //println!("ded");
                     break;
                 },
                 EnemyPlayerState::EnemyCatch(eid) => {

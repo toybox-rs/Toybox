@@ -114,13 +114,13 @@ _lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.state_alloc.restype = ctypes.POINTER(WrapState)
 
 _lib.simulator_frame_width.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.simulator_frame_width.restype = ctypes.c_int
+_lib.simulator_frame_width.restype = ctypes.c_int32
 
 _lib.simulator_frame_height.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.simulator_frame_height.restype = ctypes.c_int 
+_lib.simulator_frame_height.restype = ctypes.c_int32
 
-_lib.state_lives.restype = ctypes.c_int
-_lib.state_score.restype = ctypes.c_int
+_lib.state_lives.restype = ctypes.c_int32
+_lib.state_score.restype = ctypes.c_int32
     
 _lib.render_current_frame.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p]
  #(frame_ptr, size, sim.get_simulator(), self.__state)
@@ -131,18 +131,60 @@ _lib.to_json.restype = ctypes.c_char_p
 _lib.from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.from_json.restype = ctypes.POINTER(WrapState)
 
+_lib.breakout_brick_live_by_index.argtypes = [ctypes.POINTER(WrapState), ctypes.c_size_t]
+_lib.breakout_brick_live_by_index.restype = ctypes.c_bool
+
 _lib.breakout_bricks_remaining.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_bricks_remaining.restype = ctypes.c_int
+_lib.breakout_bricks_remaining.restype = ctypes.c_int32
 
-_lib.breakout_channel_count.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_channel_count.restype = ctypes.c_int
+_lib.breakout_num_rows.argtypes = [ctypes.POINTER(WrapState)]
+_lib.breakout_num_rows.restype = ctypes.c_int32
 
+_lib.breakout_num_columns.argtypes = [ctypes.POINTER(WrapState)]
+_lib.breakout_num_columns.restype = ctypes.c_int32
+
+_lib.breakout_channels.argtypes = [ctypes.POINTER(WrapState), ctypes.c_void_p, ctypes.c_size_t]
+_lib.breakout_channels.restype = ctypes.c_ssize_t
+
+_lib.amidar_num_tiles_unpainted.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_num_tiles_unpainted.restype = ctypes.c_int32
+
+_lib.amidar_num_enemies.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_num_enemies.restype = ctypes.c_int32
+
+_lib.amidar_jumps_remaining.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_jumps_remaining.restype = ctypes.c_int32
+
+_lib.amidar_regular_mode.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_regular_mode.restype = ctypes.c_bool
+
+_lib.amidar_chase_mode.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_chase_mode.restype = ctypes.c_bool
+
+_lib.amidar_jump_mode.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_jump_mode.restype = ctypes.c_bool
+
+_lib.amidar_player_tile_x.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_player_tile_x.restype = ctypes.c_int32
+
+_lib.amidar_player_tile_y.argtypes = [ctypes.POINTER(WrapState)]
+_lib.amidar_player_tile_y.restype = ctypes.c_int32
+
+_lib.amidar_enemy_tile_x.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
+_lib.amidar_enemy_tile_x.restype = ctypes.c_int32
+
+_lib.amidar_enemy_tile_y.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
+_lib.amidar_enemy_tile_y.restype = ctypes.c_int32
+
+_lib.amidar_enemy_caught.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
+_lib.amidar_enemy_caught.restype = ctypes.c_bool
 
 class Simulator(object):
     def __init__(self, game_name):
         sim = _lib.simulator_alloc(game_name.encode('utf-8'))
         # sim should be a pointer
         #self.__sim = ctypes.pointer(ctypes.c_int(sim))
+        self.game_name = game_name
         self.__sim = sim 
         self.__width = _lib.simulator_frame_width(sim)
         self.__height = _lib.simulator_frame_height(sim)
@@ -188,6 +230,7 @@ class Simulator(object):
 class State(object):
     def __init__(self, sim, state=None):
         self.__state = state or _lib.state_alloc(sim.get_simulator())
+        self.game_name = sim.game_name
         self.deleted = False
 
     def __enter__(self):
@@ -214,11 +257,82 @@ class State(object):
     def game_over(self):
         return self.lives() == 0
 
+    def breakout_brick_live_by_index(self, index):
+        assert(self.game_name == 'breakout')
+        return _lib.breakout_brick_live_by_index(self.__state, index)
+
     def breakout_bricks_remaining(self):
+        assert(self.game_name == 'breakout')
         return _lib.breakout_bricks_remaining(self.__state)
     
     def breakout_channel_count(self):
-        return _lib.breakout_channel_count(self.__state)
+        assert(self.game_name == 'breakout')
+        return len(self.breakout_channels())
+    
+    def breakout_num_columns(self):
+        assert(self.game_name == 'breakout')
+        return _lib.breakout_num_columns(self.__state)
+
+    def breakout_num_rows(self):
+        assert(self.game_name == 'breakout')
+        return _lib.breakout_num_rows(self.__state)
+
+    def breakout_channels(self):
+        assert(self.game_name == 'breakout')
+        NC = self.breakout_num_columns()
+        arr = np.zeros(NC, dtype='int32')
+        found = _lib.breakout_channels(self.__state, arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)), NC)
+        assert(found >= 0)
+        return arr.tolist()[:found]
+
+    def amidar_num_tiles_unpainted(self):
+        assert(self.game_name == 'amidar')
+        return _lib.amidar_num_tiles_unpainted(self.__state)
+    
+    def amidar_player_tile(self):
+        assert(self.game_name == 'amidar')
+        x = _lib.amidar_player_tile_x(self.__state)
+        y = _lib.amidar_player_tile_y(self.__state)
+        return (x,y)
+    
+    def amidar_num_enemies(self):
+        assert(self.game_name == 'amidar')
+        return _lib.amidar_num_enemies(self.__state)
+    
+    def amidar_jumps_remaining(self):
+        assert(self.game_name == 'amidar')
+        return _lib.amidar_jumps_remaining(self.__state)
+
+    def amidar_regular_mode(self):
+        assert(self.game_name == 'amidar')
+        return _lib.amidar_regular_mode(self.__state)
+
+    def amidar_jump_mode(self):
+        assert(self.game_name == 'amidar')
+        return _lib.amidar_jump_mode(self.__state)
+
+    def amidar_chase_mode(self):
+        assert(self.game_name == 'amidar')
+        return _lib.amidar_chase_mode(self.__state)
+
+    def amidar_enemy_tiles(self):
+        assert(self.game_name == 'amidar')
+        num_enemies = self.amidar_num_enemies()
+        out = []
+        for eid in range(num_enemies):
+            x = _lib.amidar_enemy_tile_x(self.__state, eid)
+            y = _lib.amidar_enemy_tile_y(self.__state, eid)
+            out.append((x,y))
+        return out
+
+    def amidar_enemy_caught(self, eid):
+        assert(self.game_name == 'amidar')
+        return _lib.amidar_enemy_caught(self.__state, eid)
+
+    def amidar_any_enemy_caught(self, eid):
+        assert(self.game_name == 'amidar')
+        num_enemies = self.amidar_num_enemies()
+        return any(self.amidar_enemy_caught(eid) for eid in range(num_enemies))
 
     def render_frame(self, sim, grayscale=True):
         if grayscale:
@@ -254,33 +368,18 @@ class State(object):
         return json.loads(str(json_str))
 
 class Toybox(object):
-    def __init__(self, game_name, grayscale=True, frameskip=0, k=4):
+    def __init__(self, game_name, grayscale=True, frameskip=0):
+        self.game_name = game_name
         self.frames_per_action = frameskip+1
         self.rsimulator = Simulator(game_name)
         self.rstate = State(self.rsimulator)
         self.grayscale = grayscale
-        self.k = k 
-        # OpenAI state is a 4-frame sequence
-        self.state = None
-        self._set_state(k)
         self.deleted = False
-
-    def _set_state(self, k):
-        self.state = deque([], maxlen=k)
-        frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
-        for _ in range(k):
-            self.state.append(frame)
-        assert (self.state)
-
-    def get_state(self):
-        assert(self.state)
-        return self.state
 
     def new_game(self):
         old_state = self.rstate
         del old_state
         self.rstate = self.rsimulator.new_game()
-        self._set_state(self.k)
         
     def get_height(self):
         return self.rsimulator.get_frame_height()
@@ -292,9 +391,10 @@ class Toybox(object):
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
             _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
-        new_frame = self.rstate.render_frame(self.rsimulator, self.grayscale)
-        self.state.append(new_frame)
-        return new_frame
+        return self.rstate.render_frame(self.rsimulator, self.grayscale)
+    
+    def get_state(self):
+        return self.rstate.render_frame(self.rsimulator, self.grayscale)
     
     def set_seed(self, seed):
         self.rsimulator.set_seed(seed)
@@ -324,6 +424,11 @@ class Toybox(object):
 
     def from_json(self, js):
         return self.rsimulator.from_json(js)
+
+    def write_json(self, js):
+        old_state = self.rstate
+        del old_state
+        self.rstate = self.from_json(js)
 
     def predicate_met(self, pred): 
         return False

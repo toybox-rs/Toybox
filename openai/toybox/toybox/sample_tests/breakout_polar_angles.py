@@ -1,19 +1,17 @@
 import toybox
-from toybox.envs.atari.base import ToyboxBaseEnv
-from toybox.envs.atari.amidar import AmidarEnv
-from toybox.envs.atari.breakout import BreakoutEnv
 
 import time
-import functools
 import sys
 import multiprocessing
 import os.path as osp
-from os import listdir
 import gym
 from collections import defaultdict
 import tensorflow as tf
 import numpy as np
-import json
+from scipy.stats import sem
+from statistics import stdev
+import math
+from tqdm import tqdm
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -211,18 +209,10 @@ def parse_cmdline_kwargs(args):
 
     return {k: parse(v) for k,v in parse_unknown_args(args).items()}
 
-def save_seed_json(predicate, seed_state, model_path): 
-    print("Found seed for", predicate+".")
-    print("Exported to JSON.")
-
-     # save seed to openai/seed_states/json
-    new_f = predicate + '_'+str(osp.basename(model_path))+'.json'
-    with open(osp.join('seed_states', 'json', new_f), 'w') as outfile:
-        json.dump(seed_state, outfile)    
-
 
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
+
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -237,45 +227,74 @@ def main():
     model, env = train(args, extra_args)
     env.close()
 
-    if args.play:
-        logger.log("Running trained model")
-        env = build_env(args)
-        obs = env.reset()
-        turtle = atari_wrappers.get_turtle(env)
-        found_seed = {}
-        seed_state = None
 
-        if not isinstance(turtle, ToyboxBaseEnv): 
-            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
-        else: 
-            if isinstance(turtle, BreakoutEnv): 
-                found_seed['breakout_bricks_remaining'] = False
-                found_seed['breakout_channel_count'] = False
+    logger.log("Running trained model")
+    env = build_env(args)
+    obs = env.reset()
+    turtle = atari_wrappers.get_turtle(env)
 
-        while not all(found_seed.values()):
-            actions = model.step(obs)[0]
-            num_lives = turtle.ale.lives()
-            obs, _, done, info = env.step(actions)
-            done = num_lives == 1 and done 
+    data = []
 
-            if isinstance(turtle, AmidarEnv): 
-                pass
 
-            if isinstance(turtle, BreakoutEnv): 
-                # find single brick remaining seed
-                if turtle.toybox.rstate.breakout_bricks_remaining() == 1:
-                    found_seed['breakout_bricks_remaining'] = True
-                    save_seed_json('breakout_bricks_remaining', turtle.toybox.to_json(), extra_args['load_path'])
+    # get initial state
+    start_state = turtle.toybox.to_json()
+    config = start_state['config']
+    ball_speed_slow = config['ball_speed_slow']
 
-                if turtle.toybox.rstate.breakout_channel_count() and not found_seed['breakout_channel_count'] == 1: 
-                    found_seed['breakout_channel_count'] = True
-                    save_seed_json('breakout_channel_count', turtle.toybox.to_json(), extra_args['load_path'])
+    # Only let them beat one level.
+    clear_level_score = sum([b['points'] for b in start_state['bricks']])
 
-            if done:
-                obs = env.reset()
-                print("Game ended before predicate met. New game.")
+    # Give the ball only one life.
+    start_state['lives'] = 1
+    # Use center ball position.
+    start_state['ball']['position']['x'] = 120.0
+    start_state['ball']['position']['y'] = 80.0
 
-        env.close()
+    for angle in range(0,360,5):
+        velocity_y = ball_speed_slow * math.sin(math.radians(angle))
+        velocity_x = ball_speed_slow * math.cos(math.radians(angle))
+
+        if abs(velocity_y) < 0.0001:
+            print('Skip angle=', angle, 'velocity_y=', velocity_y)
+            continue
+        start_state['ball']['velocity']['y'] = velocity_y
+        start_state['ball']['velocity']['x'] = velocity_x
+
+        # indicate we're starting a new angle
+        print(angle, velocity_x, velocity_y)
+
+        for trial in range(30):
+            obs = env.reset()
+            # overwrite state inside the env wrappers:
+            turtle.toybox.write_json(start_state)
+            # Take a step to overwrite anything that's stuck there, e.g., gameover
+            obs, _, done, info = env.step(0)
+
+            # keep track of the score as best in case a game_over wipes it out while we're reading
+            best_score = 0
+
+            tup = None
+            # give it 20 minutes of human time to finish.
+            for t in range(72000):
+                actions = model.step(obs)[0]
+                obs, _, done, info = env.step(actions)
+                #env.render()
+                score = turtle.toybox.get_score()
+                if score > best_score:
+                    best_score = score
+                if done or turtle.toybox.get_lives() != 1 or turtle.toybox.game_over() or score >= clear_level_score:
+                    tup = (trial, angle, velocity_x, velocity_y, best_score, t)
+                    break
+
+            # how did we do?
+            print(tup)
+            data.append(tup)
+    
+    with open('polar_angles.tsv', 'w') as fp:
+        for row in data:
+            print('\t'.join(row), file=fp)
+
+    env.close()
 
 if __name__ == '__main__':
     main()

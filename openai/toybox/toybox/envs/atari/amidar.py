@@ -24,6 +24,12 @@ class AmidarEnv(ToyboxBaseEnv):
         action = action.upper() if type(action) == str \
                 else ACTION_MEANING[action]
 
+        #state = self.toybox.rstate
+        #print("tiles_to_paint", state.amidar_num_tiles_unpainted())
+        #print("player", state.amidar_player_tile(), "regular", state.amidar_regular_mode())
+        #print("jumps", state.amidar_jumps_remaining())
+        #print("enemies", state.amidar_enemy_tiles())
+
         if action in self._amidar_action_strs:
             # Action ids < 6 are atomic actions
             if action == FIRE_STR:

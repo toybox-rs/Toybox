@@ -1,19 +1,15 @@
 import toybox
-from toybox.envs.atari.base import ToyboxBaseEnv
-from toybox.envs.atari.amidar import AmidarEnv
-from toybox.envs.atari.breakout import BreakoutEnv
 
 import time
-import functools
 import sys
 import multiprocessing
 import os.path as osp
-from os import listdir
 import gym
 from collections import defaultdict
 import tensorflow as tf
 import numpy as np
-import json
+from scipy.stats import sem
+from statistics import stdev
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -211,18 +207,10 @@ def parse_cmdline_kwargs(args):
 
     return {k: parse(v) for k,v in parse_unknown_args(args).items()}
 
-def save_seed_json(predicate, seed_state, model_path): 
-    print("Found seed for", predicate+".")
-    print("Exported to JSON.")
-
-     # save seed to openai/seed_states/json
-    new_f = predicate + '_'+str(osp.basename(model_path))+'.json'
-    with open(osp.join('seed_states', 'json', new_f), 'w') as outfile:
-        json.dump(seed_state, outfile)    
-
 
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
+
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -237,45 +225,67 @@ def main():
     model, env = train(args, extra_args)
     env.close()
 
-    if args.play:
-        logger.log("Running trained model")
-        env = build_env(args)
-        obs = env.reset()
-        turtle = atari_wrappers.get_turtle(env)
-        found_seed = {}
-        seed_state = None
 
-        if not isinstance(turtle, ToyboxBaseEnv): 
-            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
-        else: 
-            if isinstance(turtle, BreakoutEnv): 
-                found_seed['breakout_bricks_remaining'] = False
-                found_seed['breakout_channel_count'] = False
+    logger.log("Running trained model")
+    env = build_env(args)
+    obs = env.reset()
+    turtle = atari_wrappers.get_turtle(env)
+    scores = []
+    session_scores = set()
+    num_games = 0
 
-        while not all(found_seed.values()):
+    n_bricks = turtle.toybox.breakout_bricks_remaining()
+
+    # get initial state
+    start_state = turtle.toybox.to_json()
+
+    # remove all bricks
+    for brick in n_bricks: 
+        start_state["bricks"][brick]["alive"] = False
+
+    for brick in n_bricks: 
+        # turn on single brick
+
+        # load env from manipulated state
+
+
+        # give it 72000 frames to win
+        turtle.toybox.query_brick_id(brick)
+
+        # if win, break 
+
+        # record number of steps to completion or end 
+
+        while num_games < 1:
             actions = model.step(obs)[0]
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
+            #env.render()
             done = num_lives == 1 and done 
 
-            if isinstance(turtle, AmidarEnv): 
-                pass
-
-            if isinstance(turtle, BreakoutEnv): 
-                # find single brick remaining seed
-                if turtle.toybox.rstate.breakout_bricks_remaining() == 1:
-                    found_seed['breakout_bricks_remaining'] = True
-                    save_seed_json('breakout_bricks_remaining', turtle.toybox.to_json(), extra_args['load_path'])
-
-                if turtle.toybox.rstate.breakout_channel_count() and not found_seed['breakout_channel_count'] == 1: 
-                    found_seed['breakout_channel_count'] = True
-                    save_seed_json('breakout_channel_count', turtle.toybox.to_json(), extra_args['load_path'])
+            if isinstance(info, list) or isinstance(info, tuple):
+                session_scores.add(np.average([d['score'] for d in info]))
+            elif isinstance(info, dict):
+                session_scores.add(['score'])
+            else:
+                session_scores.add(-1)
 
             if done:
-                obs = env.reset()
-                print("Game ended before predicate met. New game.")
+                num_games += 1
+                score = max(session_scores)
+                scores.append(score)
+                session_scores = set()
 
-        env.close()
+                print("game %s: %s" % (num_games, score))
+                obs = env.reset()
+                session_scores = set()
+
+
+    print("Avg score: %f" % np.average(scores))
+    print("Median score: %f" % np.median(scores))
+    print("Std error score: %f" % sem(scores))
+    print("Std dev score: %f" % stdev(scores))
+    env.close()
 
 if __name__ == '__main__':
     main()
