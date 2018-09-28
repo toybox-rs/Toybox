@@ -185,6 +185,7 @@ pub struct State {
     pub paddle_width: f64,
     pub paddle_speed: f64,
     pub bricks: Vec<Brick>,
+    pub reset: bool
 }
 
 pub struct Breakout {
@@ -247,6 +248,7 @@ impl super::Simulation for Breakout {
             paddle_speed: 4.0,
             rand: random::Gen::new_child(&mut self.rand),
             bricks,
+            reset: true
         };
 
         state.start_ball();
@@ -419,23 +421,24 @@ impl super::State for State {
             let time_left = total_time - time_simulated;
             if time_left < time_step {
                 self.update_time_slice(time_left);
-                return;
+                break;
             } else {
                 self.update_time_slice(time_step);
                 if self.is_dead {
                     // Don't simulate if dead.
-                    return;
+                    break;
                 }
                 time_simulated += time_step;
             }
         }
         
-        let reset_level = self.bricks.clone().into_iter().all(|b| !b.alive);
-        if reset_level {
+        let reset_level = self.bricks.iter().all(|b| !b.alive);
+        if reset_level && self.reset {
             for b in self.bricks.iter_mut() {
                 b.alive = true;
             }
             self.start_ball();
+            self.reset = false;
         }
     }
 
