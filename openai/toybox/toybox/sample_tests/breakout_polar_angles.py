@@ -250,6 +250,7 @@ def main():
     start_state['ball']['position']['x'] = 120.0
     start_state['ball']['position']['y'] = 80.0
 
+    #for angle in [90,90,270,270]:
     for angle in range(0,360,5):
         velocity_y = ball_speed_slow * math.sin(math.radians(angle))
         velocity_x = ball_speed_slow * math.cos(math.radians(angle))
@@ -263,7 +264,7 @@ def main():
         # indicate we're starting a new angle
         print(angle, velocity_x, velocity_y)
 
-        for trial in range(30):
+        for trial in range(10):
             obs = env.reset()
             # overwrite state inside the env wrappers:
             turtle.toybox.write_json(start_state)
@@ -274,16 +275,17 @@ def main():
             best_score = 0
 
             tup = None
-            # give it 20 minutes of human time to finish.
-            for t in range(72000):
+            # give it 2 minutes of human time to finish.
+            for t in range(7200):
                 actions = model.step(obs)[0]
                 obs, _, done, info = env.step(actions)
-                #env.render()
+                env.render()
+                time.sleep(1.0/60.0)
                 score = turtle.toybox.get_score()
                 if score > best_score:
                     best_score = score
+                tup = (trial, angle, velocity_x, velocity_y, best_score, t)
                 if done or turtle.toybox.get_lives() != 1 or turtle.toybox.game_over() or score >= clear_level_score:
-                    tup = (trial, angle, velocity_x, velocity_y, best_score, t)
                     break
 
             # how did we do?
@@ -292,7 +294,7 @@ def main():
     
     with open('polar_angles.tsv', 'w') as fp:
         for row in data:
-            print('\t'.join(row), file=fp)
+            print('\t'.join([str(r) for r in row]), file=fp)
 
     env.close()
 
