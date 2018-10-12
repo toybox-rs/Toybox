@@ -6,8 +6,8 @@ from toybox.toybox import Toybox, Input
 class BreakoutEnv(ToyboxBaseEnv):
 
     def __init__(self, grayscale=True, alpha=False): 
-        #self._breakout_action_strs = [NOOP_STR, LEFT_STR, RIGHT_STR, FIRE_STR]
-        self._breakout_action_strs = [NOOP_STR, LEFT_STR, RIGHT_STR]
+        self._breakout_action_strs = [NOOP_STR, FIRE_STR, RIGHT_STR, LEFT_STR]
+        #self._breakout_action_strs = [NOOP_STR, LEFT_STR, RIGHT_STR]
         super().__init__(Toybox('breakout', grayscale), 
             grayscale=grayscale, 
             alpha=alpha, 

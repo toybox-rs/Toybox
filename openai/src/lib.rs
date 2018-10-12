@@ -179,13 +179,13 @@ pub extern "C" fn to_json(state_ptr: *mut WrapState) -> *const c_char {
 #[no_mangle]
 pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mut WrapState {
     let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
-    let json_str: &str = json_str.to_str().expect("shit!");
+    let json_str: &str = json_str.to_str().expect("Could not convert your string to UTF-8!");
     let &mut WrapSimulator { ref mut simulator } = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
     };
     let state = simulator.new_state_from_json(json_str)
-                         .expect("scheisse!");
+                         .expect("Could not parse state JSON!");
     let state = Box::new(WrapState { state });
     Box::into_raw(state)
 }

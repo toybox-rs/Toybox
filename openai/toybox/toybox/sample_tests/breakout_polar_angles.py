@@ -9,11 +9,9 @@ from collections import defaultdict
 import tensorflow as tf
 import numpy as np
 from scipy.stats import sem
-<<<<<<< Updated upstream
 from statistics import stdev
-=======
-from PIL import Image
->>>>>>> Stashed changes
+import math
+from tqdm import tqdm
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -229,54 +227,76 @@ def main():
     model, env = train(args, extra_args)
     env.close()
 
-    if args.save_path is not None and rank == 0:
-        save_path = osp.expanduser(args.save_path)
-        model.save(save_path)
 
-    if args.play:
-        logger.log("Running trained model")
-        env = build_env(args)
-        obs = env.reset()
-        turtle = atari_wrappers.get_turtle(env)
-        scores = []
-        session_scores = set()
-        num_games = 0
-        # This is a hack to get the starting screen, which throws an error in ALE for amidar
-        num_steps = -1
+    logger.log("Running trained model")
+    env = build_env(args)
+    obs = env.reset()
+    turtle = atari_wrappers.get_turtle(env)
 
-        while num_games < 100:
-            actions = model.step(obs)[0]
-            num_lives = turtle.ale.lives()
-            obs, _, done, info = env.step(actions)
-            #done = done and (num_lives == 1 or turtle.ale.game_over())
-            env.render()
-            time.sleep(1.0/60.0)
-            done = num_lives == 1 and done 
-            #done = done.any() if isinstance(done, np.ndarray) else done
-
-            if isinstance(info, list) or isinstance(info, tuple):
-                session_scores.add(np.average([d['score'] for d in info]))
-            elif isinstance(info, dict):
-                session_scores.add(['score'])
-            else:
-                session_scores.add(-1)
-
-            if done:
-                num_games += 1
-                score = max(session_scores)
-                scores.append(score)
-                session_scores = set()
-
-                print("game %s: %s" % (num_games, score))
-                obs = env.reset()
-                session_scores = set()
+    data = []
 
 
-        print("Avg score: %f" % np.average(scores))
-        print("Median score: %f" % np.median(scores))
-        print("Std error score: %f" % sem(scores))
-        print("Std dev score: %f" % stdev(scores))
-        env.close()
+    # get initial state
+    start_state = turtle.toybox.to_json()
+    config = start_state['config']
+    ball_speed_slow = config['ball_speed_slow']
+
+    # Only let them beat one level.
+    clear_level_score = sum([b['points'] for b in start_state['bricks']])
+
+    # Give the ball only one life.
+    start_state['lives'] = 1
+    # Use center ball position.
+    start_state['ball']['position']['x'] = 120.0
+    start_state['ball']['position']['y'] = 80.0
+
+    #for angle in [90,90,270,270]:
+    for angle in range(0,360,5):
+        velocity_y = ball_speed_slow * math.sin(math.radians(angle))
+        velocity_x = ball_speed_slow * math.cos(math.radians(angle))
+
+        if abs(velocity_y) < 0.0001:
+            print('Skip angle=', angle, 'velocity_y=', velocity_y)
+            continue
+        start_state['ball']['velocity']['y'] = velocity_y
+        start_state['ball']['velocity']['x'] = velocity_x
+
+        # indicate we're starting a new angle
+        print(angle, velocity_x, velocity_y)
+
+        for trial in range(10):
+            obs = env.reset()
+            # overwrite state inside the env wrappers:
+            turtle.toybox.write_json(start_state)
+            # Take a step to overwrite anything that's stuck there, e.g., gameover
+            obs, _, done, info = env.step(0)
+
+            # keep track of the score as best in case a game_over wipes it out while we're reading
+            best_score = 0
+
+            tup = None
+            # give it 2 minutes of human time to finish.
+            for t in range(7200):
+                actions = model.step(obs)[0]
+                obs, _, done, info = env.step(actions)
+                env.render()
+                time.sleep(1.0/60.0)
+                score = turtle.toybox.get_score()
+                if score > best_score:
+                    best_score = score
+                tup = (trial, angle, velocity_x, velocity_y, best_score, t)
+                if done or turtle.toybox.get_lives() != 1 or turtle.toybox.game_over() or score >= clear_level_score:
+                    break
+
+            # how did we do?
+            print(tup)
+            data.append(tup)
+    
+    with open('polar_angles.tsv', 'w') as fp:
+        for row in data:
+            print('\t'.join([str(r) for r in row]), file=fp)
+
+    env.close()
 
 if __name__ == '__main__':
     main()

@@ -2,7 +2,7 @@ use super::graphics::{Color, Drawable};
 use super::vec2d::Vec2D;
 use super::Body2D;
 use super::Input;
-use super::digit_sprites::draw_score;
+use super::digit_sprites::{draw_score, draw_lives, DIGIT_WIDTH};
 use super::random;
 
 use failure;
@@ -12,7 +12,7 @@ use std::any::Any;
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
-    pub const FRAME_OFFSET: i32 = 15;
+    pub const FRAME_OFFSET: i32 = 13;
     pub const FRAME_THICKNESS: i32 = 12;
     pub const FRAME_SUPPORT_WIDTH: i32 = 12;
 
@@ -185,6 +185,7 @@ pub struct State {
     pub paddle_width: f64,
     pub paddle_speed: f64,
     pub bricks: Vec<Brick>,
+    pub reset: bool
 }
 
 pub struct Breakout {
@@ -247,6 +248,7 @@ impl super::Simulation for Breakout {
             paddle_speed: 4.0,
             rand: random::Gen::new_child(&mut self.rand),
             bricks,
+            reset: true
         };
 
         state.start_ball();
@@ -419,23 +421,24 @@ impl super::State for State {
             let time_left = total_time - time_simulated;
             if time_left < time_step {
                 self.update_time_slice(time_left);
-                return;
+                break;
             } else {
                 self.update_time_slice(time_step);
                 if self.is_dead {
                     // Don't simulate if dead.
-                    return;
+                    break;
                 }
                 time_simulated += time_step;
             }
         }
         
-        let reset_level = self.bricks.clone().into_iter().all(|b| !b.alive);
-        if reset_level {
+        let reset_level = self.bricks.iter().all(|b| !b.alive);
+        if reset_level && self.reset {
             for b in self.bricks.iter_mut() {
                 b.alive = true;
             }
             self.start_ball();
+            self.reset = false;
         }
     }
 
@@ -526,10 +529,16 @@ impl super::State for State {
             ball_r * 2,
         ));
 
+        let score_offset = 88;
+        let score_x = screen::BOARD_LEFT_X + score_offset;
+        let lives_x = score_x + (DIGIT_WIDTH * 2);
+        let thing_x = lives_x + (DIGIT_WIDTH * 2);
         // Draw points:
-        output.extend(draw_score(self.points, screen::BOARD_RIGHT_X, 5));
+        output.extend(draw_score(self.points, score_x, 1));
         // Draw lives:
-        output.extend(draw_score(self.lives, screen::BOARD_LEFT_X + 50, 5));
+        output.extend(draw_lives(self.lives, lives_x , 1));
+        // Draw whatever this thing is
+        output.extend(draw_lives(1, thing_x, 1));
 
         output
     }

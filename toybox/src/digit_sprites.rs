@@ -3,8 +3,8 @@ use super::graphics::{Color, FixedSpriteData, Drawable};
 const RAW_NUMBER_DATA: &str = include_str!("resources/number_sprites.txt");
 const SET: char = '1';
 const IGNORE: char = '.';
-pub const DIGIT_WIDTH: i32 = 8;
-pub const DIGIT_HEIGHT: i32 = 7;
+pub const DIGIT_WIDTH: i32 = 24;
+pub const DIGIT_HEIGHT: i32 = 12;
 
 lazy_static! {
     static ref DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites();
@@ -25,7 +25,21 @@ pub fn draw_score(score: i32, x: i32, y: i32) -> Vec<Drawable> {
         score as u32
     };
     let radix = 10;
-    format!("{}", score).chars()
+    format!("{:03}", score).chars()
+        .map(|ch| ch.to_digit(radix).expect("format! only gives us digits!"))
+        .rev()
+        .enumerate()
+        .map(|(position, digit)| {
+            let x = x - (position as i32) * DIGIT_WIDTH;
+            Drawable::sprite(x, y, get_sprite(digit))
+        }).collect()
+}
+
+/// This is separate from draw_score because in breakout, lives are not
+/// padded, but score is, and Rust requires the format string be a literal
+pub fn draw_lives(lives: i32, x: i32, y: i32) -> Vec<Drawable> {
+    let radix = 10;
+    format!("{}", lives).chars()
         .map(|ch| ch.to_digit(radix).expect("format! only gives us digits!"))
         .rev()
         .enumerate()
@@ -37,7 +51,10 @@ pub fn draw_score(score: i32, x: i32, y: i32) -> Vec<Drawable> {
 
 /// Parse a number from number_sprites.txt into a SpriteData.
 fn load_sprite(data: &[&str]) -> FixedSpriteData {
-    let on_color = Color::white();
+    // let on_color = Color::white();
+    // Should take on_color as an argument, but it needs screen passed in.
+    // The current setup doesn't make this easy.
+    let on_color = Color::rgb(144, 144, 144);
     let off_color = Color::invisible();
     let mut pixels: Vec<Vec<Color>> = Vec::new();
     for line in data {

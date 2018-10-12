@@ -6,7 +6,7 @@ import gym
 import numpy as np
 from scipy.stats import sem 
 
-N = 100000
+N = 10000
 M = 100
 
 # Copied from https://github.com/openai/gym/blob/master/examples/agents/random_agent.py
@@ -36,6 +36,7 @@ def env_test(game_name, system):
     game = get_game(game_name, system)
     #env = gym.envs.atari.AtariEnv(game=game, obs_type='image', frameskip=0)
     env = gym.make(game)
+    print(env.action_space)
     agent = RandomAgent(env.action_space)
     obs = env.reset()
     reward = 0 
@@ -127,7 +128,7 @@ for game in ['amidar', 'breakout']:
     before = avg
     FPS = FPS_dict['gym-toybox-'+game]
     avg = np.average(FPS)
-    print('GYM: %s-%s-FPS:\n\t %3.4f\n\t %3.4f' % (game, system, avg, sem(FPS)))
+    print('GYM: %s-toybox-FPS:\n\t %3.4f\n\t %3.4f' % (game, avg, sem(FPS)))
     slowdown = (before - avg) / before
     print('Slowdown: %3.4f\n' % slowdown)
 
@@ -159,13 +160,13 @@ for game in ['amidar', 'breakout']:
     #print("\t", scores[0], len(scores))
 
     # benchmark openai's env
-    before = FPS
+    before = avg
     for _ in range(30):
         gym_fps = env_test(game, 'openai')
         FPS_dict['gym-ale-'+game].append(gym_fps)
     FPS = FPS_dict['gym-ale-'+game]
     avg = np.average(FPS)
-    print('GYM: %s-%s-FPS:\n\t %3.4f\n\t %3.4f' % (game, system, avg, sem(FPS)))
+    print('GYM: %s-ALE-FPS:\n\t %3.4f\n\t %3.4f' % (game, avg, sem(FPS)))
     slowdown = (before - avg) / before
     print('Slowdown: %3.4f\n' % slowdown)
 
