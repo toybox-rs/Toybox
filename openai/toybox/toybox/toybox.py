@@ -399,9 +399,9 @@ class Toybox(object):
     def set_seed(self, seed):
         self.rsimulator.set_seed(seed)
 
-    def save_frame_image(self, path):
+    def save_frame_image(self, path, grayscale=False):
         img = None
-        if self.grayscale:
+        if grayscale:
             img = Image.fromarray(self.rstate.render_frame_grayscale(self.rsimulator), 'L') 
         else:
             img = Image.fromarray(self.rstate.render_frame_color(self.rsimulator), 'RGBA')
