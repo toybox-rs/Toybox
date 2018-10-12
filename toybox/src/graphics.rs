@@ -187,6 +187,7 @@ impl SpriteData {
 #[derive(Clone)]
 pub enum Drawable {
     Rectangle {
+        id: Option<u32>,
         color: Color,
         x: i32,
         y: i32,
@@ -205,7 +206,10 @@ pub enum Drawable {
 
 impl Drawable {
     pub fn rect(color: Color, x: i32, y: i32, w: i32, h: i32) -> Drawable {
-        Drawable::Rectangle { color, x, y, w, h }
+        Drawable::Rectangle { id: None, color, x, y, w, h }
+    }
+    pub fn id_rect(id: u32, color: Color, x: i32, y: i32, w: i32, h: i32) -> Drawable {
+        Drawable::Rectangle { id: Some(id), color, x, y, w, h }
     }
     pub fn sprite(x: i32, y: i32, sprite: FixedSpriteData) -> Drawable {
         Drawable::StaticSprite { x, y, data: sprite }
@@ -247,7 +251,7 @@ impl GrayscaleBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
-                &Drawable::Rectangle { color, x, y, w, h } => {
+                &Drawable::Rectangle { color, x, y, w, h, .. } => {
                     let fill = color.grayscale_byte();
                     for yi in y..(y + h) {
                         for xi in x..(x + w) {
@@ -346,7 +350,7 @@ impl ImageBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
-                &Drawable::Rectangle { color, x, y, w, h } => {
+                &Drawable::Rectangle { color, x, y, w, h, .. } => {
                     for yi in y..(y + h) {
                         for xi in x..(x + w) {
                             self.set_pixel(xi, yi, color)

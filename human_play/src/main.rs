@@ -52,7 +52,7 @@ impl quicksilver::State for AbstractGame {
         for (z, dw) in drawables.iter().enumerate() {
             let z = z as i32;
             match dw {
-                &Drawable::Rectangle { color, x, y, w, h } => {
+                &Drawable::Rectangle { color, x, y, w, h, .. } => {
                     window.draw(
                         &Draw::rectangle(Rectangle::new(x, y, w, h))
                             .with_color(color_convert(color))
@@ -76,7 +76,6 @@ impl quicksilver::State for AbstractGame {
                         window.draw(&Draw::image(img, Vector::new(x, y)).with_z(z));
                         None
                     } else {
-                        println!("First-render: ({},{})", x, y);
                         let mut buf = ImageBuffer::alloc(w, h);
                         buf.render(&[Drawable::sprite(0, 0, sprite.clone())]);
                         let img = Image::from_raw(&buf.data, w as u32, h as u32, PixelFormat::RGBA);

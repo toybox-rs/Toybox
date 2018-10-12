@@ -383,6 +383,7 @@ impl State {
             }
         }
     }
+
 }
 
 impl super::State for State {
@@ -501,11 +502,11 @@ impl super::State for State {
             return output;
         }
 
-        for brick in self.bricks.iter().filter(|b| b.alive) {
+        for (i, brick) in self.bricks.iter().enumerate().filter(|(_i, b)| b.alive) {
             let (x, y) = brick.position.pixels();
             let (w, h) = brick.size.pixels();
 
-            output.push(Drawable::rect(brick.color, x, y, w, h));
+            output.push(Drawable::id_rect(i as u32, brick.color, x, y, w, h));
         }
 
         let (paddle_x, paddle_y) = self.paddle.position.pixels();

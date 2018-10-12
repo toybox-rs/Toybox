@@ -1,0 +1,12 @@
+[package]
+name = "toybox-svg"
+version = "0.1.0"
+authors = ["John Foley <jfoley@cs.umass.edu>"]
+
+[dependencies]
+failure = "*"
+clap = "*"
+
+[dependencies.toybox]
+version = "*"
+path = "../toybox"
