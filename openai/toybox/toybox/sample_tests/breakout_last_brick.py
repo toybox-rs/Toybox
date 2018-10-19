@@ -280,9 +280,11 @@ def main():
         step_counts = []
         successes = 0
 
+        # stop game after 4 minutes of human gameplay
+        max_steps = 7200
+
         while num_games < n_trials:
-#           actions = model.step(obs)[0]
-            actions = np.random.randint(0,3)
+            actions = model.step(obs)[0]
             n_steps += 1
 
             num_lives = turtle.ale.lives()
@@ -292,7 +294,7 @@ def main():
             bricks_remaining = info[0]['score'] < brick_score       
             done = (num_lives == 1 and done) or not bricks_remaining
 
-            if done:
+            if done or n_steps > 7200:
                 num_games += 1
 
                 obs = env.reset()
