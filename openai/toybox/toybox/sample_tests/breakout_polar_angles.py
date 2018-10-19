@@ -264,8 +264,11 @@ def main():
         # indicate we're starting a new angle
         print(angle, velocity_x, velocity_y)
 
-        for trial in range(10):
+        for trial in range(30):
+            time.sleep(1/60.0);
             obs = env.reset()
+            time.sleep(1/60.0);
+
             # overwrite state inside the env wrappers:
             turtle.toybox.write_json(start_state)
             # Take a step to overwrite anything that's stuck there, e.g., gameover
@@ -279,8 +282,6 @@ def main():
             for t in range(7200):
                 actions = model.step(obs)[0]
                 obs, _, done, info = env.step(actions)
-                env.render()
-                time.sleep(1.0/60.0)
                 score = turtle.toybox.get_score()
                 if score > best_score:
                     best_score = score
@@ -292,7 +293,7 @@ def main():
             print(tup)
             data.append(tup)
     
-    with open('polar_angles.tsv', 'w') as fp:
+    with open('polar_angles2.tsv', 'w') as fp:
         for row in data:
             print('\t'.join([str(r) for r in row]), file=fp)
 
