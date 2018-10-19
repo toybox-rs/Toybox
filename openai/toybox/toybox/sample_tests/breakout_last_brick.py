@@ -1,7 +1,13 @@
 import toybox
+from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox.envs.atari.amidar import AmidarEnv
+from toybox.envs.atari.breakout import BreakoutEnv
 
 import time
 import sys
+import csv
+import matplotlib as mpl
+import matplotlib.cm as cm
 import multiprocessing
 import os.path as osp
 import gym
@@ -191,7 +197,19 @@ def get_learn_function_defaults(alg, env_type):
         kwargs = {}
     return kwargs
 
+# from https://stackoverflow.com/questions/40948069/color-range-python
+def convert_to_rgb(minimum, maximum, value):
+    norm = mpl.colors.Normalize(vmin=minimum, vmax=maximum)
+    cmap = cm.hot
 
+    m = cm.ScalarMappable(norm=norm, cmap=cmap)
+    print(m.to_rgba(value))
+
+    norm = (value - minimum)/(maximum - minimum)
+    (r, g, b) = colorsys.hsv_to_rgb(norm, 1.0, 1.0)
+    R, G, B = int(255 * r), int(255 * g), int(255 * b)
+
+    return R, G, B
 
 def parse_cmdline_kwargs(args):
     '''
@@ -210,7 +228,6 @@ def parse_cmdline_kwargs(args):
 
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
-
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -230,61 +247,95 @@ def main():
     env = build_env(args)
     obs = env.reset()
     turtle = atari_wrappers.get_turtle(env)
-    scores = []
-    session_scores = set()
-    num_games = 0
+    if not isinstance(turtle, ToyboxBaseEnv): 
+            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
 
-    n_bricks = turtle.toybox.breakout_bricks_remaining()
+    # get total number of bricks
+    n_bricks = turtle.toybox.rstate.breakout_bricks_remaining()
+
+    n_trials = 30
+    #brick_info = [["brick_id", "avg_steps", "median_steps", "std_dev_steps", "n_successes"]]
+    brick_info = []
 
     # get initial state
     start_state = turtle.toybox.to_json()
 
-    # remove all bricks
-    for brick in n_bricks: 
-        start_state["bricks"][brick]["alive"] = False
+    # for each brick, remove and run n_trials to determine number of steps until success (or death)
+    for brick in range(n_bricks): 
+        # remove all bricks
+        for b in range(n_bricks): 
+            start_state["bricks"][b]["alive"] = False
 
-    for brick in n_bricks: 
         # turn on single brick
+        start_state["bricks"][brick]["alive"] = True
+        # get bricks core
+        brick_score = start_state["bricks"][brick]["points"]
 
         # load env from manipulated state
+        turtle.toybox.write_json(start_state)
 
+        # n trials 
+        num_games = 0
+        n_steps = 0
+        step_counts = []
+        successes = 0
 
-        # give it 72000 frames to win
-        turtle.toybox.query_brick_id(brick)
+        while num_games < n_trials:
+#           actions = model.step(obs)[0]
+            actions = np.random.randint(0,3)
+            n_steps += 1
 
-        # if win, break 
-
-        # record number of steps to completion or end 
-
-        while num_games < 1:
-            actions = model.step(obs)[0]
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             #env.render()
-            done = num_lives == 1 and done 
 
-            if isinstance(info, list) or isinstance(info, tuple):
-                session_scores.add(np.average([d['score'] for d in info]))
-            elif isinstance(info, dict):
-                session_scores.add(['score'])
-            else:
-                session_scores.add(-1)
+            bricks_remaining = info[0]['score'] < brick_score       
+            done = (num_lives == 1 and done) or not bricks_remaining
 
             if done:
                 num_games += 1
-                score = max(session_scores)
-                scores.append(score)
-                session_scores = set()
 
-                print("game %s: %s" % (num_games, score))
                 obs = env.reset()
-                session_scores = set()
+                turtle.toybox.write_json(start_state)
+
+                step_counts.append(n_steps)
+                n_steps = 0
+
+                if not bricks_remaining: 
+                    successes += 1
+
+        avg = np.average(step_counts)
+        med = np.median(step_counts)
+        print("brick %s: avg %s steps, %s median steps, %s/%s successes" % (brick, avg, med, successes, n_trials))
+        brick_info.append([brick, avg, med, stdev(step_counts), successes])
+
+        with open('last_brick.tsv', 'w') as fp:
+            for row in brick_info:
+                print('\t'.join([str(x) for x in row]), file=fp)
+
+    #create image from brick clearing performance in steps
+    max_steps = max(brick_info[:][1])
+    for brick in range(n_bricks): 
+        start_state["bricks"][brick]["alive"] = True
+        r,g,b = convert_to_rgb(0, max_steps, brick_info[brick][1])
+        print(r,g,b)
+        start_state["bricks"][brick]["color"]["r"] = r
+        start_state["bricks"][brick]["color"]["g"] = g
+        start_state["bricks"][brick]["color"]["b"] = b
+
+    turtle.toybox.write_json(start_state)
+    turtle.toybox.save_frame_image(osp.join("test_figures", "last_brick_heatmap_steps.jpg"))
 
 
-    print("Avg score: %f" % np.average(scores))
-    print("Median score: %f" % np.median(scores))
-    print("Std error score: %f" % sem(scores))
-    print("Std dev score: %f" % stdev(scores))
+
+   # create image from brick clearing performance in steps
+    # for brick in range(n_bricks): 
+    #     start_state["bricks"][brick]["alive"] = True
+    #     r,g,b = rgb(0,max,value)
+    #     start_state["bricks"][brick]["color"]["r"] = r
+    #     start_state["bricks"][brick]["color"]["g"] = g
+    #     start_state["bricks"][brick]["color"]["b"] = b
+
     env.close()
 
 if __name__ == '__main__':
