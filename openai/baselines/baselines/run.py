@@ -9,11 +9,8 @@ from collections import defaultdict
 import tensorflow as tf
 import numpy as np
 from scipy.stats import sem
-<<<<<<< Updated upstream
 from statistics import stdev
-=======
 from PIL import Image
->>>>>>> Stashed changes
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
