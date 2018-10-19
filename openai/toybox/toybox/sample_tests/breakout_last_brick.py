@@ -315,19 +315,6 @@ def main():
             for row in brick_info:
                 print('\t'.join([str(x) for x in row]), file=fp)
 
-    #create image from brick clearing performance in steps
-    max_steps = max(brick_info[:][1])
-    for brick in range(n_bricks): 
-        start_state["bricks"][brick]["alive"] = True
-        r,g,b = convert_to_rgb(0, max_steps, brick_info[brick][1])
-        print(r,g,b)
-        start_state["bricks"][brick]["color"]["r"] = r
-        start_state["bricks"][brick]["color"]["g"] = g
-        start_state["bricks"][brick]["color"]["b"] = b
-
-    turtle.toybox.write_json(start_state)
-    turtle.toybox.save_frame_image(osp.join("test_figures", "last_brick_heatmap_steps.jpg"))
-
 
 
    # create image from brick clearing performance in steps
