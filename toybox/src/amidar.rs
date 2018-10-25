@@ -1,12 +1,12 @@
+use super::digit_sprites;
+use super::digit_sprites::draw_score;
 use super::graphics::{Color, Drawable, FixedSpriteData};
 use super::Direction;
 use super::Input;
-use super::digit_sprites;
-use super::digit_sprites::draw_score;
 use failure::Error;
 use serde_json;
-use std::collections::{HashSet, VecDeque};
 use std::any::Any;
+use std::collections::{HashSet, VecDeque};
 
 // Window constants:
 pub mod screen {
@@ -17,31 +17,38 @@ pub mod screen {
     pub const TILE_SIZE: (i32, i32) = (4, 5);
 
     pub const LIVES_Y_POS: i32 = 198;
-    pub const LIVES_X_POS: i32 = 148; 
+    pub const LIVES_X_POS: i32 = 148;
     pub const LIVES_X_STEP: i32 = 16;
-    
+
     pub const SCORE_Y_POS: i32 = 198;
-    pub const SCORE_X_POS: i32 = LIVES_X_POS - LIVES_X_STEP*3 - 8;
+    pub const SCORE_X_POS: i32 = LIVES_X_POS - LIVES_X_STEP * 3 - 8;
 }
 pub mod raw_images {
     pub const PLAYER_L1: &[u8] = include_bytes!("resources/amidar/player_l1.png");
     pub const ENEMY_L1: &[u8] = include_bytes!("resources/amidar/enemy_l1.png");
     pub const ENEMY_CHASE_L1: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
     pub const PAINTED_BOX_BAR: &[u8] = include_bytes!("resources/amidar/painted_box_bar.png");
-    pub const BLOCK_TILE_PAINTED_L1: &[u8] = include_bytes!("resources/amidar/block_tile_painted_l1.png");
-    pub const BLOCK_TILE_UNPAINTED_L1: &[u8] = include_bytes!("resources/amidar/block_tile_unpainted_l1.png");
+    pub const BLOCK_TILE_PAINTED_L1: &[u8] =
+        include_bytes!("resources/amidar/block_tile_painted_l1.png");
+    pub const BLOCK_TILE_UNPAINTED_L1: &[u8] =
+        include_bytes!("resources/amidar/block_tile_unpainted_l1.png");
 }
 pub mod images {
     use super::*;
     lazy_static! {
-        pub static ref PLAYER_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::PLAYER_L1);
+        pub static ref PLAYER_L1: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PLAYER_L1);
         pub static ref ENEMY_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L1);
         pub static ref ENEMY_JUMP_L1: FixedSpriteData = ENEMY_L1.make_black_version();
-        pub static ref ENEMY_CHASE_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L1);
+        pub static ref ENEMY_CHASE_L1: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L1);
         pub static ref ENEMY_CAUGHT_L1: FixedSpriteData = ENEMY_CHASE_L1.make_black_version();
-        pub static ref PAINTED_BOX_BAR: FixedSpriteData = FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
-        pub static ref BLOCK_TILE_PAINTED_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L1);
-        pub static ref BLOCK_TILE_UNPAINTED_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L1);
+        pub static ref PAINTED_BOX_BAR: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
+        pub static ref BLOCK_TILE_PAINTED_L1: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L1);
+        pub static ref BLOCK_TILE_UNPAINTED_L1: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L1);
     }
 }
 
@@ -53,7 +60,7 @@ mod world {
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
 
-#[derive(Debug,Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     bg_color: Color,
     player_color: Color,
@@ -72,7 +79,14 @@ pub struct Config {
 
 impl Config {
     pub fn colors(&self) -> Vec<&Color> {
-        vec![&self.bg_color, &self.enemy_color, &self.inner_painted_color, &self.painted_color, &self.player_color, &self.unpainted_color]
+        vec![
+            &self.bg_color,
+            &self.enemy_color,
+            &self.inner_painted_color,
+            &self.painted_color,
+            &self.player_color,
+            &self.unpainted_color,
+        ]
     }
 }
 
@@ -175,7 +189,7 @@ impl GridBox {
             top_left,
             bottom_right,
             painted: false,
-            triggers_chase
+            triggers_chase,
         }
     }
     fn matches(&self, tile: &TilePoint) -> bool {
@@ -201,10 +215,10 @@ impl GridBox {
         let y1 = self.top_left.ty;
         let y2 = self.bottom_right.ty;
 
-        let top_and_bottom = (x1..(x2+1)).all(|xi| {
+        let top_and_bottom = (x1..(x2 + 1)).all(|xi| {
             board.is_painted(&TilePoint::new(xi, y1)) && board.is_painted(&TilePoint::new(xi, y2))
         });
-        let left_and_right = (y1..(y2+1)).all(|yi| {
+        let left_and_right = (y1..(y2 + 1)).all(|yi| {
             board.is_painted(&TilePoint::new(x1, yi)) && board.is_painted(&TilePoint::new(x2, yi))
         });
 
@@ -241,7 +255,7 @@ impl Tile {
     pub fn needs_paint(self) -> bool {
         match self {
             Tile::Painted | Tile::Empty => false,
-            Tile::ChaseMarker | Tile::Unpainted => true
+            Tile::ChaseMarker | Tile::Unpainted => true,
         }
     }
 }
@@ -413,7 +427,8 @@ lazy_static! {
                 .map(|x| x.parse::<u32>())
                 .collect();
             route.unwrap()
-        }).collect();
+        })
+        .collect();
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -512,7 +527,7 @@ impl Board {
                         let x = x as u32;
                         let _ = self.junctions.insert(y * self.width + x);
                         if cell == &Tile::ChaseMarker {
-                            self.chase_junctions.insert(y *self.width + x);
+                            self.chase_junctions.insert(y * self.width + x);
                         }
                     }
                 }
@@ -561,7 +576,7 @@ impl Board {
             Some(GridBox::new(
                 self.lookup_position(source),
                 self.lookup_position(down_right),
-                self.chase_junctions.contains(&source)
+                self.chase_junctions.contains(&source),
             ))
         } else {
             None
@@ -614,9 +629,12 @@ impl Board {
             }
         }
 
-        let triggers_chase = chase_change && self.boxes.iter()
-            .filter(|b| b.triggers_chase)
-            .all(|b| b.painted);
+        let triggers_chase = chase_change
+            && self
+                .boxes
+                .iter()
+                .filter(|b| b.triggers_chase)
+                .all(|b| b.painted);
 
         (triggers_chase, updated)
     }
@@ -655,7 +673,7 @@ impl Board {
                 }
             }
         }
-        
+
         if score_change.happened() {
             // Don't forget this location should still be in history:
             let current = *player_history.front().unwrap();
@@ -699,8 +717,7 @@ impl Board {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct State {
-    pub config: Config,
+pub struct StateCore {
     pub score: i32,
     pub lives: i32,
     pub jumps: i32,
@@ -710,6 +727,11 @@ pub struct State {
     pub player_start: TilePoint,
     pub enemies: Vec<Mob>,
     pub board: Board,
+}
+
+pub struct State {
+    pub config: Config,
+    pub state: StateCore
 }
 
 impl State {
@@ -727,44 +749,46 @@ impl State {
 
         let mut state = State {
             config: config.clone(),
-            lives: config.start_lives,
-            score: 0,
-            chase_timer: 0,
-            jumps: config.start_jumps,
-            jump_timer: 0,
-            player,
-            player_start,
-            enemies,
-            board,
+            state: StateCore {
+                lives: config.start_lives,
+                score: 0,
+                chase_timer: 0,
+                jumps: config.start_jumps,
+                jump_timer: 0,
+                player,
+                player_start,
+                enemies,
+                board,
+            }
         };
         state.reset();
         Ok(state)
     }
     pub fn reset(&mut self) {
-        self.player.reset(&self.player_start, &self.board);
-        self.player
+        self.state.player.reset(&self.state.player_start, &self.state.board);
+        self.state.player
             .history
-            .push_front(self.board.get_junction_id(&TilePoint::new(31, 18)).unwrap());
-        for enemy in &mut self.enemies {
-            enemy.reset(&self.player_start, &self.board);
+            .push_front(self.state.board.get_junction_id(&TilePoint::new(31, 18)).unwrap());
+        for enemy in &mut self.state.enemies {
+            enemy.reset(&self.state.player_start, &self.state.board);
         }
     }
     pub fn board_size(&self) -> WorldPoint {
-        let th = self.board.height as i32;
-        let tw = self.board.width as i32;
+        let th = self.state.board.height as i32;
+        let tw = self.state.board.width as i32;
         TilePoint::new(tw + 1, th + 1).to_world()
     }
     /// Determine whether an enemy and a player are colliding and what to do about it.
     /// returns: (player_dead, enemy_caught)
     fn check_enemy_player_collision(&self, enemy: &Mob, enemy_id: usize) -> EnemyPlayerState {
-        if self.player.position.to_tile() == enemy.position.to_tile() {
-            if self.chase_timer > 0 {
+        if self.state.player.position.to_tile() == enemy.position.to_tile() {
+            if self.state.chase_timer > 0 {
                 if !enemy.caught {
                     EnemyPlayerState::EnemyCatch(enemy_id)
                 } else {
                     EnemyPlayerState::Miss
                 }
-            } else if self.jump_timer > 0 {
+            } else if self.state.jump_timer > 0 {
                 EnemyPlayerState::Miss
             } else {
                 EnemyPlayerState::PlayerDeath
@@ -776,7 +800,7 @@ impl State {
     }
 }
 
-#[derive(PartialEq,Eq,Clone,Copy)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 enum EnemyPlayerState {
     Miss,
     PlayerDeath,
@@ -794,8 +818,7 @@ impl super::Simulation for Amidar {
     fn as_any(&self) -> &Any {
         self
     }
-    fn reset_seed(&mut self, _seed: u32) {
-    }
+    fn reset_seed(&mut self, _seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
@@ -803,8 +826,14 @@ impl super::Simulation for Amidar {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, Error> {
-        let state: State = serde_json::from_str(json_str)?;
-        Ok(Box::new(state))
+        let state: StateCore = serde_json::from_str(json_str)?;
+        let config: Config = Config::default();
+        Ok(Box::new(State { config: config.clone(), state: state }))
+    }
+    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, Error> {
+        let state: StateCore = serde_json::from_str(json_state)?;
+        let config: Config = serde_json::from_str(json_config)?;
+        Ok(Box::new(State { config: config, state: state }))
     }
 }
 
@@ -813,80 +842,81 @@ impl super::State for State {
         self
     }
     fn lives(&self) -> i32 {
-        self.lives
+        self.state.lives
     }
     fn score(&self) -> i32 {
-        self.score
+        self.state.score
     }
     fn update_mut(&mut self, buttons: Input) {
-        let pre_update_score : i32 = self.score();
-        if let Some(score_change) = self.player.update(buttons, &mut self.board) {
-            self.score += score_change.horizontal;
+        let pre_update_score: i32 = self.score();
+        if let Some(score_change) = self.state.player.update(buttons, &mut self.state.board) {
+            self.state.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
-            self.score += score_change.vertical.signum();
-            self.score += self.config.box_bonus * score_change.num_boxes;
+            self.state.score += score_change.vertical.signum();
+            self.state.score += self.config.box_bonus * score_change.num_boxes;
 
             if score_change.triggers_chase {
-                self.chase_timer = self.config.chase_time;
+                self.state.chase_timer = self.config.chase_time;
             }
         }
 
-        if self.chase_timer > 0 {
-            self.chase_timer -= 1;
-        } else if self.jump_timer > 0 { // only support jump when not chasing.
-            self.jump_timer -= 1;
-        } else if (buttons.button1 || buttons.button2) && self.jumps > 0 {
-            self.jump_timer = self.config.jump_time;
-            self.jumps-=1;
+        if self.state.chase_timer > 0 {
+            self.state.chase_timer -= 1;
+        } else if self.state.jump_timer > 0 {
+            // only support jump when not chasing.
+            self.state.jump_timer -= 1;
+        } else if (buttons.button1 || buttons.button2) && self.state.jumps > 0 {
+            self.state.jump_timer = self.config.jump_time;
+            self.state.jumps -= 1;
         }
 
         let mut dead = false;
         let mut changes: Vec<EnemyPlayerState> = Vec::new();
-        
+
         // check-collisions after player move:
-        for (i,e) in self.enemies.iter().enumerate() {
+        for (i, e) in self.state.enemies.iter().enumerate() {
             let state = self.check_enemy_player_collision(e, i);
             if state != EnemyPlayerState::Miss {
                 changes.push(state);
-            } 
+            }
         }
 
         // move enemies:
-        for e in self.enemies.iter_mut() {
-            e.update(Input::default(), &mut self.board);
+        for e in self.state.enemies.iter_mut() {
+            e.update(Input::default(), &mut self.state.board);
         }
-        
+
         // check-collisions again (so we can't run through enemies):
-        for (i,e) in self.enemies.iter().enumerate() {
+        for (i, e) in self.state.enemies.iter().enumerate() {
             let state = self.check_enemy_player_collision(e, i);
             if state != EnemyPlayerState::Miss {
                 changes.push(state);
-            } 
+            }
         }
-        
+
         // Process EnemyPlayerState that were interesting!
         for change in changes {
             match change {
                 EnemyPlayerState::Miss => {
                     // This was filtered out.
-                },
+                }
                 EnemyPlayerState::PlayerDeath => {
                     dead = true;
                     break;
-                },
+                }
                 EnemyPlayerState::EnemyCatch(eid) => {
-                    if !self.enemies[eid].caught {
-                        self.score += self.config.chase_score_bonus;
-                        self.enemies[eid].caught = true;
+                    if !self.state.enemies[eid].caught {
+                        self.state.score += self.config.chase_score_bonus;
+                        self.state.enemies[eid].caught = true;
                     }
-                },
+                }
             }
         }
 
         if dead {
-            self.jumps = self.config.start_jumps;
-            self.lives -= 1;
-            self.score = pre_update_score;
+            self.state.jumps = self.config.start_jumps;
+            self.state.lives -= 1;
+            self.state.score = pre_update_score;
             self.reset();
         }
     }
@@ -900,14 +930,14 @@ impl super::State for State {
             screen::GAME_SIZE.0,
             screen::GAME_SIZE.1,
         ));
-        if self.lives < 0 {
+        if self.state.lives < 0 {
             return output;
         }
 
         let (tile_w, tile_h) = screen::TILE_SIZE;
         let (offset_x, offset_y) = screen::BOARD_OFFSET;
 
-        for (ty, row) in self.board.tiles.iter().enumerate() {
+        for (ty, row) in self.state.board.tiles.iter().enumerate() {
             let ty = ty as i32;
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
@@ -940,9 +970,9 @@ impl super::State for State {
             }
         }
 
-        for inner_box in self.board.boxes.iter().filter(|b| b.painted) {
+        for inner_box in self.state.board.boxes.iter().filter(|b| b.painted) {
             if self.config.render_images {
-                let top_left_in = inner_box.top_left.translate(1,1);
+                let top_left_in = inner_box.top_left.translate(1, 1);
                 let x1 = top_left_in.tx;
                 let x2 = inner_box.bottom_right.tx;
                 let y1 = top_left_in.ty;
@@ -951,12 +981,14 @@ impl super::State for State {
                 // generate all boxes inside:
                 for x in x1..x2 {
                     for y in y1..y2 {
-                        let pt = TilePoint::new(x,y).to_world().to_screen();
+                        let pt = TilePoint::new(x, y).to_world().to_screen();
                         output.push(Drawable::sprite(
-                            pt.sx + offset_x, pt.sy + offset_y, images::PAINTED_BOX_BAR.clone()));
+                            pt.sx + offset_x,
+                            pt.sy + offset_y,
+                            images::PAINTED_BOX_BAR.clone(),
+                        ));
                     }
                 }
-
             } else {
                 let origin = inner_box.top_left.translate(1, 1).to_world().to_screen();
                 let dest = inner_box.bottom_right.to_world().to_screen();
@@ -972,13 +1004,13 @@ impl super::State for State {
             }
         }
 
-        let (player_x, player_y) = self.player.position.to_screen().pixels();
+        let (player_x, player_y) = self.state.player.position.to_screen().pixels();
         let (player_w, player_h) = screen::PLAYER_SIZE;
         if self.config.render_images {
             output.push(Drawable::sprite(
-                offset_x + player_x - 1, 
+                offset_x + player_x - 1,
                 offset_y + player_y - 1,
-                images::PLAYER_L1.clone()
+                images::PLAYER_L1.clone(),
             ))
         } else {
             output.push(Drawable::rect(
@@ -990,25 +1022,25 @@ impl super::State for State {
             ));
         }
 
-        for enemy in &self.enemies {
+        for enemy in &self.state.enemies {
             let (x, y) = enemy.position.to_screen().pixels();
             let (w, h) = screen::ENEMY_SIZE;
 
             if self.config.render_images {
                 output.push(Drawable::sprite(
-                    offset_x + x - 1, 
+                    offset_x + x - 1,
                     offset_y + y - 1,
-                    if self.chase_timer > 0 { 
+                    if self.state.chase_timer > 0 {
                         if enemy.caught {
                             images::ENEMY_JUMP_L1.clone()
                         } else {
-                            images::ENEMY_CHASE_L1.clone() 
+                            images::ENEMY_CHASE_L1.clone()
                         }
-                    } else if self.jump_timer > 0 {
+                    } else if self.state.jump_timer > 0 {
                         images::ENEMY_JUMP_L1.clone()
-                    } else { 
-                        images::ENEMY_L1.clone() 
-                    }
+                    } else {
+                        images::ENEMY_L1.clone()
+                    },
                 ))
             } else {
                 output.push(Drawable::rect(
@@ -1021,21 +1053,30 @@ impl super::State for State {
             }
         }
 
-        output.extend(draw_score(self.score, screen::SCORE_X_POS, screen::SCORE_Y_POS));
-        for i in 0..self.lives {
-            output.push(Drawable::rect(self.config.player_color,
+        output.extend(draw_score(
+            self.state.score,
+            screen::SCORE_X_POS,
+            screen::SCORE_Y_POS,
+        ));
+        for i in 0..self.state.lives {
+            output.push(Drawable::rect(
+                self.config.player_color,
                 screen::LIVES_X_POS - i * screen::LIVES_X_STEP,
                 screen::LIVES_Y_POS,
                 1,
-                digit_sprites::DIGIT_HEIGHT+1
+                digit_sprites::DIGIT_HEIGHT + 1,
             ))
         }
 
         output
     }
-    
+
     fn to_json(&self) -> String {
-        serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
+        serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
+    }
+
+    fn config_to_json(&self) -> String {
+        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
     }
 }
 
@@ -1047,7 +1088,11 @@ mod tests {
     fn test_colors_unique_in_gray() {
         let config = Config::default();
         let num_colors = config.colors().len();
-        let uniq_grays: HashSet<u8> = config.colors().into_iter().map(|c| c.grayscale_byte()).collect();
+        let uniq_grays: HashSet<u8> = config
+            .colors()
+            .into_iter()
+            .map(|c| c.grayscale_byte())
+            .collect();
         // Don't allow a grayscale agent to be confused where a human wouldn't be.
         assert_eq!(uniq_grays.len(), num_colors);
     }

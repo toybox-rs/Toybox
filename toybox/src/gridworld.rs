@@ -1,14 +1,13 @@
 use super::graphics::{Color, Drawable};
-use super::Input;
 use super::Direction;
+use super::Input;
 
-use serde_json;
 use failure;
-use std::collections::HashMap;
+use serde_json;
 use std::any::Any;
+use std::collections::HashMap;
 
-
-#[derive(Debug,Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileConfig {
     /// What reward (if any) is given or taken by passing this tile?
     pub reward: i32,
@@ -23,34 +22,46 @@ pub struct TileConfig {
 impl TileConfig {
     fn wall() -> TileConfig {
         TileConfig {
-            reward: 0, walkable: false, goal: false, color: Color::black()
+            reward: 0,
+            walkable: false,
+            goal: false,
+            color: Color::black(),
         }
     }
     fn floor() -> TileConfig {
         TileConfig {
-            reward: 0, walkable: true, goal: false, color: Color::white()
+            reward: 0,
+            walkable: true,
+            goal: false,
+            color: Color::white(),
         }
     }
     fn reward() -> TileConfig {
         TileConfig {
-            reward: 1, walkable: true, goal: false, color: Color::rgb(255,255,0)
+            reward: 1,
+            walkable: true,
+            goal: false,
+            color: Color::rgb(255, 255, 0),
         }
     }
     fn goal() -> TileConfig {
         TileConfig {
-            reward: 10, walkable: true, goal: true, color: Color::rgb(0,255,0)
+            reward: 10,
+            walkable: true,
+            goal: true,
+            color: Color::rgb(0, 255, 0),
         }
     }
 }
 
-#[derive(Debug,Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub game_size: (i32, i32),
     pub grid: Vec<String>,
     pub tiles: HashMap<char, TileConfig>,
     pub reward_becomes: char,
     pub player_color: Color,
-    pub player_start: (i32, i32)
+    pub player_start: (i32, i32),
 }
 
 impl Default for Config {
@@ -62,24 +73,24 @@ impl Default for Config {
         tiles.insert('G', TileConfig::goal());
 
         let grid = vec![
-                "111111111".to_owned(),
-                "1000R0001".to_owned(),
-                "101111101".to_owned(),
-                "100010001".to_owned(),
-                "10001R111".to_owned(),
-                "1000100G1".to_owned(),
-                "111111111".to_owned(),
-                ];
+            "111111111".to_owned(),
+            "1000R0001".to_owned(),
+            "101111101".to_owned(),
+            "100010001".to_owned(),
+            "10001R111".to_owned(),
+            "1000100G1".to_owned(),
+            "111111111".to_owned(),
+        ];
 
         let width = grid[0].len() as i32;
         let height = grid.len() as i32;
         Config {
             game_size: (width, height),
             player_color: Color::rgb(255, 0, 0),
-            player_start: (2,4),
+            player_start: (2, 4),
             reward_becomes: '0',
             grid,
-            tiles
+            tiles,
         }
     }
 }
@@ -126,7 +137,7 @@ impl State {
             tiles,
             grid,
             player_color: config.player_color,
-            player: config.player_start
+            player: config.player_start,
         }
     }
     fn get_tile(&self, tx: i32, ty: i32) -> Option<&TileConfig> {
@@ -160,15 +171,16 @@ pub struct GridWorld {
 }
 impl Default for GridWorld {
     fn default() -> Self {
-        GridWorld { config: Config::default() }
+        GridWorld {
+            config: Config::default(),
+        }
     }
 }
 impl super::Simulation for GridWorld {
     fn as_any(&self) -> &Any {
         self
     }
-    fn reset_seed(&mut self, seed: u32) {
-    }
+    fn reset_seed(&mut self, seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
         self.config.game_size
     }
@@ -180,6 +192,11 @@ impl super::Simulation for GridWorld {
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, failure::Error> {
         let state: State = serde_json::from_str(json_str)?;
         Ok(Box::new(state))
+    }
+
+    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, failure::Error> {
+        // Not sure what's up with Config for now, so let's just ignore it.
+        self.new_state_from_json(json_state)
     }
 }
 
@@ -205,7 +222,7 @@ impl super::State for State {
         if let Some(dir) = Direction::from_input(buttons) {
             let (dx, dy) = dir.delta();
             let (px, py) = self.player;
-            let dest = (px+dx, py+dy);
+            let dest = (px + dx, py + dy);
 
             if self.walkable(dest.0, dest.1) {
                 self.player = dest.clone();
@@ -215,7 +232,7 @@ impl super::State for State {
     }
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        let (w,h) = self.size();
+        let (w, h) = self.size();
         output.push(Drawable::rect(Color::black(), 0, 0, w, h));
 
         for (y, row) in self.grid.iter().enumerate() {
@@ -224,11 +241,21 @@ impl super::State for State {
                 output.push(Drawable::rect(tile.color, x as i32, y as i32, 1, 1));
             }
         }
-        output.push(Drawable::rect(self.player_color, self.player.0, self.player.1, 1, 1));
+        output.push(Drawable::rect(
+            self.player_color,
+            self.player.0,
+            self.player.1,
+            1,
+            1,
+        ));
 
         output
     }
     fn to_json(&self) -> String {
         serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
+    }
+
+    fn config_to_json(&self) -> String {
+        panic!("No config on the state of GridWorld");
     }
 }

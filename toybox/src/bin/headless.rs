@@ -3,7 +3,7 @@ extern crate failure;
 extern crate png;
 extern crate toybox;
 
-use toybox::graphics::{ImageBuffer, GrayscaleBuffer};
+use toybox::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox::Input;
 use toybox::State;
 
@@ -41,43 +41,50 @@ fn main() {
                 .value_name("GAME")
                 .help("Try amidar, breakout or space_invaders. (amidar by default)")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("num_steps")
                 .short("n")
                 .long("num_steps")
                 .value_name("1000")
                 .help("How many steps to simulate (also how many images to output).")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("max_frames")
                 .long("max_frames")
                 .value_name("all by default, try 1000")
                 .help("How many frames to keep in memory")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("grayscale")
                 .long("grayscale")
-                .help("Agents work in grayscale. This will output PNG to grayscale.")
-        ).arg(
+                .help("Agents work in grayscale. This will output PNG to grayscale."),
+        )
+        .arg(
             Arg::with_name("frame_step")
                 .short("f")
                 .long("frame_step")
                 .value_name("4")
                 .help("How many frames to simulate per step")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("output_json")
                 .long("output_json")
                 .value_name("OUTPUT_DIR")
                 .help("Where to save JSON files (directory).")
                 .takes_value(true),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("output")
                 .long("output")
                 .value_name("OUTPUT_DIR")
                 .help("Where to save PNG files (directory).")
                 .takes_value(true),
-        ).get_matches();
+        )
+        .get_matches();
 
     let game = matches.value_of("game").unwrap_or("amidar");
 
@@ -90,7 +97,8 @@ fn main() {
         .map(|c| {
             c.parse::<usize>()
                 .expect("--frame_steps should be a number")
-        }).unwrap_or(4);
+        })
+        .unwrap_or(4);
     let max_frames = matches
         .value_of("max_frames")
         .map(|c| c.parse::<usize>().expect("--max_frames should be a number"));
@@ -103,7 +111,11 @@ fn main() {
         return;
     }
 
-    println!("output={:?} grayscale={:?}", matches.value_of("output"), grayscale);
+    println!(
+        "output={:?} grayscale={:?}",
+        matches.value_of("output"),
+        grayscale
+    );
 
     let mut simulator = toybox::get_simulation_by_name(game).unwrap();
     let (w, h) = simulator.game_size();
@@ -154,7 +166,8 @@ fn main() {
     }
     if let Some(path) = matches.value_of("output_json") {
         for (i, json) in jsons.into_iter().enumerate() {
-            let file = File::create(Path::new(path).join(format!("{}_{:08}.json", game, i))).unwrap();
+            let file =
+                File::create(Path::new(path).join(format!("{}_{:08}.json", game, i))).unwrap();
             let w = &mut BufWriter::new(file);
             write!(w, "{}", json).unwrap();
         }
@@ -163,16 +176,20 @@ fn main() {
     if let Some(path) = matches.value_of("output") {
         if grayscale {
             for (i, img) in grayscale_images.into_iter().enumerate() {
-                let file = File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
+                let file =
+                    File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
                 let w = &mut BufWriter::new(file);
                 let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
-                encoder.set(png::ColorType::Grayscale).set(png::BitDepth::Eight);
+                encoder
+                    .set(png::ColorType::Grayscale)
+                    .set(png::BitDepth::Eight);
                 let mut writer = encoder.write_header().unwrap();
                 writer.write_image_data(&img.data).unwrap();
             }
         } else {
             for (i, img) in images.into_iter().enumerate() {
-                let file = File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
+                let file =
+                    File::create(Path::new(path).join(format!("{}_{:08}.png", game, i))).unwrap();
                 let w = &mut BufWriter::new(file);
                 let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
                 encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);

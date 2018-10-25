@@ -1,4 +1,4 @@
-use super::graphics::{Color, FixedSpriteData, Drawable};
+use super::graphics::{Color, Drawable, FixedSpriteData};
 
 const RAW_NUMBER_DATA: &str = include_str!("resources/number_sprites.txt");
 const SET: char = '1';
@@ -19,34 +19,34 @@ fn get_sprite(digit_index: u32) -> FixedSpriteData {
 /// We don't have a sprite for negatives, but scores might be someday... this just prints zero.
 /// x and y represent the top-right of scores.
 pub fn draw_score(score: i32, x: i32, y: i32) -> Vec<Drawable> {
-    let score = if score < 0 {
-        0
-    } else {
-        score as u32
-    };
+    let score = if score < 0 { 0 } else { score as u32 };
     let radix = 10;
-    format!("{:03}", score).chars()
+    format!("{:03}", score)
+        .chars()
         .map(|ch| ch.to_digit(radix).expect("format! only gives us digits!"))
         .rev()
         .enumerate()
         .map(|(position, digit)| {
             let x = x - (position as i32) * DIGIT_WIDTH;
             Drawable::sprite(x, y, get_sprite(digit))
-        }).collect()
+        })
+        .collect()
 }
 
 /// This is separate from draw_score because in breakout, lives are not
 /// padded, but score is, and Rust requires the format string be a literal
 pub fn draw_lives(lives: i32, x: i32, y: i32) -> Vec<Drawable> {
     let radix = 10;
-    format!("{}", lives).chars()
+    format!("{}", lives)
+        .chars()
         .map(|ch| ch.to_digit(radix).expect("format! only gives us digits!"))
         .rev()
         .enumerate()
         .map(|(position, digit)| {
             let x = x - (position as i32) * DIGIT_WIDTH;
             Drawable::sprite(x, y, get_sprite(digit))
-        }).collect()
+        })
+        .collect()
 }
 
 /// Parse a number from number_sprites.txt into a SpriteData.
@@ -67,9 +67,7 @@ fn load_sprite(data: &[&str]) -> FixedSpriteData {
             } else {
                 panic!(
                     "Cannot construct pixel from {}, expected one of (on={}, off={})",
-                    ch,
-                    SET,
-                    IGNORE
+                    ch, SET, IGNORE
                 );
             }
         }
