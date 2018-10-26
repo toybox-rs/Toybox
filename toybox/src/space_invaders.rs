@@ -199,9 +199,7 @@ impl super::Simulation for SpaceInvaders {
     fn as_any(&self) -> &Any {
         self
     }
-    fn reset_seed(&mut self, _seed: u32) {
-
-    }
+    fn reset_seed(&mut self, _seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
@@ -211,6 +209,9 @@ impl super::Simulation for SpaceInvaders {
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, Error> {
         let state: State = serde_json::from_str(json_str)?;
         Ok(Box::new(state))
+    }
+    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, Error> {
+        panic!("No config implemented for SpaceInvaders.")
     }
 }
 
@@ -306,6 +307,10 @@ impl super::State for State {
 
     fn to_json(&self) -> String {
         serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
+    }
+
+    fn config_to_json(&self) -> String {
+        panic!("No config implemented for SpaceInvaders.")
     }
 }
 

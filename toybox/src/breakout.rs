@@ -1,14 +1,13 @@
+use super::digit_sprites::{draw_lives, draw_score, DIGIT_WIDTH};
 use super::graphics::{Color, Drawable};
+use super::random;
 use super::vec2d::Vec2D;
 use super::Body2D;
 use super::Input;
-use super::digit_sprites::{draw_score, draw_lives, DIGIT_WIDTH};
-use super::random;
 
 use failure;
 use serde_json;
 use std::any::Any;
-
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
@@ -72,7 +71,11 @@ pub struct StartBall {
 }
 impl StartBall {
     fn new(x: f64, y: f64, angle_degrees: f64) -> StartBall {
-        StartBall { x, y, angle_degrees }
+        StartBall {
+            x,
+            y,
+            angle_degrees,
+        }
     }
 }
 
@@ -85,10 +88,10 @@ pub struct Config {
     row_colors: Vec<Color>,
     row_scores: Vec<i32>,
     start_lives: i32,
-    ball_speed_row_depth: u32, 
+    ball_speed_row_depth: u32,
     ball_speed_slow: f64,
     ball_speed_fast: f64,
-    ball_start_positions: Vec<StartBall>
+    ball_start_positions: Vec<StartBall>,
 }
 impl Config {
     fn unique_colors(&self) -> Vec<&Color> {
@@ -100,13 +103,13 @@ impl Config {
         output
     }
     fn start_paddle(&self) -> Body2D {
-        let (w,h) = screen::GAME_SIZE;
+        let (w, h) = screen::GAME_SIZE;
         Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into())
     }
 }
 impl Default for Config {
     fn default() -> Self {
-        let (w,h) = screen::GAME_SIZE;
+        let (w, h) = screen::GAME_SIZE;
         let w = w as f64;
         let y = h as f64 / 2.0;
 
@@ -115,22 +118,25 @@ impl Default for Config {
             frame_color: (&screen::FRAME_COLOR).into(),
             paddle_color: (&screen::PADDLE_COLOR).into(),
             ball_color: (&screen::BALL_COLOR).into(),
-            row_colors: screen::ROW_COLORS.iter().cloned().map(|c| c.into()).collect(),
+            row_colors: screen::ROW_COLORS
+                .iter()
+                .cloned()
+                .map(|c| c.into())
+                .collect(),
             row_scores: screen::ROW_SCORES.iter().cloned().collect(),
             start_lives: 5,
             ball_speed_row_depth: 3, // orange is 0..1..2..3
             ball_speed_slow: 2.0,
             ball_speed_fast: 4.0,
             ball_start_positions: vec![
-                StartBall::new(0.1*w, y, 30.0),
-                StartBall::new(0.5*w, y, 30.0),
-                StartBall::new(0.5*w, y, 150.0),
-                StartBall::new(0.9*w, y, 150.0),
-            ]
+                StartBall::new(0.1 * w, y, 30.0),
+                StartBall::new(0.5 * w, y, 30.0),
+                StartBall::new(0.5 * w, y, 150.0),
+                StartBall::new(0.9 * w, y, 150.0),
+            ],
         }
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[repr(C)]
@@ -146,7 +152,7 @@ pub struct Brick {
     /// What color is this brick.
     pub color: Color,
     /// How deep is this brick? Will trigger speedup?
-    pub depth: u32, 
+    pub depth: u32,
 }
 
 impl Brick {
@@ -171,8 +177,7 @@ impl Brick {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[repr(C)]
-pub struct State {
-    pub config: Config,
+pub struct StateCore {
     pub rand: random::Gen,
     pub lives: i32,
     pub is_dead: bool,
@@ -185,7 +190,12 @@ pub struct State {
     pub paddle_width: f64,
     pub paddle_speed: f64,
     pub bricks: Vec<Brick>,
-    pub reset: bool
+    pub reset: bool,
+}
+
+pub struct State {
+    pub config: Config,
+    pub state: StateCore
 }
 
 pub struct Breakout {
@@ -194,7 +204,10 @@ pub struct Breakout {
 }
 impl Default for Breakout {
     fn default() -> Self {
-        Breakout { config: Config::default(), rand: random::Gen::new_from_seed(13) }
+        Breakout {
+            config: Config::default(),
+            rand: random::Gen::new_from_seed(13),
+        }
     }
 }
 
@@ -230,25 +243,33 @@ impl super::Simulation for Breakout {
                 let bpos = Vec2D::new(x * xs, (y as f64) * ys).translate(&offset);
                 // Reverse depth:
                 let depth = num_bricks_deep - y - 1;
-                bricks.push(Brick::new(bpos, bsize.clone(), score, color_tuple.into(), depth as u32));
+                bricks.push(Brick::new(
+                    bpos,
+                    bsize.clone(),
+                    score,
+                    color_tuple.into(),
+                    depth as u32,
+                ));
             }
         }
 
         let mut state = State {
             config: self.config.clone(),
-            lives: self.config.start_lives,
-            // offscreen, and dead
-            ball: Body2D::new_pos(-100.0, -100.0),
-            is_dead: true,
-            // paddle starts in middle
-            paddle: self.config.start_paddle(),
-            points: 0,
-            ball_radius: 2.0,
-            paddle_width: screen::PADDLE_START_SIZE.0.into(),
-            paddle_speed: 4.0,
-            rand: random::Gen::new_child(&mut self.rand),
-            bricks,
-            reset: true
+            state: StateCore {
+                lives: self.config.start_lives,
+                // offscreen, and dead
+                ball: Body2D::new_pos(-100.0, -100.0),
+                is_dead: true,
+                // paddle starts in middle
+                paddle: self.config.start_paddle(),
+                points: 0,
+                ball_radius: 2.0,
+                paddle_width: screen::PADDLE_START_SIZE.0.into(),
+                paddle_speed: 4.0,
+                rand: random::Gen::new_child(&mut self.rand),
+                bricks,
+                reset: true
+            }
         };
 
         state.start_ball();
@@ -256,130 +277,142 @@ impl super::Simulation for Breakout {
     }
 
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, failure::Error> {
-        let state: State = serde_json::from_str(json_str)?;
-        Ok(Box::new(state))
+        let state: StateCore = serde_json::from_str(json_str)?;
+        let config: Config = Config::default();
+        Ok(Box::new(State { config: config.clone(), state }))
+    }
+
+    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, failure::Error> {
+        let state: StateCore = serde_json::from_str(json_state)?;
+        let config: Config = serde_json::from_str(json_config)?;
+        Ok(Box::new(State { config, state }))
     }
 }
 
 impl State {
     fn start_ball(&mut self) {
         let options = &self.config.ball_start_positions;
-        let index = (self.rand.next_u32() as usize) % options.len();
+        let index = (self.state.rand.next_u32() as usize) % options.len();
 
-        self.ball.position.x = options[index].x;
-        self.ball.position.y = options[index].y;
-        self.ball.velocity = Vec2D::from_polar(
+        self.state.ball.position.x = options[index].x;
+        self.state.ball.position.y = options[index].y;
+        self.state.ball.velocity = Vec2D::from_polar(
             self.config.ball_speed_slow,
-            options[index].angle_degrees.to_radians());
+            options[index].angle_degrees.to_radians(),
+        );
     }
     fn update_paddle_movement(&mut self, buttons: Input) {
         let left = buttons.left;
         let right = buttons.right;
 
         if left {
-            self.paddle.velocity.x = -self.paddle_speed;
+            self.state.paddle.velocity.x = -self.state.paddle_speed;
         } else if right {
-            self.paddle.velocity.x = self.paddle_speed;
+            self.state.paddle.velocity.x = self.state.paddle_speed;
         } else {
-            self.paddle.velocity.x = 0.0;
+            self.state.paddle.velocity.x = 0.0;
         }
     }
     fn keep_paddle_on_screen(&mut self) {
-        let left = screen::BOARD_LEFT_X as f64 - self.paddle_width/2.0;
-        let right = screen::BOARD_RIGHT_X as f64 + self.paddle_width/2.0;
-        if self.paddle.position.x < left {
-            self.paddle.position.x = left;
-            self.paddle.velocity.x = 0.0;
-        } else if self.paddle.position.x > right {
-            self.paddle.position.x = right;
-            self.paddle.velocity.x = 0.0;
+        let left = screen::BOARD_LEFT_X as f64 - self.state.paddle_width / 2.0;
+        let right = screen::BOARD_RIGHT_X as f64 + self.state.paddle_width / 2.0;
+        if self.state.paddle.position.x < left {
+            self.state.paddle.position.x = left;
+            self.state.paddle.velocity.x = 0.0;
+        } else if self.state.paddle.position.x > right {
+            self.state.paddle.position.x = right;
+            self.state.paddle.velocity.x = 0.0;
         }
     }
     fn update_time_slice(&mut self, time_step: f64) {
         // Update positions.
-        self.ball.integrate_mut(time_step);
-        self.paddle.integrate_mut(time_step);
-        
+
+        self.state.ball.integrate_mut(time_step);
+        self.state.paddle.integrate_mut(time_step);
+
         self.keep_paddle_on_screen();
 
         // Handle collisions:
-        if self.ball.velocity.y > 0.0 {
+        if self.state.ball.velocity.y > 0.0 {
             // check paddle:
-            let paddle_ball_same_x = (self.ball.position.x - self.paddle.position.x).abs()
-                < self.ball_radius + self.paddle_width / 2.0;
+            let paddle_ball_same_x = (self.state.ball.position.x - self.state.paddle.position.x).abs()
+                < self.state.ball_radius + self.state.paddle_width / 2.0;
             let paddle_ball_same_y =
-                (self.paddle.position.y - self.ball.position.y).abs() < self.ball_radius;
+                (self.state.paddle.position.y - self.state.ball.position.y).abs() < self.state.ball_radius;
             if paddle_ball_same_x && paddle_ball_same_y {
                 // get x location of ball hit relative to paddle
-                let ball_hit_x = self.ball.position.x - (self.paddle.position.x - (self.paddle_width/ 2.0));
+                let ball_hit_x =
+                    self.state.ball.position.x - (self.state.paddle.position.x - (self.state.paddle_width / 2.0));
                 // get normalized location of ball hit along paddle
-                let paddle_normalized_relative_intersect_x =  1.0 - ball_hit_x / self.paddle_width;
+                let paddle_normalized_relative_intersect_x = 1.0 - ball_hit_x / self.state.paddle_width;
                 // convert this normalized parameter to the degree of the bounce angle
-                let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE + screen::BALL_ANGLE_MIN;
+                let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE
+                    + screen::BALL_ANGLE_MIN;
 
-                self.ball.velocity = Vec2D::from_polar(self.ball.velocity.magnitude(), bounce_angle.to_radians());
+                self.state.ball.velocity =
+                    Vec2D::from_polar(self.state.ball.velocity.magnitude(), bounce_angle.to_radians());
                 // calculations use non-graphics polar orientation
                 // to quickly fix, we reflect over the x-axis
-                self.ball.velocity.y *= -1.0;
+                self.state.ball.velocity.y *= -1.0;
             }
 
             // check lose?
-            if self.ball.position.y + self.ball_radius > screen::BOARD_BOTTOM_Y.into() {
-                if !self.is_dead {
-                    self.lives-=1;
-                    self.paddle_width = screen::PADDLE_START_SIZE.0.into();
+            if self.state.ball.position.y + self.state.ball_radius > screen::BOARD_BOTTOM_Y.into() {
+                if !self.state.is_dead {
+                    self.state.lives -= 1;
+                    self.state.paddle_width = screen::PADDLE_START_SIZE.0.into();
                 }
-                self.is_dead = true;
+                self.state.is_dead = true;
                 return;
             }
         } else {
             // bounce ceiling?
-            if self.ball.position.y - self.ball_radius < screen::BOARD_TOP_Y.into() {
-                self.ball.velocity.y *= -1.0;
-                self.paddle_width = screen::PADDLE_SMALL_SIZE.0.into();
+            if self.state.ball.position.y - self.state.ball_radius < screen::BOARD_TOP_Y.into() {
+                self.state.ball.velocity.y *= -1.0;
+                self.state.paddle_width = screen::PADDLE_SMALL_SIZE.0.into();
             }
         }
 
         // check living bricks:
         let ball_bounce_y = Vec2D::new(
-            self.ball.position.x,
-            self.ball.position.y + self.ball.velocity.y.signum() * self.ball_radius,
+            self.state.ball.position.x,
+            self.state.ball.position.y + self.state.ball.velocity.y.signum() * self.state.ball_radius,
         );
         let ball_bounce_x = Vec2D::new(
-            self.ball.position.x + self.ball.velocity.x.signum() * self.ball_radius,
-            self.ball.position.y,
+            self.state.ball.position.x + self.state.ball.velocity.x.signum() * self.state.ball_radius,
+            self.state.ball.position.y,
         );
 
-        for brick in self.bricks.iter_mut().filter(|b| b.alive) {
+        for brick in self.state.bricks.iter_mut().filter(|b| b.alive) {
             let mut hit = false;
             if brick.contains(&ball_bounce_x) {
                 hit = true;
-                self.ball.velocity.x *= -1.0;
+                self.state.ball.velocity.x *= -1.0;
             } else if brick.contains(&ball_bounce_y) {
                 hit = true;
-                self.ball.velocity.y *= -1.0;
+                self.state.ball.velocity.y *= -1.0;
             }
             if hit {
                 brick.alive = false;
-                self.points += brick.points;
+                self.state.points += brick.points;
                 if brick.depth >= self.config.ball_speed_row_depth {
                     // Potentially speed up the ball. This will be a no-op if it's already fast.
-                    let theta = self.ball.velocity.angle();
-                    self.ball.velocity = Vec2D::from_polar(self.config.ball_speed_fast, theta);
+                    let theta = self.state.ball.velocity.angle();
+                    self.state.ball.velocity = Vec2D::from_polar(self.config.ball_speed_fast, theta);
                 }
                 break;
             }
         }
 
         // bounce right wall?
-        if self.ball.velocity.x > 0.0 {
-            if self.ball.position.x + self.ball_radius > screen::BOARD_RIGHT_X.into() {
-                self.ball.velocity.x *= -1.0;
+        if self.state.ball.velocity.x > 0.0 {
+            if self.state.ball.position.x + self.state.ball_radius > screen::BOARD_RIGHT_X.into() {
+                self.state.ball.velocity.x *= -1.0;
             }
         } else {
             // bounce left wall?
-            if self.ball.position.x - self.ball_radius < screen::BOARD_LEFT_X.into() {
-                self.ball.velocity.x *= -1.0;
+            if self.state.ball.position.x - self.state.ball_radius < screen::BOARD_LEFT_X.into() {
+                self.state.ball.velocity.x *= -1.0;
             }
         }
     }
@@ -390,27 +423,27 @@ impl super::State for State {
         self
     }
     fn lives(&self) -> i32 {
-        self.lives
+        self.state.lives
     }
     fn score(&self) -> i32 {
-        self.points
+        self.state.points
     }
 
     /// Mutably update the game state.
     fn update_mut(&mut self, buttons: Input) {
         self.update_paddle_movement(buttons);
 
-        if self.is_dead {
+        if self.state.is_dead {
             if buttons.button1 || buttons.button2 {
                 self.start_ball();
-                self.is_dead = false;
+                self.state.is_dead = false;
             }
         }
 
-        let distance_limit = self.ball_radius as i32;
+        let distance_limit = self.state.ball_radius as i32;
         let total_time = 1.0;
         let distance_limit = distance_limit as f64; // m
-        let speed = self.ball.velocity.magnitude(); // m/s
+        let speed = self.state.ball.velocity.magnitude(); // m/s
 
         // if your speed is 30, and your radius is 5, we want to do about 6 steps.
         let time_step = distance_limit / speed; // (m) / (m/s) = m * s / m = s
@@ -424,21 +457,21 @@ impl super::State for State {
                 break;
             } else {
                 self.update_time_slice(time_step);
-                if self.is_dead {
+                if self.state.is_dead {
                     // Don't simulate if dead.
                     break;
                 }
                 time_simulated += time_step;
             }
         }
-        
-        let reset_level = self.bricks.iter().all(|b| !b.alive);
-        if reset_level && self.reset {
-            for b in self.bricks.iter_mut() {
+
+        let reset_level = self.state.bricks.iter().all(|b| !b.alive);
+        if reset_level && self.state.reset {
+            for b in self.state.bricks.iter_mut() {
                 b.alive = true;
             }
             self.start_ball();
-            self.reset = false;
+            self.state.reset = false;
         }
     }
 
@@ -497,19 +530,19 @@ impl super::State for State {
             screen::FRAME_RIGHT_SUPPORT.1,
         ));
 
-        if self.lives < 0 {
+        if self.state.lives < 0 {
             return output;
         }
 
-        for brick in self.bricks.iter().filter(|b| b.alive) {
+        for brick in self.state.bricks.iter().filter(|b| b.alive) {
             let (x, y) = brick.position.pixels();
             let (w, h) = brick.size.pixels();
 
             output.push(Drawable::rect(brick.color, x, y, w, h));
         }
 
-        let (paddle_x, paddle_y) = self.paddle.position.pixels();
-        let paddle_w = self.paddle_width as i32;
+        let (paddle_x, paddle_y) = self.state.paddle.position.pixels();
+        let paddle_w = self.state.paddle_width as i32;
 
         output.push(Drawable::rect(
             self.config.paddle_color,
@@ -519,8 +552,8 @@ impl super::State for State {
             screen::PADDLE_START_SIZE.1,
         ));
 
-        let (ball_x, ball_y) = self.ball.position.pixels();
-        let ball_r = self.ball_radius as i32;
+        let (ball_x, ball_y) = self.state.ball.position.pixels();
+        let ball_r = self.state.ball_radius as i32;
         output.push(Drawable::rect(
             self.config.ball_color,
             ball_x - ball_r,
@@ -534,20 +567,23 @@ impl super::State for State {
         let lives_x = score_x + (DIGIT_WIDTH * 2);
         let thing_x = lives_x + (DIGIT_WIDTH * 2);
         // Draw points:
-        output.extend(draw_score(self.points, score_x, 1));
+        output.extend(draw_score(self.state.points, score_x, 1));
         // Draw lives:
-        output.extend(draw_lives(self.lives, lives_x , 1));
+        output.extend(draw_lives(self.state.lives, lives_x, 1));
         // Draw whatever this thing is
         output.extend(draw_lives(1, thing_x, 1));
 
         output
     }
-    
+
     fn to_json(&self) -> String {
-        serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
+        serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
+    }
+
+    fn config_to_json(&self) -> String {
+        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -558,7 +594,11 @@ mod tests {
     fn test_colors_unique_in_gray() {
         let config = Config::default();
         let num_colors = config.unique_colors().len();
-        let uniq_grays: HashSet<u8> = config.unique_colors().into_iter().map(|c| c.grayscale_byte()).collect();
+        let uniq_grays: HashSet<u8> = config
+            .unique_colors()
+            .into_iter()
+            .map(|c| c.grayscale_byte())
+            .collect();
         // Don't allow a grayscale agent to be confused where a human wouldn't be.
         assert_eq!(uniq_grays.len(), num_colors);
     }

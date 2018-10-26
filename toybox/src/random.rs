@@ -1,8 +1,7 @@
-
 /// This implementation is a xoroshiro128+ that is serde serializable.
-#[derive(Debug,Clone,Serialize,Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Gen {
-  state: [u64; 2]
+    state: [u64; 2],
 }
 
 /// This implementation heavily based on MIT-Licensed:
@@ -14,7 +13,9 @@ impl Gen {
     }
     /// Generator from current generator?
     pub fn new_child(other: &mut Gen) -> Gen {
-        Gen { state: [other.next_u64(), other.next_u64()] }
+        Gen {
+            state: [other.next_u64(), other.next_u64()],
+        }
     }
     /// Generate next 64 pseudo-random bits.
     pub fn next_u64(&mut self) -> u64 {

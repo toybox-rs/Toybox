@@ -11,11 +11,10 @@ extern crate serde_json;
 
 extern crate png;
 
-
 use std::any::Any;
 
-pub mod graphics;
 pub mod digit_sprites;
+pub mod graphics;
 
 mod random;
 
@@ -49,6 +48,8 @@ pub trait State {
     fn draw(&self) -> Vec<graphics::Drawable>;
     /// Any state can serialize to JSON String.
     fn to_json(&self) -> String;
+    /// Separate serialization of once-per-game data
+    fn config_to_json(&self) -> String;
 }
 
 /// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.
@@ -61,8 +62,10 @@ pub trait Simulation {
     fn new_game(&mut self) -> Box<State>;
     /// Return a tuple of game size in pixels, e.g., (100,100).
     fn game_size(&self) -> (i32, i32);
-    /// Generate a new state from JSON String.
+    /// Generate a new state from JSON String. Uses the default config.
     fn new_state_from_json(&self, json: &str) -> Result<Box<State>, failure::Error>;
+    /// Generate new state and new config from JSON String.
+    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<State>, failure::Error>;
 }
 
 /// This method returns a Box<Simulation> if possible for a given game name.
@@ -74,7 +77,8 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
         _ => Err(format_err!(
             "Cannot construct game: `{}`. Try any of {:?}.",
-            name, GAME_LIST
+            name,
+            GAME_LIST
         )),
     };
     y
@@ -87,9 +91,9 @@ pub const GAME_LIST: &[&str] = &["amidar", "breakout", "space_invaders", "gridwo
 pub mod amidar;
 /// Breakout defined in this module.
 pub mod breakout;
-/// Space Invaders logic defined in this module.
-pub mod space_invaders;
 /// Gridworld
 pub mod gridworld;
 /// Queries
 pub mod queries;
+/// Space Invaders logic defined in this module.
+pub mod space_invaders;

@@ -56,9 +56,7 @@ impl Color {
     /// This taken from [StackOverflow](https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color)
     /// which referred to [Wikipedia's Relative Luminance](https://en.wikipedia.org/wiki/Luminance_%28relative%29).
     pub fn luminance(&self) -> f64 {
-        self.float_red() * 0.2126 +
-        self.float_green() * 0.7152 + 
-        self.float_blue() * 0.0722
+        self.float_red() * 0.2126 + self.float_green() * 0.7152 + self.float_blue() * 0.0722
     }
 }
 
@@ -75,7 +73,9 @@ pub struct FixedSpriteData {
 }
 impl FixedSpriteData {
     pub fn new(data: Vec<Vec<Color>>) -> FixedSpriteData {
-        FixedSpriteData { data: Arc::new(data) }
+        FixedSpriteData {
+            data: Arc::new(data),
+        }
     }
     pub fn width(&self) -> i32 {
         self.data[0].len() as i32
@@ -107,12 +107,12 @@ impl FixedSpriteData {
         let height = info.height as usize;
         assert_eq!(info.color_type, png::ColorType::RGBA);
         assert_eq!(info.bit_depth, png::BitDepth::Eight);
-        
+
         let mut buf = vec![0; info.buffer_size()];
         reader.next_frame(&mut buf).unwrap();
 
         let mut output = Vec::new();
-        for pix_row in buf.chunks(width*4) {
+        for pix_row in buf.chunks(width * 4) {
             let mut row = Vec::new();
             for pix in pix_row.chunks(4) {
                 row.push(Color::rgba(pix[0], pix[1], pix[2], pix[3]));
@@ -122,7 +122,7 @@ impl FixedSpriteData {
 
         FixedSpriteData::new(output)
     }
-    
+
     pub fn find_visible_color(&self) -> Option<Color> {
         for row in self.data.iter() {
             for px in row {
@@ -199,8 +199,8 @@ pub enum Drawable {
     StaticSprite {
         x: i32,
         y: i32,
-        data: FixedSpriteData
-    }
+        data: FixedSpriteData,
+    },
 }
 
 impl Drawable {
@@ -222,7 +222,7 @@ impl GrayscaleBuffer {
         GrayscaleBuffer {
             width,
             height,
-            data: vec![0; (width * height) as usize]
+            data: vec![0; (width * height) as usize],
         }
     }
     #[inline(always)]
@@ -272,7 +272,11 @@ impl GrayscaleBuffer {
                         }
                     }
                 }
-                &Drawable::StaticSprite { x, y, data: ref sprite } => {
+                &Drawable::StaticSprite {
+                    x,
+                    y,
+                    data: ref sprite,
+                } => {
                     let w = sprite.width();
                     let h = sprite.height();
                     for yi in 0..h {
@@ -303,7 +307,6 @@ impl ImageBuffer {
         }
     }
 
-
     #[inline(always)]
     fn set_pixel(&mut self, x: i32, y: i32, color: Color) {
         debug_assert!(color.is_visible());
@@ -320,14 +323,14 @@ impl ImageBuffer {
         self.data[start + 2] = color.b;
         self.data[start + 3] = color.a;
     }
-    
+
     #[inline(always)]
     fn set_pixel_alpha(&mut self, x: i32, y: i32, color: Color) {
         if color.is_visible() {
             self.set_pixel(x, y, color)
         }
     }
-    
+
     pub fn render_sprite(&mut self, scale: i32, data: &Vec<Vec<Color>>) {
         let h = data.len() as i32;
         let w = data[0].len() as i32;
@@ -353,7 +356,11 @@ impl ImageBuffer {
                         }
                     }
                 }
-                &Drawable::StaticSprite { x, y, data: ref sprite } => {
+                &Drawable::StaticSprite {
+                    x,
+                    y,
+                    data: ref sprite,
+                } => {
                     let w = sprite.width();
                     let h = sprite.height();
                     for yi in 0..h {
@@ -382,7 +389,7 @@ impl ImageBuffer {
                 }
             }
         }
-    // Done.
+        // Done.
     }
 }
 
