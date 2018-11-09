@@ -344,18 +344,20 @@ impl State {
             let ball_hit_x = self.state.ball.position.x
                 - (self.state.paddle.position.x - (self.state.paddle_width / 2.0));
             // get normalized location of ball hit along paddle
-            let mut paddle_normalized_relative_intersect_x = 1.0 - ball_hit_x / self.state.paddle_width;
+            let mut paddle_normalized_relative_intersect_x =
+                1.0 - ball_hit_x / self.state.paddle_width;
 
             // If we have discrete segments, discretize that.
             if let Some(segments) = self.config.paddle_discrete_segments {
-                println!("continuous paddle: {}", paddle_normalized_relative_intersect_x);
-                let segment_id = (paddle_normalized_relative_intersect_x * segments as f64).floor() as i32;
-                println!("segment_id: {}", segment_id);
-                // center within segments.
+                // Multiply to get an integer segment id.
+                let segment_id =
+                    (paddle_normalized_relative_intersect_x * segments as f64).floor() as i32;
+                // Center within segments.
                 let shift = 1.0 / (2.0 * segments as f64);
+                // Divide to go back to a number from 0..1.0
                 let relative = (segment_id as f64) / (segments as f64) + shift;
+                // Overwrite continuous value.
                 paddle_normalized_relative_intersect_x = relative;
-                println!("discrete paddle: {}", paddle_normalized_relative_intersect_x);
             }
 
             // convert this normalized parameter to the degree of the bounce angle
