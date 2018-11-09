@@ -39,6 +39,38 @@ pub struct WrapState {
 }
 
 #[wasm_bindgen]
+pub struct WebInput {
+    input: Input,
+}
+
+#[wasm_bindgen]
+impl WebInput {
+    pub fn new() -> WebInput {
+        WebInput {
+            input: Input::default()
+        }
+    }
+    pub fn set_left(&mut self, val: bool) {
+        self.input.left = val;
+    }
+    pub fn set_right(&mut self, val: bool) {
+        self.input.right = val;
+    }
+    pub fn set_up(&mut self, val: bool) {
+        self.input.up = val;
+    }
+    pub fn set_down(&mut self, val: bool) {
+        self.input.down = val;
+    }
+    pub fn set_button1(&mut self, val: bool) {
+        self.input.button1 = val;
+    }
+    pub fn set_button2(&mut self, val: bool) {
+        self.input.button2 = val;
+    }
+}
+
+#[wasm_bindgen]
 pub extern "C" fn simulator_alloc(name: &str) -> *mut WrapSimulator {
     let simulator = toybox::get_simulation_by_name(name).unwrap();
     // The boxing stuff ensures the pointer remains allocated after
@@ -145,16 +177,13 @@ pub extern "C" fn render_current_frame(
 }
 
 #[wasm_bindgen]
-pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
+pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, web: WebInput) {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
     };
-    let input = unsafe {
-        assert!(!input_ptr.is_null());
-        &mut *input_ptr
-    };
-    state.update_mut(*input);
+
+    state.update_mut(web.input);
 }
 
 #[wasm_bindgen]
