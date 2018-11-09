@@ -1,10 +1,10 @@
 [package]
-name = "openai"
+name = "ctoybox"
 version = "0.1.0"
 authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
 
 [lib]
-name = "openai"
+name = "ctoybox"
 crate-type = ["cdylib"]
 
 [dependencies.toybox]

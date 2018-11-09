@@ -25,6 +25,16 @@ class AlwaysMoveLeftAgent(object):
 
     def act(self, observation, reward, done):
         return self.action_space[0]
+
+class ReadFromFileAgent(object):
+    def __init__(self, action_space, actions):
+        self.action_space = action_space
+        self.actions = actions
+
+    def act(self, observation, reward, done):
+        next_action = actions[0]
+        self.actions = actions[1:]
+        return next_action
     
 
 def get_game(game_name, system):

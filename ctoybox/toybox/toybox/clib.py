@@ -8,12 +8,15 @@ import time
 import json
 
 platform = platform.system() 
-libopenai = 'LIBOPENAI'
+lib_env_var = 'LIBCTOYBOX'
+lib_dylib = 'libctoybox.dylib'
+lib_so = 'libctoybox.so'
+
 
 if platform == 'Darwin':
-    _lib_prefix = os.environ[libopenai] if libopenai in os.environ else '.'
-    _lib_path_debug   = os.path.sep.join([_lib_prefix, 'target', 'debug', 'libopenai.dylib'])
-    _lib_path_release = os.path.sep.join([_lib_prefix, 'target', 'release', 'libopenai.dylib'])
+    _lib_prefix = os.environ[lib_env_var] if lib_env_var in os.environ else '.'
+    _lib_path_debug   = os.path.sep.join([_lib_prefix, 'target', 'debug', lib_dylib])
+    _lib_path_release = os.path.sep.join([_lib_prefix, 'target', 'release', lib_dylib])
 
     _lib_ts_release = os.stat(_lib_path_release).st_birthtime \
         if os.path.exists(_lib_path_release) else 0
@@ -21,13 +24,13 @@ if platform == 'Darwin':
         if os.path.exists(_lib_path_debug) else 0
         
     if (not (_lib_ts_debug or _lib_ts_release)):
-        raise OSError('libopenai.dylib not found on this machine')
+        raise OSError('%s not found on this machine' % lib_dylib)
 
     _lib_path = _lib_path_debug if _lib_ts_debug > _lib_ts_release else _lib_path_release
     print(_lib_path)
 
 elif platform == 'Linux':
-    _lib_path = 'libopenai.so'
+    _lib_path = lib_so
     
 else:
     raise Exception('Unsupported platform: %s' % platform)
