@@ -210,7 +210,11 @@ impl super::Simulation for SpaceInvaders {
         let state: State = serde_json::from_str(json_str)?;
         Ok(Box::new(state))
     }
-    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, Error> {
+    fn new_state_config_from_json(
+        &self,
+        json_config: &str,
+        json_state: &str,
+    ) -> Result<Box<super::State>, Error> {
         panic!("No config implemented for SpaceInvaders.")
     }
 }

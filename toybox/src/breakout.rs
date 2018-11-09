@@ -92,6 +92,7 @@ pub struct Config {
     ball_speed_slow: f64,
     ball_speed_fast: f64,
     ball_start_positions: Vec<StartBall>,
+    paddle_segment_responses: Option<Vec<f64>>,
 }
 impl Config {
     fn unique_colors(&self) -> Vec<&Color> {
@@ -134,6 +135,7 @@ impl Default for Config {
                 StartBall::new(0.5 * w, y, 150.0),
                 StartBall::new(0.9 * w, y, 150.0),
             ],
+            paddle_segment_responses: None,
         }
     }
 }
@@ -195,7 +197,7 @@ pub struct StateCore {
 
 pub struct State {
     pub config: Config,
-    pub state: StateCore
+    pub state: StateCore,
 }
 
 pub struct Breakout {
@@ -268,8 +270,8 @@ impl super::Simulation for Breakout {
                 paddle_speed: 4.0,
                 rand: random::Gen::new_child(&mut self.rand),
                 bricks,
-                reset: true
-            }
+                reset: true,
+            },
         };
 
         state.start_ball();
@@ -279,10 +281,17 @@ impl super::Simulation for Breakout {
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, failure::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         let config: Config = Config::default();
-        Ok(Box::new(State { config: config.clone(), state }))
+        Ok(Box::new(State {
+            config: config.clone(),
+            state,
+        }))
     }
 
-    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, failure::Error> {
+    fn new_state_config_from_json(
+        &self,
+        json_config: &str,
+        json_state: &str,
+    ) -> Result<Box<super::State>, failure::Error> {
         let state: StateCore = serde_json::from_str(json_state)?;
         let config: Config = serde_json::from_str(json_config)?;
         Ok(Box::new(State { config, state }))
@@ -324,6 +333,31 @@ impl State {
             self.state.paddle.velocity.x = 0.0;
         }
     }
+    fn check_bounce_paddle(&mut self) {
+        // check paddle:
+        let paddle_ball_same_x = (self.state.ball.position.x - self.state.paddle.position.x).abs()
+            < self.state.ball_radius + self.state.paddle_width / 2.0;
+        let paddle_ball_same_y = (self.state.paddle.position.y - self.state.ball.position.y).abs()
+            < self.state.ball_radius;
+        if paddle_ball_same_x && paddle_ball_same_y {
+            // get x location of ball hit relative to paddle
+            let ball_hit_x = self.state.ball.position.x
+                - (self.state.paddle.position.x - (self.state.paddle_width / 2.0));
+            // get normalized location of ball hit along paddle
+            let paddle_normalized_relative_intersect_x = 1.0 - ball_hit_x / self.state.paddle_width;
+            // convert this normalized parameter to the degree of the bounce angle
+            let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE
+                + screen::BALL_ANGLE_MIN;
+
+            self.state.ball.velocity = Vec2D::from_polar(
+                self.state.ball.velocity.magnitude(),
+                bounce_angle.to_radians(),
+            );
+            // calculations use non-graphics polar orientation
+            // to quickly fix, we reflect over the x-axis
+            self.state.ball.velocity.y *= -1.0;
+        }
+    }
     fn update_time_slice(&mut self, time_step: f64) {
         // Update positions.
 
@@ -334,27 +368,7 @@ impl State {
 
         // Handle collisions:
         if self.state.ball.velocity.y > 0.0 {
-            // check paddle:
-            let paddle_ball_same_x = (self.state.ball.position.x - self.state.paddle.position.x).abs()
-                < self.state.ball_radius + self.state.paddle_width / 2.0;
-            let paddle_ball_same_y =
-                (self.state.paddle.position.y - self.state.ball.position.y).abs() < self.state.ball_radius;
-            if paddle_ball_same_x && paddle_ball_same_y {
-                // get x location of ball hit relative to paddle
-                let ball_hit_x =
-                    self.state.ball.position.x - (self.state.paddle.position.x - (self.state.paddle_width / 2.0));
-                // get normalized location of ball hit along paddle
-                let paddle_normalized_relative_intersect_x = 1.0 - ball_hit_x / self.state.paddle_width;
-                // convert this normalized parameter to the degree of the bounce angle
-                let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE
-                    + screen::BALL_ANGLE_MIN;
-
-                self.state.ball.velocity =
-                    Vec2D::from_polar(self.state.ball.velocity.magnitude(), bounce_angle.to_radians());
-                // calculations use non-graphics polar orientation
-                // to quickly fix, we reflect over the x-axis
-                self.state.ball.velocity.y *= -1.0;
-            }
+            self.check_bounce_paddle();
 
             // check lose?
             if self.state.ball.position.y + self.state.ball_radius > screen::BOARD_BOTTOM_Y.into() {
@@ -376,10 +390,12 @@ impl State {
         // check living bricks:
         let ball_bounce_y = Vec2D::new(
             self.state.ball.position.x,
-            self.state.ball.position.y + self.state.ball.velocity.y.signum() * self.state.ball_radius,
+            self.state.ball.position.y
+                + self.state.ball.velocity.y.signum() * self.state.ball_radius,
         );
         let ball_bounce_x = Vec2D::new(
-            self.state.ball.position.x + self.state.ball.velocity.x.signum() * self.state.ball_radius,
+            self.state.ball.position.x
+                + self.state.ball.velocity.x.signum() * self.state.ball_radius,
             self.state.ball.position.y,
         );
 
@@ -398,7 +414,8 @@ impl State {
                 if brick.depth >= self.config.ball_speed_row_depth {
                     // Potentially speed up the ball. This will be a no-op if it's already fast.
                     let theta = self.state.ball.velocity.angle();
-                    self.state.ball.velocity = Vec2D::from_polar(self.config.ball_speed_fast, theta);
+                    self.state.ball.velocity =
+                        Vec2D::from_polar(self.config.ball_speed_fast, theta);
                 }
                 break;
             }

@@ -194,7 +194,11 @@ impl super::Simulation for GridWorld {
         Ok(Box::new(state))
     }
 
-    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, failure::Error> {
+    fn new_state_config_from_json(
+        &self,
+        json_config: &str,
+        json_state: &str,
+    ) -> Result<Box<super::State>, failure::Error> {
         // Not sure what's up with Config for now, so let's just ignore it.
         self.new_state_from_json(json_state)
     }

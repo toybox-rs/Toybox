@@ -41,50 +41,43 @@ fn main() {
                 .value_name("GAME")
                 .help("Try amidar, breakout or space_invaders. (amidar by default)")
                 .takes_value(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("num_steps")
                 .short("n")
                 .long("num_steps")
                 .value_name("1000")
                 .help("How many steps to simulate (also how many images to output).")
                 .takes_value(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("max_frames")
                 .long("max_frames")
                 .value_name("all by default, try 1000")
                 .help("How many frames to keep in memory")
                 .takes_value(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("grayscale")
                 .long("grayscale")
                 .help("Agents work in grayscale. This will output PNG to grayscale."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("frame_step")
                 .short("f")
                 .long("frame_step")
                 .value_name("4")
                 .help("How many frames to simulate per step")
                 .takes_value(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("output_json")
                 .long("output_json")
                 .value_name("OUTPUT_DIR")
                 .help("Where to save JSON files (directory).")
                 .takes_value(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("output")
                 .long("output")
                 .value_name("OUTPUT_DIR")
                 .help("Where to save PNG files (directory).")
                 .takes_value(true),
-        )
-        .get_matches();
+        ).get_matches();
 
     let game = matches.value_of("game").unwrap_or("amidar");
 
@@ -97,8 +90,7 @@ fn main() {
         .map(|c| {
             c.parse::<usize>()
                 .expect("--frame_steps should be a number")
-        })
-        .unwrap_or(4);
+        }).unwrap_or(4);
     let max_frames = matches
         .value_of("max_frames")
         .map(|c| c.parse::<usize>().expect("--max_frames should be a number"));

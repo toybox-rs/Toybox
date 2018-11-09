@@ -427,8 +427,7 @@ lazy_static! {
                 .map(|x| x.parse::<u32>())
                 .collect();
             route.unwrap()
-        })
-        .collect();
+        }).collect();
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -629,12 +628,11 @@ impl Board {
             }
         }
 
-        let triggers_chase = chase_change
-            && self
-                .boxes
-                .iter()
-                .filter(|b| b.triggers_chase)
-                .all(|b| b.painted);
+        let triggers_chase = chase_change && self
+            .boxes
+            .iter()
+            .filter(|b| b.triggers_chase)
+            .all(|b| b.painted);
 
         (triggers_chase, updated)
     }
@@ -731,7 +729,7 @@ pub struct StateCore {
 
 pub struct State {
     pub config: Config,
-    pub state: StateCore
+    pub state: StateCore,
 }
 
 impl State {
@@ -759,16 +757,21 @@ impl State {
                 player_start,
                 enemies,
                 board,
-            }
+            },
         };
         state.reset();
         Ok(state)
     }
     pub fn reset(&mut self) {
-        self.state.player.reset(&self.state.player_start, &self.state.board);
-        self.state.player
-            .history
-            .push_front(self.state.board.get_junction_id(&TilePoint::new(31, 18)).unwrap());
+        self.state
+            .player
+            .reset(&self.state.player_start, &self.state.board);
+        self.state.player.history.push_front(
+            self.state
+                .board
+                .get_junction_id(&TilePoint::new(31, 18))
+                .unwrap(),
+        );
         for enemy in &mut self.state.enemies {
             enemy.reset(&self.state.player_start, &self.state.board);
         }
@@ -828,12 +831,22 @@ impl super::Simulation for Amidar {
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         let config: Config = Config::default();
-        Ok(Box::new(State { config: config.clone(), state: state }))
+        Ok(Box::new(State {
+            config: config.clone(),
+            state: state,
+        }))
     }
-    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<super::State>, Error> {
+    fn new_state_config_from_json(
+        &self,
+        json_config: &str,
+        json_state: &str,
+    ) -> Result<Box<super::State>, Error> {
         let state: StateCore = serde_json::from_str(json_state)?;
         let config: Config = serde_json::from_str(json_config)?;
-        Ok(Box::new(State { config: config, state: state }))
+        Ok(Box::new(State {
+            config: config,
+            state: state,
+        }))
     }
 }
 

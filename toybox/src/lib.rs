@@ -65,7 +65,11 @@ pub trait Simulation {
     /// Generate a new state from JSON String. Uses the default config.
     fn new_state_from_json(&self, json: &str) -> Result<Box<State>, failure::Error>;
     /// Generate new state and new config from JSON String.
-    fn new_state_config_from_json(&self, json_config: &str, json_state: &str) -> Result<Box<State>, failure::Error>;
+    fn new_state_config_from_json(
+        &self,
+        json_config: &str,
+        json_state: &str,
+    ) -> Result<Box<State>, failure::Error>;
 }
 
 /// This method returns a Box<Simulation> if possible for a given game name.
