@@ -9,6 +9,8 @@ use failure;
 use serde_json;
 use std::any::Any;
 
+pub mod test_fmt { pub const issue: i32 = 47; }
+
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
     pub const FRAME_OFFSET: i32 = 13;
@@ -621,8 +623,6 @@ impl super::State for State {
 mod tests {
     use super::*;
     use std::collections::HashSet;
-
-    pub mod test_fmt { pub mod issue: i32 = 47; }
 
     #[test]
     fn test_colors_unique_in_gray() {
