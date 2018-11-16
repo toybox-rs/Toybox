@@ -10,9 +10,7 @@ use serde_json;
 use std::any::Any;
 
 pub mod screen {
-    pub const GAME_SIZE: (i32, i32) = 
-    (240, 
-    160);
+    pub const GAME_SIZE: (i32, i32) = (240, 160);
     pub const FRAME_OFFSET: i32 = 13;
     pub const FRAME_THICKNESS: i32 = 12;
     pub const FRAME_SUPPORT_WIDTH: i32 = 12;
