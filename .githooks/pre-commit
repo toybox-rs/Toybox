@@ -21,3 +21,4 @@ fi
 cargo fmt --package toybox -- --emit files
 cargo fmt --package ctoybox -- --emit files
 cargo fmt --package human_play -- --emit files
+cargo fmt --package breakout-web-plage -- --emit files
