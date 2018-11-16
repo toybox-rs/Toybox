@@ -7,12 +7,12 @@ use std::sync::Arc;
 extern crate quicksilver;
 use clap::{App, Arg};
 use quicksilver::{
-    input::Key,
     geom::{Rectangle, Vector},
     graphics::{Color, Draw, Image, PixelFormat, View, Window, WindowBuilder},
+    input::Key,
     run,
 };
-use toybox::graphics::{Drawable, FixedSpriteData, ImageBuffer, Color as TColor};
+use toybox::graphics::{Color as TColor, Drawable, FixedSpriteData, ImageBuffer};
 use toybox::Input;
 
 static mut GAME_ID: usize = 0;
@@ -56,7 +56,7 @@ impl quicksilver::State for AbstractGame {
                     window.draw(
                         &Draw::rectangle(Rectangle::new(x, y, w, h))
                             .with_color(color_convert(color))
-                            .with_z(z)
+                            .with_z(z),
                     );
                 }
                 &Drawable::StaticSprite {
@@ -65,8 +65,8 @@ impl quicksilver::State for AbstractGame {
                     data: ref sprite,
                 } => {
                     // TODO(jfoley); why do we suddenly need to shift these? Is this a quicksilver bug?
-                    let x = x+w/2;
-                    let y = y+h/2;
+                    let x = x + w / 2;
+                    let y = y + h / 2;
 
                     let change = if let Some((_, ref img)) = self
                         .cached_images
@@ -114,7 +114,8 @@ fn main() {
                 .value_name("GAME")
                 .help("Try amidar, breakout or space_invaders. (amidar by default)")
                 .takes_value(true),
-        ).get_matches();
+        )
+        .get_matches();
 
     let game = matches.value_of("game").unwrap_or("amidar");
     let game_num = toybox::GAME_LIST
