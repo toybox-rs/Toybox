@@ -11,4 +11,4 @@ before_script:
 script:
 - cargo fmt --all -- --check
 - cd toybox && cargo test --verbose --all
-- cd openai && cargo build --verbose --all
+- cd ctoybox && cargo build --verbose --all
