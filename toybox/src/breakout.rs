@@ -9,7 +9,8 @@ use failure;
 use serde_json;
 use std::any::Any;
 
-pub mod test_fmt { pub const issue: 
+pub mod test_fmt { pub const 
+issue: 
 i32 
 = 
 47; }
