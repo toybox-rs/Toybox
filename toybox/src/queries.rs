@@ -113,7 +113,8 @@ pub mod breakout {
                 .map(|row| {
                     let i = row + offset * down;
                     !bricks[i as usize].alive
-                }).all(|c| c);
+                })
+                .all(|c| c);
             if all_dead {
                 retval.push(offset);
                 assert!(retval.len() <= (across as usize));
@@ -179,7 +180,8 @@ mod breakout_q_tests {
                 .map(|row| {
                     let i = row + offset * down;
                     bricks[i as usize].position.x as i32
-                }).collect();
+                })
+                .collect();
             for i in (1..down) {
                 assert_eq!(xs[(i - 1) as usize], xs[i as usize]);
             }

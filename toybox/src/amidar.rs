@@ -427,7 +427,8 @@ lazy_static! {
                 .map(|x| x.parse::<u32>())
                 .collect();
             route.unwrap()
-        }).collect();
+        })
+        .collect();
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -628,11 +629,12 @@ impl Board {
             }
         }
 
-        let triggers_chase = chase_change && self
-            .boxes
-            .iter()
-            .filter(|b| b.triggers_chase)
-            .all(|b| b.painted);
+        let triggers_chase = chase_change
+            && self
+                .boxes
+                .iter()
+                .filter(|b| b.triggers_chase)
+                .all(|b| b.painted);
 
         (triggers_chase, updated)
     }

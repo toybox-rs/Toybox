@@ -29,7 +29,8 @@ pub fn draw_score(score: i32, x: i32, y: i32) -> Vec<Drawable> {
         .map(|(position, digit)| {
             let x = x - (position as i32) * DIGIT_WIDTH;
             Drawable::sprite(x, y, get_sprite(digit))
-        }).collect()
+        })
+        .collect()
 }
 
 /// This is separate from draw_score because in breakout, lives are not
@@ -44,7 +45,8 @@ pub fn draw_lives(lives: i32, x: i32, y: i32) -> Vec<Drawable> {
         .map(|(position, digit)| {
             let x = x - (position as i32) * DIGIT_WIDTH;
             Drawable::sprite(x, y, get_sprite(digit))
-        }).collect()
+        })
+        .collect()
 }
 
 /// Parse a number from number_sprites.txt into a SpriteData.
