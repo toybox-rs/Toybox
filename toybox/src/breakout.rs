@@ -9,8 +9,6 @@ use failure;
 use serde_json;
 use std::any::Any;
 
-pub mod test_fmt { pub const issue: i32 = 47; }
-
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
     pub const FRAME_OFFSET: i32 = 13;
