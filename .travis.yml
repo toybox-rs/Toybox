@@ -10,5 +10,5 @@ before_script:
 
 script:
 - cargo fmt --all -- --check
-- cd toybox && cargo test --verbose --all
-- cd ctoybox && cargo build --verbose --all
+- cd toybox && cargo test 
+- cd ctoybox && cargo build 
