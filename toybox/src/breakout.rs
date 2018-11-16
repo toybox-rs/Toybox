@@ -622,6 +622,8 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
 
+    pub mod test_fmt { pub mod issue: i32 = 47; }
+
     #[test]
     fn test_colors_unique_in_gray() {
         let config = Config::default();
