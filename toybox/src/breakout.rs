@@ -10,8 +10,7 @@ use serde_json;
 use std::any::Any;
 
 pub mod test_fmt { pub 
-const 
-issue: 
+const issue: 
 i32 
 = 47; }
 
