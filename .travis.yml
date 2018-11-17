@@ -1,14 +1,15 @@
 language: rust
 
 rust:
-- 1.28.0
+  - 1.28.0
 
 env:
-- AUDIODEV=null
+  global:
+    - RUST_BACKTRACE=1
 
 cache: cargo
 
 before_script:
-- rustup component add rustfmt-preview
+  - rustup component add rustfmt-preview
 
 script: ./check.sh

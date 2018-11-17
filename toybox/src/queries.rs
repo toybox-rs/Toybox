@@ -2,6 +2,7 @@
 // These can all be implemented over json, but exporting some fast
 // ones from Rust will be helpful.
 
+#[cfg(feature="amidar")]
 pub mod amidar {
     use super::super::amidar::State;
     pub fn num_tiles_unpainted(state: &State) -> i32 {
@@ -51,6 +52,7 @@ pub mod amidar {
     }
 }
 
+#[cfg(feature="amidar")]
 #[cfg(test)]
 mod amidar_q_tests {
     use super::super::amidar;
@@ -90,6 +92,7 @@ mod amidar_q_tests {
     }
 }
 
+#[cfg(feature="breakout")]
 pub mod breakout {
     use super::super::breakout::{screen, State};
 
@@ -135,6 +138,7 @@ pub mod breakout {
     }
 }
 
+#[cfg(feature="breakout")]
 #[cfg(test)]
 mod breakout_q_tests {
     use super::super::breakout;
