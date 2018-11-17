@@ -11,8 +11,9 @@ apt:
     - libssl-dev
 
 env:
-  - RUST_BACKTRACE=1
-  - AUDIODEV=null
+  global:
+    - RUST_BACKTRACE=1
+    - AUDIODEV=null
 
 cache: cargo
 
