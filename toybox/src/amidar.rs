@@ -1,5 +1,4 @@
-use super::digit_sprites;
-use super::digit_sprites::draw_score;
+use super::digit_sprites::{digit_height, draw_lives, DigitFonts};
 use super::graphics::{Color, Drawable, FixedSpriteData};
 use super::Direction;
 use super::Input;
@@ -1068,10 +1067,13 @@ impl super::State for State {
             }
         }
 
-        output.extend(draw_score(
+        let font = DigitFonts::Amidar;
+
+        output.extend(draw_lives(
+            font,
             self.state.score,
             screen::SCORE_X_POS,
-            screen::SCORE_Y_POS,
+            screen::SCORE_Y_POS + 1,
         ));
         for i in 0..self.state.lives {
             output.push(Drawable::rect(
@@ -1079,7 +1081,7 @@ impl super::State for State {
                 screen::LIVES_X_POS - i * screen::LIVES_X_STEP,
                 screen::LIVES_Y_POS,
                 1,
-                digit_sprites::DIGIT_HEIGHT + 1,
+                digit_height(font) + 1,
             ))
         }
 
