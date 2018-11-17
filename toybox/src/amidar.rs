@@ -1,4 +1,4 @@
-use super::digit_sprites::{DigitFonts, draw_lives, digit_height};
+use super::digit_sprites::{digit_height, draw_lives, DigitFonts};
 use super::graphics::{Color, Drawable, FixedSpriteData};
 use super::Direction;
 use super::Input;

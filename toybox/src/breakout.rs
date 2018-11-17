@@ -1,4 +1,4 @@
-use super::digit_sprites::{draw_lives, draw_score, digit_width, DigitFonts};
+use super::digit_sprites::{digit_width, draw_lives, draw_score, DigitFonts};
 use super::graphics::{Color, Drawable};
 use super::random;
 use super::vec2d::Vec2D;

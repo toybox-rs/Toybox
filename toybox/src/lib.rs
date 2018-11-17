@@ -75,13 +75,13 @@ pub trait Simulation {
 /// This method returns a Box<Simulation> if possible for a given game name.
 pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Error> {
     let y: Result<Box<Simulation>, _> = match name.to_lowercase().as_str() {
-        #[cfg(feature="amidar")]
+        #[cfg(feature = "amidar")]
         "amidar" => Ok(Box::new(amidar::Amidar)),
-        #[cfg(feature="breakout")]
+        #[cfg(feature = "breakout")]
         "breakout" => Ok(Box::new(breakout::Breakout::default())),
-        #[cfg(feature="space_invaders")]
+        #[cfg(feature = "space_invaders")]
         "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
-        #[cfg(feature="gridworld")]
+        #[cfg(feature = "gridworld")]
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
         _ => Err(format_err!(
             "Cannot construct game: `{}`. Try any of {:?}.",
@@ -94,26 +94,27 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
 
 /// This defines the set of games that are known. An index into this array is used in human_play, so try not to shuffle them!
 pub const GAME_LIST: &[&str] = &[
-    #[cfg(feature="amidar")]
-    "amidar", 
-    #[cfg(feature="breakout")]
-    "breakout", 
-    #[cfg(feature="space_invaders")]
-    "space_invaders", 
-    #[cfg(feature="gridworld")]
-    "gridworld"];
+    #[cfg(feature = "amidar")]
+    "amidar",
+    #[cfg(feature = "breakout")]
+    "breakout",
+    #[cfg(feature = "space_invaders")]
+    "space_invaders",
+    #[cfg(feature = "gridworld")]
+    "gridworld",
+];
 
 /// Amidar defined in this module.
-#[cfg(feature="amidar")]
+#[cfg(feature = "amidar")]
 pub mod amidar;
 /// Breakout defined in this module.
-#[cfg(feature="breakout")]
+#[cfg(feature = "breakout")]
 pub mod breakout;
 /// Gridworld
-#[cfg(feature="gridworld")]
+#[cfg(feature = "gridworld")]
 pub mod gridworld;
 /// Queries
 pub mod queries;
 /// Space Invaders logic defined in this module.
-#[cfg(feature="space_invaders")]
+#[cfg(feature = "space_invaders")]
 pub mod space_invaders;

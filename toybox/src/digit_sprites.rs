@@ -8,15 +8,21 @@ pub const AMIDAR_DIGIT_HEIGHT: i32 = 7;
 pub const BREAKOUT_DIGIT_WIDTH: i32 = 24;
 pub const BREAKOUT_DIGIT_HEIGHT: i32 = 12;
 
-#[derive(PartialEq,Eq,Hash,Clone,Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub enum DigitFonts {
     Breakout,
     Amidar,
 }
 
 lazy_static! {
-    static ref AMIDAR_DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(include_str!("resources/amidar_digit_sprites.txt"), Color::rgb(255, 255, 153));
-    static ref BREAKOUT_DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(include_str!("resources/breakout_digit_sprites.txt"), Color::rgb(144, 144, 144));
+    static ref AMIDAR_DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(
+        include_str!("resources/amidar_digit_sprites.txt"),
+        Color::rgb(255, 255, 153)
+    );
+    static ref BREAKOUT_DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(
+        include_str!("resources/breakout_digit_sprites.txt"),
+        Color::rgb(144, 144, 144),
+    );
 }
 
 /// Given a font return an atomic reference to a digit sprite as a FixedSpriteData.
@@ -24,7 +30,7 @@ fn get_sprite(font: DigitFonts, digit_index: u32) -> FixedSpriteData {
     debug_assert!(digit_index < 10);
     match font {
         DigitFonts::Breakout => BREAKOUT_DIGIT_SPRITES[digit_index as usize].clone(),
-        DigitFonts::Amidar => AMIDAR_DIGIT_SPRITES[digit_index as usize].clone()
+        DigitFonts::Amidar => AMIDAR_DIGIT_SPRITES[digit_index as usize].clone(),
     }
 }
 
@@ -130,23 +136,23 @@ fn load_digit_sprites(data: &str, on_color: Color) -> Vec<FixedSpriteData> {
 mod tests {
     use super::*;
 
-     #[test]
-     pub fn test_amidar_font() {
-         let font = DigitFonts::Amidar;
-         for digit in 0..10 {
-             let sprite = get_sprite(font, digit);
-             assert_eq!(sprite.width(), digit_width(font));
-             assert_eq!(sprite.height(), digit_height(font));
-         }
-     }
-     
-     #[test]
-     pub fn test_breakout_font() {
-         let font = DigitFonts::Breakout;
-         for digit in 0..10 {
-             let sprite = get_sprite(font, digit);
-             assert_eq!(sprite.width(), digit_width(font));
-             assert_eq!(sprite.height(), digit_height(font));
-         }
-     }
+    #[test]
+    pub fn test_amidar_font() {
+        let font = DigitFonts::Amidar;
+        for digit in 0..10 {
+            let sprite = get_sprite(font, digit);
+            assert_eq!(sprite.width(), digit_width(font));
+            assert_eq!(sprite.height(), digit_height(font));
+        }
+    }
+
+    #[test]
+    pub fn test_breakout_font() {
+        let font = DigitFonts::Breakout;
+        for digit in 0..10 {
+            let sprite = get_sprite(font, digit);
+            assert_eq!(sprite.width(), digit_width(font));
+            assert_eq!(sprite.height(), digit_height(font));
+        }
+    }
 }
