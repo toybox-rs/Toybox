@@ -1,4 +1,4 @@
-use super::digit_sprites::{draw_lives, draw_score, DIGIT_WIDTH};
+use super::digit_sprites::{draw_lives, draw_score, digit_width, DigitFonts};
 use super::graphics::{Color, Drawable};
 use super::random;
 use super::vec2d::Vec2D;
@@ -594,16 +594,18 @@ impl super::State for State {
             ball_r * 2,
         ));
 
+        let font = DigitFonts::Breakout;
+        let width = digit_width(font);
         let score_offset = 88;
         let score_x = screen::BOARD_LEFT_X + score_offset;
-        let lives_x = score_x + (DIGIT_WIDTH * 2);
-        let thing_x = lives_x + (DIGIT_WIDTH * 2);
+        let lives_x = score_x + (width * 2);
+        let thing_x = lives_x + (width * 2);
         // Draw points:
-        output.extend(draw_score(self.state.points, score_x, 1));
+        output.extend(draw_score(font, self.state.points, score_x, 1));
         // Draw lives:
-        output.extend(draw_lives(self.state.lives, lives_x, 1));
+        output.extend(draw_lives(font, self.state.lives, lives_x, 1));
         // Draw whatever this thing is
-        output.extend(draw_lives(1, thing_x, 1));
+        output.extend(draw_lives(font, 1, thing_x, 1));
 
         output
     }
