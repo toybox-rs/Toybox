@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    "toybox",
-    "ctoybox",
+  "toybox",
+  "ctoybox",
+  "breakout-web-play",
+  "human_play",
 ]
 exclude = [
   "openai", # The old name for ctoybox
-  "breakout-web-play",
-  "human_play",
 ]
