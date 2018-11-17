@@ -39,3 +39,10 @@ from the top-level directory. This will ensure that your files are formatted pro
 Tensorflow, OpenAI Gym, OpenCV, and other libraries may or may not break with various Python versions. We have confirmed that the code in this repository will work with the following Python versions:
 
 * 3.5
+
+
+# Developing New Games
+
+## Get starting images for reference from ALE
+
+`./scripts/utils/start_images --help` 
