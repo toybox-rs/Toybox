@@ -339,7 +339,7 @@ impl ImageBuffer {
                 let color = data[yi as usize][xi as usize];
                 for xt in 0..scale {
                     for yt in 0..scale {
-                        self.set_pixel_alpha(xi + xt, yi + yt, color)
+                        self.set_pixel_alpha(xi * scale + xt, yi * scale + yt, color)
                     }
                 }
             }

@@ -16,10 +16,15 @@ pub mod screen {
     pub const SHIELD1_POS: (i32, i32) = (126, 241);
     pub const SHIELD2_POS: (i32, i32) = (222, 241);
     pub const SHIELD3_POS: (i32, i32) = (318, 241);
+    pub const SHIELD_SCALE: i32 = 3;
 
     pub const ENEMY_SIZE: (i32, i32) = (24, 15);
+    pub const ENEMY_START_POS: (i32, i32) = (44, 31);
+    pub const ENEMIES_PER_ROW: i32 = 6;
+    pub const ENEMIES_NUM: i32 = 6;
     pub const ENEMY_Y_SPACE: i32 = 12;
     pub const ENEMY_X_SPACE: i32 = 24;
+    pub const ENEMY_SCALE: i32 = 1;
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE: (i32, i32) = (3, 11);
 
@@ -37,6 +42,12 @@ pub mod screen {
     pub const SHIP_LIMIT_X2: i32 = GAME_SIZE.0 - GAME_DOT_RIGHT - SHIP_SIZE.0 / 2;
 
     pub const SHIELD_SPRITE_DATA: &str = include_str!("resources/space_invader_shield_x3");
+    pub const INVADER_INIT_1: &str = include_str!("resources/space_invaders/invader_init_1");
+    pub const INVADER_INIT_2: &str = include_str!("resources/space_invaders/invader_init_2");
+    pub const INVADER_INIT_3: &str = include_str!("resources/space_invaders/invader_init_3");
+    pub const INVADER_INIT_4: &str = include_str!("resources/space_invaders/invader_init_4");
+    pub const INVADER_INIT_5: &str = include_str!("resources/space_invaders/invader_init_5");
+    pub const INVADER_INIT_6: &str = include_str!("resources/space_invaders/invader_init_6");
 }
 
 pub fn load_sprite(
@@ -44,6 +55,7 @@ pub fn load_sprite(
     on_color: Color,
     on_symbol: char,
     off_symbol: char,
+    scale: i32,
 ) -> Result<SpriteData, Error> {
     let off_color = Color::invisible();
     let mut pixels = Vec::new();
@@ -67,16 +79,60 @@ pub fn load_sprite(
     }
     let width = pixels[0].len();
     debug_assert!(pixels.iter().all(|row| row.len() == width));
-    Ok(SpriteData::new(pixels, 3))
+    Ok(SpriteData::new(pixels, scale))
 }
-pub fn load_sprite_default(data: &str, on_color: Color) -> Result<SpriteData, Error> {
-    load_sprite(data, on_color, 'X', '.')
+pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<SpriteData, Error> {
+    load_sprite(data, on_color, 'X', '.', scale)
+}
+pub fn get_invader_init(row: i32) -> SpriteData {
+    match (row + 1) {
+        1 => load_sprite_default(
+            screen::INVADER_INIT_1,
+            (&screen::ENEMY_COLOR).into(),
+            screen::ENEMY_SCALE,
+        )
+        .expect("Invader1 sprite should be included!"),
+        2 => load_sprite_default(
+            screen::INVADER_INIT_2,
+            (&screen::ENEMY_COLOR).into(),
+            screen::ENEMY_SCALE,
+        )
+        .expect("Invader1 sprite should be included!"),
+        3 => load_sprite_default(
+            screen::INVADER_INIT_3,
+            (&screen::ENEMY_COLOR).into(),
+            screen::ENEMY_SCALE,
+        )
+        .expect("Invader1 sprite should be included!"),
+        4 => load_sprite_default(
+            screen::INVADER_INIT_4,
+            (&screen::ENEMY_COLOR).into(),
+            screen::ENEMY_SCALE,
+        )
+        .expect("Invader1 sprite should be included!"),
+        5 => load_sprite_default(
+            screen::INVADER_INIT_5,
+            (&screen::ENEMY_COLOR).into(),
+            screen::ENEMY_SCALE,
+        )
+        .expect("Invader1 sprite should be included!"),
+        6 => load_sprite_default(
+            screen::INVADER_INIT_6,
+            (&screen::ENEMY_COLOR).into(),
+            screen::ENEMY_SCALE,
+        )
+        .expect("Invader1 sprite should be included!"),
+        _ => unreachable!("Only expecting 6 invader types"),
+    }
 }
 
 lazy_static! {
-    static ref SHIELD_SPRITE: SpriteData =
-        load_sprite_default(screen::SHIELD_SPRITE_DATA, (&screen::SHIELD_COLOR).into())
-            .expect("Shield sprite should be included!");
+    static ref SHIELD_SPRITE: SpriteData = load_sprite_default(
+        screen::SHIELD_SPRITE_DATA,
+        (&screen::SHIELD_COLOR).into(),
+        screen::SHIELD_SCALE
+    )
+    .expect("Shield sprite should be included!");
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -164,7 +220,7 @@ pub struct State {
     /// Shields are destructible, so we need to track their pixels...
     pub shields: Vec<SpriteData>,
     /// Enemies are rectangular actors (logically speaking).
-    pub enemies: Vec<Actor>,
+    pub enemies: Vec<SpriteData>,
     /// Enemy lasers are actors as well.
     pub enemy_lasers: Vec<Actor>,
 }
@@ -174,6 +230,7 @@ impl State {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
         let mut shields = Vec::new();
+        let mut enemies = Vec::new();
 
         for &(x, y) in &[
             screen::SHIELD1_POS,
@@ -182,13 +239,27 @@ impl State {
         ] {
             shields.push(SHIELD_SPRITE.translate(x, y))
         }
+
+        let (x, y) = screen::ENEMY_START_POS;
+        let (w, h) = screen::ENEMY_SIZE;
+        let x_offset = w + screen::ENEMY_Y_SPACE;
+        let y_offset = h + screen::ENEMY_Y_SPACE;
+        for j in 0..screen::ENEMIES_NUM {
+            let enemy_sprite = get_invader_init(j);
+            for i in 0..screen::ENEMIES_PER_ROW {
+                let x = x + (i * x_offset);
+                let y = y + (j * y_offset);
+                enemies.push(enemy_sprite.translate(x, y))
+            }
+        }
+
         State {
             lives: 0,
             score: 0,
             ship: Actor::ship(player_start_x, player_start_y),
             ship_laser: None,
             shields,
-            enemies: Vec::new(),
+            enemies,
             enemy_lasers: Vec::new(),
         }
     }
@@ -294,6 +365,10 @@ impl super::State for State {
 
         for shield in &self.shields {
             output.push(Drawable::DestructibleSprite(shield.clone()));
+        }
+
+        for enemy in &self.enemies {
+            output.push(Drawable::DestructibleSprite(enemy.clone()));
         }
 
         if let Some(ref laser) = self.ship_laser {
