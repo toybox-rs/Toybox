@@ -12,6 +12,7 @@ apt:
 
 env:
   global:
+    - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
     - RUST_BACKTRACE=1
     - AUDIODEV=null
 
