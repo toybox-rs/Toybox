@@ -1,6 +1,7 @@
 import time
 import functools
 import tensorflow as tf
+import numpy as np
 
 from baselines import logger
 
@@ -172,6 +173,7 @@ def learn(
             logger.record_tabular("policy_entropy", float(policy_entropy))
             logger.record_tabular("value_loss", float(value_loss))
             logger.record_tabular("explained_variance", float(ev))
+            logger.record_tabular("eprewmean", np.nan if len(rewards) == 0 else np.mean(rewards))
             logger.dump_tabular()
     return model
 
