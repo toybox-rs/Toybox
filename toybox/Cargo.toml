@@ -11,3 +11,10 @@ clap = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
+
+[features]
+default = ["amidar", "breakout"]
+breakout = []
+amidar = []
+space_invaders = []
+gridworld = []
