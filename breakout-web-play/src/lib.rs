@@ -47,7 +47,7 @@ pub struct WebInput {
 impl WebInput {
     pub fn new() -> WebInput {
         WebInput {
-            input: Input::default()
+            input: Input::default(),
         }
     }
     pub fn set_left(&mut self, val: bool) {

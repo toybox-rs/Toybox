@@ -1,4 +1,7 @@
 #!/bin/bash
 
-cargo fmt --all -- --check
+set -eu
+
 cargo test
+cargo fmt --all -- --check
+
