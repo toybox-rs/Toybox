@@ -3,13 +3,20 @@ language: rust
 rust:
 - 1.28.0
 
+addons:
+apt:
+  packages:
+    - libasound2-dev
+    - libudev-dev
+    - libssl-dev
+
 env:
-- AUDIODEV=null
+  - RUST_BACKTRACE=1
+  - AUDIODEV=null
 
 cache: cargo
 
 before_script:
-  - sudo apt-get install libasound2-dev
   - rustup component add rustfmt-preview
 
 script: ./check.sh
