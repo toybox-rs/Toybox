@@ -9,6 +9,7 @@ env:
 cache: cargo
 
 before_script:
-- rustup component add rustfmt-preview
+  - sudo apt-get install libasound2-dev
+  - rustup component add rustfmt-preview
 
 script: ./check.sh
