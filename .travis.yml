@@ -3,6 +3,9 @@ language: rust
 rust:
 - 1.28.0
 
+env:
+- AUDIODEV=null
+
 cache: cargo
 
 before_script:
