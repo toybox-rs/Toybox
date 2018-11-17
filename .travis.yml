@@ -1,20 +1,12 @@
 language: rust
 
 rust:
-- 1.28.0
-
-addons:
-apt:
-  packages:
-    - libasound2-dev
-    - libudev-dev
-    - libssl-dev
+  - stable
+  - 1.28.0
 
 env:
   global:
-    - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
     - RUST_BACKTRACE=1
-    - AUDIODEV=null
 
 cache: cargo
 
