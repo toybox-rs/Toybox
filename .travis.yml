@@ -8,7 +8,4 @@ cache: cargo
 before_script:
 - rustup component add rustfmt-preview
 
-script:
-  cargo fmt --all -- --check
-  cd toybox && cargo test 
-  cd ctoybox && cargo build 
+script: check.sh

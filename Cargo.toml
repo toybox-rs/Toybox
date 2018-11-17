@@ -3,7 +3,7 @@ members = [
     "toybox",
     "ctoybox",
     "human_play",
-    "breakout-web-play"
+    "breakout-web-play",
 ]
 exclude = [
   "openai" # The old name for ctoybox
