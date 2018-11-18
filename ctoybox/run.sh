@@ -6,15 +6,23 @@ work1=/mnt/nfs/work1/jensen/etosch
 envs="BreakoutToyboxNoFrameskip-v0"
 partition="titanx-long"
 
+
+envs="BreakoutToyboxNoFrameskip-v0"
+algs="ppo2"
+timesteps="1e6"
+partition="titanx-short"
+
 # make sure we have all the pip dependencies we want installed
 pip3 install gym[atari] --user
 pip3 install 'tensorboard<1.8.0,>=1.7.0' --user
+cd ../toybox && cargo build --release
+cd ../ctoybox && cargo build --release
 
 
 for env in $envs; do
     for alg in $algs; do 
 	for steps in $timesteps; do
-	    model=$work1/$env.$alg.$steps.model
+	    model=$work1/$env.$alg.$steps.`date -I`.model
 	    uid=$env.$alg.$steps
 	    dest=run_cmd_$uid.sh
 
