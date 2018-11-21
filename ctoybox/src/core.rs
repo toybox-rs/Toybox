@@ -1,14 +1,13 @@
-use toybox;
+use super::WrapSimulator;
+use super::WrapState;
 use libc::c_char;
 use std::boxed::Box;
 use std::ffi::{CStr, CString};
+use std::mem;
+use toybox;
 use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox_core::Input;
 use toybox_core::State;
-use super::WrapSimulator;
-use super::WrapState;
-use std::mem;
-
 
 #[no_mangle]
 pub extern "C" fn simulator_alloc(name: *const i8) -> *mut WrapSimulator {
