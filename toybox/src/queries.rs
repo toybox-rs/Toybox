@@ -57,7 +57,7 @@ pub mod amidar {
 mod amidar_q_tests {
     use super::super::amidar;
     use super::amidar as q;
-    use toybox_core::{State,Simulation,Input};
+    use toybox_core::{Input, Simulation, State};
 
     #[test]
     fn test_q_num_tiles_unpainted() {

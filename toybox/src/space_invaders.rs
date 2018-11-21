@@ -90,38 +90,32 @@ pub fn get_invader_init(row: i32) -> SpriteData {
             screen::INVADER_INIT_1,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
+        ).expect("Invader1 sprite should be included!"),
         2 => load_sprite_default(
             screen::INVADER_INIT_2,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
+        ).expect("Invader1 sprite should be included!"),
         3 => load_sprite_default(
             screen::INVADER_INIT_3,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
+        ).expect("Invader1 sprite should be included!"),
         4 => load_sprite_default(
             screen::INVADER_INIT_4,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
+        ).expect("Invader1 sprite should be included!"),
         5 => load_sprite_default(
             screen::INVADER_INIT_5,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
+        ).expect("Invader1 sprite should be included!"),
         6 => load_sprite_default(
             screen::INVADER_INIT_6,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
+        ).expect("Invader1 sprite should be included!"),
         _ => unreachable!("Only expecting 6 invader types"),
     }
 }
@@ -131,8 +125,7 @@ lazy_static! {
         screen::SHIELD_SPRITE_DATA,
         (&screen::SHIELD_COLOR).into(),
         screen::SHIELD_SCALE
-    )
-    .expect("Shield sprite should be included!");
+    ).expect("Shield sprite should be included!");
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
