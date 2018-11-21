@@ -246,8 +246,8 @@ def main():
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             #done = done and (num_lives == 1 or turtle.ale.game_over())
-            env.render()
-            time.sleep(1.0/60.0)
+            #env.render()
+            #time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
             #done = done.any() if isinstance(done, np.ndarray) else done
 
