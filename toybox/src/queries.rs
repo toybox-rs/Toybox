@@ -56,11 +56,8 @@ pub mod amidar {
 #[cfg(test)]
 mod amidar_q_tests {
     use super::super::amidar;
-    use super::super::Input;
-    use super::super::State as TState;
     use super::amidar as q;
-    use super::*;
-    use Simulation;
+    use toybox_core::{State,Simulation,Input};
 
     #[test]
     fn test_q_num_tiles_unpainted() {
@@ -143,7 +140,7 @@ pub mod breakout {
 mod breakout_q_tests {
     use super::super::breakout;
     use super::breakout as q;
-    use super::*;
+    use toybox_core::Simulation;
 
     #[test]
     fn test_q_breakout_bricks_remaining() {
