@@ -4,7 +4,7 @@ use std::boxed::Box;
 use std::ffi::{CStr, CString};
 use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox_core::Input;
-use toybox_core::{Simulation, State};
+use toybox_core::State;
 use super::WrapSimulator;
 use super::WrapState;
 use std::mem;

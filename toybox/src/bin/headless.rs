@@ -5,7 +5,6 @@ extern crate toybox;
 
 use toybox::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox::Input;
-use toybox::State;
 
 use clap::{App, Arg};
 
