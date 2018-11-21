@@ -1,8 +1,8 @@
 extern crate clap;
-extern crate toybox_core;
 extern crate failure;
-extern crate toybox;
 extern crate png;
+extern crate toybox;
+extern crate toybox_core;
 
 use std::sync::Arc;
 
@@ -17,11 +17,11 @@ use quicksilver::{
 use toybox::graphics::{Color as TColor, Drawable, FixedSpriteData, ImageBuffer};
 use toybox::Input;
 
-use toybox_core::graphics;
+use png::HasParameters;
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::Path;
-use png::HasParameters;
+use toybox_core::graphics;
 
 static mut GAME_ID: usize = 0;
 
@@ -36,7 +36,7 @@ fn write_image(game: &AbstractGame) -> std::io::Result<()> {
     let (width, height): (i32, i32) = game.factory.game_size();
     let img = &mut graphics::ImageBuffer::alloc(width, height);
     img.render(&game.state.draw());
-    
+
     // Write to output folder
     let path = "output/frame.png";
     let file = File::create(Path::new(path)).unwrap();
