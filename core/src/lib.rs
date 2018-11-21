@@ -13,7 +13,6 @@ mod input;
 pub use input::Input;
 use std::any::Any;
 
-
 /// This trait models a single frame state for a Simulation.
 pub trait State {
     /// For dynamic casts.

@@ -26,12 +26,12 @@ mod body2d;
 /// Body2D represents an object with position, velocity and acceleration in 2D.
 pub use body2d::Body2D;
 
+pub use toybox_core::graphics;
+pub use toybox_core::random;
 /// Input represents the buttons pressed given to our games.
 pub use toybox_core::Input;
 pub use toybox_core::Simulation;
 pub use toybox_core::State;
-pub use toybox_core::random;
-pub use toybox_core::graphics;
 
 /// This method returns a Box<Simulation> if possible for a given game name.
 pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Error> {
