@@ -11,14 +11,14 @@ clap = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
+amidar = {path = "../amidar", version="*", optional=true}
+breakout = {path = "../breakout", version="*", optional = true}
 
 [dependencies.toybox-core]
-version = "*"
 path = "../core"
+version="*"
 
 [features]
 default = ["amidar", "breakout", "space_invaders"]
-breakout = []
-amidar = []
 space_invaders = []
 gridworld = []

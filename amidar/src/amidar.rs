@@ -1,11 +1,12 @@
-use super::digit_sprites::{digit_height, draw_lives, DigitFonts};
-use super::graphics::{Color, Drawable, FixedSpriteData};
-use super::Direction;
-use super::Input;
+use super::digit_sprites::{draw_score, DIGIT_HEIGHT};
 use failure::Error;
 use serde_json;
 use std::any::Any;
 use std::collections::{HashSet, VecDeque};
+use toybox_core;
+use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
+use toybox_core::Direction;
+use toybox_core::Input;
 
 // Window constants:
 pub mod screen {
@@ -818,7 +819,7 @@ impl Default for Amidar {
         Amidar.clone()
     }
 }
-impl super::Simulation for Amidar {
+impl toybox_core::Simulation for Amidar {
     fn as_any(&self) -> &Any {
         self
     }
@@ -826,10 +827,10 @@ impl super::Simulation for Amidar {
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
-    fn new_game(&mut self) -> Box<super::State> {
+    fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
-    fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, Error> {
+    fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         let config: Config = Config::default();
         Ok(Box::new(State {
@@ -841,7 +842,7 @@ impl super::Simulation for Amidar {
         &self,
         json_config: &str,
         json_state: &str,
-    ) -> Result<Box<super::State>, Error> {
+    ) -> Result<Box<toybox_core::State>, Error> {
         let state: StateCore = serde_json::from_str(json_state)?;
         let config: Config = serde_json::from_str(json_config)?;
         Ok(Box::new(State {
@@ -851,7 +852,7 @@ impl super::Simulation for Amidar {
     }
 }
 
-impl super::State for State {
+impl toybox_core::State for State {
     fn as_any(&self) -> &Any {
         self
     }
@@ -1046,7 +1047,7 @@ impl super::State for State {
                     offset_y + y - 1,
                     if self.state.chase_timer > 0 {
                         if enemy.caught {
-                            images::ENEMY_JUMP_L1.clone()
+                            images::ENEMY_CAUGHT_L1.clone()
                         } else {
                             images::ENEMY_CHASE_L1.clone()
                         }
@@ -1067,10 +1068,7 @@ impl super::State for State {
             }
         }
 
-        let font = DigitFonts::Amidar;
-
-        output.extend(draw_lives(
-            font,
+        output.extend(draw_score(
             self.state.score,
             screen::SCORE_X_POS,
             screen::SCORE_Y_POS + 1,
@@ -1081,7 +1079,7 @@ impl super::State for State {
                 screen::LIVES_X_POS - i * screen::LIVES_X_STEP,
                 screen::LIVES_Y_POS,
                 1,
-                digit_height(font) + 1,
+                DIGIT_HEIGHT + 1,
             ))
         }
 

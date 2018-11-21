@@ -1,9 +1,10 @@
-use super::digit_sprites::{digit_width, draw_lives, draw_score, DigitFonts};
-use super::graphics::{Color, Drawable};
-use super::random;
+use super::body2d::Body2D;
+use super::font::{draw_lives, draw_score, DIGIT_WIDTH};
 use super::vec2d::Vec2D;
-use super::Body2D;
-use super::Input;
+use toybox_core;
+use toybox_core::graphics::{Color, Drawable};
+use toybox_core::random;
+use toybox_core::Input;
 
 use failure;
 use serde_json;
@@ -213,7 +214,7 @@ impl Default for Breakout {
     }
 }
 
-impl super::Simulation for Breakout {
+impl toybox_core::Simulation for Breakout {
     fn as_any(&self) -> &Any {
         self
     }
@@ -225,7 +226,7 @@ impl super::Simulation for Breakout {
     }
 
     /// Create a new game of breakout.
-    fn new_game(&mut self) -> Box<super::State> {
+    fn new_game(&mut self) -> Box<toybox_core::State> {
         let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
 
@@ -278,7 +279,10 @@ impl super::Simulation for Breakout {
         Box::new(state)
     }
 
-    fn new_state_from_json(&self, json_str: &str) -> Result<Box<super::State>, failure::Error> {
+    fn new_state_from_json(
+        &self,
+        json_str: &str,
+    ) -> Result<Box<toybox_core::State>, failure::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         let config: Config = Config::default();
         Ok(Box::new(State {
@@ -291,7 +295,7 @@ impl super::Simulation for Breakout {
         &self,
         json_config: &str,
         json_state: &str,
-    ) -> Result<Box<super::State>, failure::Error> {
+    ) -> Result<Box<toybox_core::State>, failure::Error> {
         let state: StateCore = serde_json::from_str(json_state)?;
         let config: Config = serde_json::from_str(json_config)?;
         Ok(Box::new(State { config, state }))
@@ -450,7 +454,7 @@ impl State {
     }
 }
 
-impl super::State for State {
+impl toybox_core::State for State {
     fn as_any(&self) -> &Any {
         self
     }
@@ -594,18 +598,16 @@ impl super::State for State {
             ball_r * 2,
         ));
 
-        let font = DigitFonts::Breakout;
-        let width = digit_width(font);
         let score_offset = 88;
         let score_x = screen::BOARD_LEFT_X + score_offset;
-        let lives_x = score_x + (width * 2);
-        let thing_x = lives_x + (width * 2);
+        let lives_x = score_x + (DIGIT_WIDTH * 2);
+        let thing_x = lives_x + (DIGIT_WIDTH * 2);
         // Draw points:
-        output.extend(draw_score(font, self.state.points, score_x, 1));
+        output.extend(draw_score(self.state.points, score_x, 1));
         // Draw lives:
-        output.extend(draw_lives(font, self.state.lives, lives_x, 1));
+        output.extend(draw_lives(self.state.lives, lives_x, 1));
         // Draw whatever this thing is
-        output.extend(draw_lives(font, 1, thing_x, 1));
+        output.extend(draw_lives(1, thing_x, 1));
 
         output
     }

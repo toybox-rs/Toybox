@@ -3,6 +3,8 @@ members = [
   "core",
   "toybox",
   "ctoybox",
+  "breakout",
+  "amidar",
   "breakout-web-play",
   "human_play",
 ]

@@ -1,0 +1,15 @@
+[package]
+name = "breakout"
+version = "0.1.0"
+authors = ["John Foley <jfoley@cs.umass.edu>"]
+
+[dependencies]
+failure = "*"
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+lazy_static = "*"
+
+[dependencies.toybox-core]
+version = "*"
+path = "../core"

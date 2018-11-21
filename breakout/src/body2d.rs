@@ -1,4 +1,4 @@
-use super::Vec2D;
+use super::vec2d::Vec2D;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Body2D {
