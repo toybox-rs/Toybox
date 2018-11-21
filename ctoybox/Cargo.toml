@@ -7,10 +7,14 @@ authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
 name = "ctoybox"
 crate-type = ["cdylib"]
 
-[dependencies.toybox]
-version = "*"
-path = "../toybox"
-
 [dependencies]
 failure = "0.1"
 libc = "0.2"
+amidar = {path = "../amidar", version="*"}
+breakout = {path = "../breakout", version="*"}
+toybox = {path = "../toybox", version="*"}
+
+[dependencies.toybox-core]
+version = "*"
+path = "../core"
+

@@ -9,8 +9,11 @@ pub mod graphics;
 pub mod random;
 
 mod input;
-
 pub use input::Input;
+
+mod direction;
+pub use direction::Direction;
+
 use std::any::Any;
 
 /// This trait models a single frame state for a Simulation.

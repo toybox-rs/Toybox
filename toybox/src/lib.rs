@@ -12,20 +12,6 @@ extern crate serde_json;
 extern crate png;
 extern crate toybox_core;
 
-pub mod digit_sprites;
-
-mod direction;
-/// Direction represents an enum of Left,Right,Up and Down.
-pub use direction::Direction;
-
-mod vec2d;
-/// Vec2D represents a floating (x,y) coordinate or vector.
-pub use vec2d::Vec2D;
-
-mod body2d;
-/// Body2D represents an object with position, velocity and acceleration in 2D.
-pub use body2d::Body2D;
-
 pub use toybox_core::graphics;
 pub use toybox_core::random;
 /// Input represents the buttons pressed given to our games.
@@ -67,10 +53,10 @@ pub const GAME_LIST: &[&str] = &[
 
 /// Amidar defined in this module.
 #[cfg(feature = "amidar")]
-pub mod amidar;
+extern crate amidar;
 /// Breakout defined in this module.
 #[cfg(feature = "breakout")]
-pub mod breakout;
+extern crate breakout;
 /// Gridworld
 #[cfg(feature = "gridworld")]
 pub mod gridworld;

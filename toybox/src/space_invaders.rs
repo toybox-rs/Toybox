@@ -1,8 +1,8 @@
-use super::graphics::{Color, Drawable, SpriteData};
-use super::{Direction, Input};
 use failure::Error;
 use serde_json;
 use std::any::Any;
+use toybox_core::graphics::{Color, Drawable, SpriteData};
+use toybox_core::{Direction, Input};
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (480, 319);
