@@ -5,25 +5,38 @@ use serde_json;
 use std::any::Any;
 
 pub mod screen {
-    pub const GAME_SIZE: (i32, i32) = (480, 319);
-    pub const SKY_TO_GROUND: i32 = 298;
+    // pub const GAME_SIZE: (i32, i32) = (480, 319);
+    pub const GAME_SIZE: (i32, i32) = (320, 210);
+    //pub const SKY_TO_GROUND: i32 = 298;
+    pub const SKY_TO_GROUND: i32 = 195;
 
-    pub const GAME_DOT_LEFT: i32 = 99;
-    pub const GAME_DOT_RIGHT: i32 = 108;
-    pub const GAME_DOT_SIZE: (i32, i32) = (6, 7);
-    pub const SHIP_SIZE: (i32, i32) = (21, 15);
-    pub const SHIELD_SIZE: (i32, i32) = (24, 27);
-    pub const SHIELD1_POS: (i32, i32) = (126, 241);
-    pub const SHIELD2_POS: (i32, i32) = (222, 241);
-    pub const SHIELD3_POS: (i32, i32) = (318, 241);
-    pub const SHIELD_SCALE: i32 = 3;
+    // pub const GAME_DOT_LEFT: i32 = 99;
+    pub const GAME_DOT_LEFT: i32 = 66;
+    // pub const GAME_DOT_RIGHT: i32 = 108;
+    pub const GAME_DOT_RIGHT: i32 = 244;
+    // pub const GAME_DOT_SIZE: (i32, i32) = (6, 7);
+    pub const GAME_DOT_SIZE: (i32, i32) = (4, 5);
+    // pub const SHIP_SIZE: (i32, i32) = (21, 15);
+    pub const SHIP_SIZE: (i32, i32) = (21, 15); // needs updating
+                                                // pub const SHIELD_SIZE: (i32, i32) = (24, 27);
+    pub const SHIELD_SIZE: (i32, i32) = (16, 18);
+    // pub const SHIELD1_POS: (i32, i32) = (126, 241);
+    pub const SHIELD1_POS: (i32, i32) = (84, 157);
+    // pub const SHIELD2_POS: (i32, i32) = (222, 241);
+    pub const SHIELD2_POS: (i32, i32) = (148, 157);
+    // pub const SHIELD3_POS: (i32, i32) = (318, 241);
+    pub const SHIELD3_POS: (i32, i32) = (212, 157);
+    pub const SHIELD_SCALE: i32 = 2;
 
-    pub const ENEMY_SIZE: (i32, i32) = (24, 15);
+    // pub const ENEMY_SIZE: (i32, i32) = (24, 15);
+    pub const ENEMY_SIZE: (i32, i32) = (16, 10);
     pub const ENEMY_START_POS: (i32, i32) = (44, 31);
     pub const ENEMIES_PER_ROW: i32 = 6;
     pub const ENEMIES_NUM: i32 = 6;
-    pub const ENEMY_Y_SPACE: i32 = 12;
-    pub const ENEMY_X_SPACE: i32 = 24;
+    // pub const ENEMY_Y_SPACE: i32 = 12;
+    pub const ENEMY_Y_SPACE: i32 = 8;
+    // pub const ENEMY_X_SPACE: i32 = 24;
+    pub const ENEMY_X_SPACE: i32 = 16;
     pub const ENEMY_SCALE: i32 = 1;
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE: (i32, i32) = (3, 11);

@@ -1,0 +1,4 @@
+tensorflow
+gym[atari]
+tensorboard
+

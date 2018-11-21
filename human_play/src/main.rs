@@ -1,6 +1,7 @@
 extern crate clap;
 extern crate failure;
 extern crate toybox;
+extern crate core;
 
 use std::sync::Arc;
 
@@ -15,12 +16,27 @@ use quicksilver::{
 use toybox::graphics::{Color as TColor, Drawable, FixedSpriteData, ImageBuffer};
 use toybox::Input;
 
+use std::fs::File;
+use core::{ImageBuffer, render_to_buffer};
+
 static mut GAME_ID: usize = 0;
 
 struct AbstractGame {
     factory: Box<toybox::Simulation>,
     state: Box<toybox::State>,
     cached_images: Vec<(FixedSpriteData, Image)>,
+}
+
+pub fn write_image(game : &AbstractGame) -> std::io::Result<()> {
+    let drawable = game.state.draw();
+    // make sure that game_size returns w, h and not h, w
+    let (width, height): (i32, i32) = game.factory.game_size();
+    let img = ImageBuffer::alloc(width, height);
+    render_to_buffer(img, drawable);
+    
+    let mut file = File::open("frame.txt")?;
+    file.write_all(img)?;
+    Ok(())
 }
 
 impl quicksilver::State for AbstractGame {
@@ -42,6 +58,10 @@ impl quicksilver::State for AbstractGame {
             return;
         }
         self.state.update_mut(buttons);
+        // save the the current image after drawing. Later we will want to record in batches.
+        // Hard-code the file for now. 
+        // Will want to save the action taken later.
+        write_image(self);
     }
     fn draw(&mut self, window: &mut Window) {
         let (w, h) = self.factory.game_size();
@@ -115,9 +135,14 @@ fn main() {
                 .help("Try amidar, breakout or space_invaders. (amidar by default)")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("--record")
+                .takes_value(false),
+        )
         .get_matches();
 
     let game = matches.value_of("game").unwrap_or("amidar");
+    let record = matches.value_of("record").unwrap_or(true); // TODO: change this to false once I am sure it is working.
     let game_num = toybox::GAME_LIST
         .iter()
         .position(|gn| gn == &game)
