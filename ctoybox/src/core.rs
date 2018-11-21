@@ -1,39 +1,19 @@
-#![crate_type = "dylib"]
-
-extern crate amidar;
-extern crate breakout;
-extern crate failure;
-extern crate libc;
-extern crate toybox;
-extern crate toybox_core;
-
+use toybox;
 use libc::c_char;
 use std::boxed::Box;
 use std::ffi::{CStr, CString};
 use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox_core::Input;
 use toybox_core::{Simulation, State};
+use super::WrapSimulator;
+use super::WrapState;
+use std::mem;
 
-#[repr(C)]
-pub struct WrapSimulator {
-    pub simulator: Box<Simulation>,
-}
-
-#[repr(C)]
-pub struct WrapState {
-    pub state: Box<State>,
-}
-
-mod qamidar;
-pub use qamidar::*;
-
-mod qbreakout;
-pub use qbreakout::*;
 
 #[no_mangle]
 pub extern "C" fn simulator_alloc(name: *const i8) -> *mut WrapSimulator {
     let name: &CStr = unsafe { CStr::from_ptr(name) };
-    let name: &str = name.to_str().expect("poop!");
+    let name: &str = name.to_str().expect("bad utf-8!");
     let simulator = toybox::get_simulation_by_name(name).unwrap();
     // The boxing stuff ensures the pointer remains allocated after
     // we leave this scope.
@@ -138,7 +118,7 @@ pub extern "C" fn render_current_frame(
     // Copy pixels at once (let LLVM/Rust optimize it as a linear copy).
     dat.extend(&imgdata);
     assert_eq!(dat.len(), imgdata.len());
-    std::mem::forget(dat)
+    mem::forget(dat)
 }
 
 #[no_mangle]
