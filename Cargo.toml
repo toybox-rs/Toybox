@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "core",
   "toybox",
   "ctoybox",
   "breakout-web-play",

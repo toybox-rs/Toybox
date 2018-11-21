@@ -12,6 +12,10 @@ serde = "*"
 serde_derive = "*"
 serde_json = "*"
 
+[dependencies.toybox-core]
+version = "*"
+path = "../core"
+
 [features]
 default = ["amidar", "breakout", "space_invaders"]
 breakout = []
