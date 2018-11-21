@@ -5,25 +5,38 @@ use toybox_core::graphics::{Color, Drawable, SpriteData};
 use toybox_core::{Direction, Input};
 
 pub mod screen {
-    pub const GAME_SIZE: (i32, i32) = (480, 319);
-    pub const SKY_TO_GROUND: i32 = 298;
+    // pub const GAME_SIZE: (i32, i32) = (480, 319);
+    pub const GAME_SIZE: (i32, i32) = (320, 210);
+    //pub const SKY_TO_GROUND: i32 = 298;
+    pub const SKY_TO_GROUND: i32 = 195;
 
-    pub const GAME_DOT_LEFT: i32 = 99;
-    pub const GAME_DOT_RIGHT: i32 = 108;
-    pub const GAME_DOT_SIZE: (i32, i32) = (6, 7);
-    pub const SHIP_SIZE: (i32, i32) = (21, 15);
-    pub const SHIELD_SIZE: (i32, i32) = (24, 27);
-    pub const SHIELD1_POS: (i32, i32) = (126, 241);
-    pub const SHIELD2_POS: (i32, i32) = (222, 241);
-    pub const SHIELD3_POS: (i32, i32) = (318, 241);
+    // pub const GAME_DOT_LEFT: i32 = 99;
+    pub const GAME_DOT_LEFT: i32 = 66;
+    // pub const GAME_DOT_RIGHT: i32 = 108;
+    pub const GAME_DOT_RIGHT: i32 = 244;
+    // pub const GAME_DOT_SIZE: (i32, i32) = (6, 7);
+    pub const GAME_DOT_SIZE: (i32, i32) = (4, 5);
+    // pub const SHIP_SIZE: (i32, i32) = (21, 15);
+    pub const SHIP_SIZE: (i32, i32) = (21, 15); // needs updating
+                                                // pub const SHIELD_SIZE: (i32, i32) = (24, 27);
+    pub const SHIELD_SIZE: (i32, i32) = (16, 18);
+    // pub const SHIELD1_POS: (i32, i32) = (126, 241);
+    pub const SHIELD1_POS: (i32, i32) = (84, 157);
+    // pub const SHIELD2_POS: (i32, i32) = (222, 241);
+    pub const SHIELD2_POS: (i32, i32) = (148, 157);
+    // pub const SHIELD3_POS: (i32, i32) = (318, 241);
+    pub const SHIELD3_POS: (i32, i32) = (212, 157);
     pub const SHIELD_SCALE: i32 = 3;
 
-    pub const ENEMY_SIZE: (i32, i32) = (24, 15);
+    // pub const ENEMY_SIZE: (i32, i32) = (24, 15);
+    pub const ENEMY_SIZE: (i32, i32) = (16, 10);
     pub const ENEMY_START_POS: (i32, i32) = (44, 31);
     pub const ENEMIES_PER_ROW: i32 = 6;
     pub const ENEMIES_NUM: i32 = 6;
-    pub const ENEMY_Y_SPACE: i32 = 12;
-    pub const ENEMY_X_SPACE: i32 = 24;
+    // pub const ENEMY_Y_SPACE: i32 = 12;
+    pub const ENEMY_Y_SPACE: i32 = 8;
+    // pub const ENEMY_X_SPACE: i32 = 24;
+    pub const ENEMY_X_SPACE: i32 = 16;
     pub const ENEMY_SCALE: i32 = 1;
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE: (i32, i32) = (3, 11);
@@ -90,32 +103,38 @@ pub fn get_invader_init(row: i32) -> SpriteData {
             screen::INVADER_INIT_1,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        ).expect("Invader1 sprite should be included!"),
+        )
+        .expect("Invader1 sprite should be included!"),
         2 => load_sprite_default(
             screen::INVADER_INIT_2,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        ).expect("Invader1 sprite should be included!"),
+        )
+        .expect("Invader1 sprite should be included!"),
         3 => load_sprite_default(
             screen::INVADER_INIT_3,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        ).expect("Invader1 sprite should be included!"),
+        )
+        .expect("Invader1 sprite should be included!"),
         4 => load_sprite_default(
             screen::INVADER_INIT_4,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        ).expect("Invader1 sprite should be included!"),
+        )
+        .expect("Invader1 sprite should be included!"),
         5 => load_sprite_default(
             screen::INVADER_INIT_5,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        ).expect("Invader1 sprite should be included!"),
+        )
+        .expect("Invader1 sprite should be included!"),
         6 => load_sprite_default(
             screen::INVADER_INIT_6,
             (&screen::ENEMY_COLOR).into(),
             screen::ENEMY_SCALE,
-        ).expect("Invader1 sprite should be included!"),
+        )
+        .expect("Invader1 sprite should be included!"),
         _ => unreachable!("Only expecting 6 invader types"),
     }
 }
@@ -125,7 +144,8 @@ lazy_static! {
         screen::SHIELD_SPRITE_DATA,
         (&screen::SHIELD_COLOR).into(),
         screen::SHIELD_SCALE
-    ).expect("Shield sprite should be included!");
+    )
+    .expect("Shield sprite should be included!");
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -235,7 +255,7 @@ impl State {
 
         let (x, y) = screen::ENEMY_START_POS;
         let (w, h) = screen::ENEMY_SIZE;
-        let x_offset = w + screen::ENEMY_Y_SPACE;
+        let x_offset = w + screen::ENEMY_X_SPACE;
         let y_offset = h + screen::ENEMY_Y_SPACE;
         for j in 0..screen::ENEMIES_NUM {
             let enemy_sprite = get_invader_init(j);
