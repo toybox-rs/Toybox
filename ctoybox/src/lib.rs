@@ -14,12 +14,10 @@ use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox_core::Input;
 use toybox_core::{Simulation, State};
 
-#[repr(C)]
 pub struct WrapSimulator {
     pub simulator: Box<Simulation>,
 }
 
-#[repr(C)]
 pub struct WrapState {
     pub state: Box<State>,
 }
