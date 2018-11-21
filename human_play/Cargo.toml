@@ -7,7 +7,12 @@ authors = ["John Foley <jfoley@cs.umass.edu>"]
 failure = "*"
 clap = "*"
 quicksilver = "0.2"
+png = "*"
 
 [dependencies.toybox]
 version = "*"
 path = "../toybox"
+
+[dependencies.toybox-core]
+version = "*"
+path = "../core"

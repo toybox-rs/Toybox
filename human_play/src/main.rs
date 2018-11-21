@@ -1,7 +1,8 @@
 extern crate clap;
+extern crate toybox_core;
 extern crate failure;
 extern crate toybox;
-extern crate core;
+extern crate png;
 
 use std::sync::Arc;
 
@@ -16,8 +17,11 @@ use quicksilver::{
 use toybox::graphics::{Color as TColor, Drawable, FixedSpriteData, ImageBuffer};
 use toybox::Input;
 
+use toybox_core::graphics;
 use std::fs::File;
-use core::{ImageBuffer, render_to_buffer};
+use std::io::BufWriter;
+use std::path::Path;
+use png::HasParameters;
 
 static mut GAME_ID: usize = 0;
 
@@ -27,15 +31,22 @@ struct AbstractGame {
     cached_images: Vec<(FixedSpriteData, Image)>,
 }
 
-pub fn write_image(game : &AbstractGame) -> std::io::Result<()> {
-    let drawable = game.state.draw();
+fn write_image(game: &AbstractGame) -> std::io::Result<()> {
     // make sure that game_size returns w, h and not h, w
     let (width, height): (i32, i32) = game.factory.game_size();
-    let img = ImageBuffer::alloc(width, height);
-    render_to_buffer(img, drawable);
+    let img = &mut graphics::ImageBuffer::alloc(width, height);
+    img.render(&game.state.draw());
     
-    let mut file = File::open("frame.txt")?;
-    file.write_all(img)?;
+    // Write to output folder
+    let path = "output/frame.png";
+    let file = File::create(Path::new(path)).unwrap();
+
+    // Do the writing
+    let w = &mut BufWriter::new(file);
+    let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
+    encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);
+    let mut writer = encoder.write_header().unwrap();
+    writer.write_image_data(&img.data).unwrap();
     Ok(())
 }
 
@@ -59,7 +70,7 @@ impl quicksilver::State for AbstractGame {
         }
         self.state.update_mut(buttons);
         // save the the current image after drawing. Later we will want to record in batches.
-        // Hard-code the file for now. 
+        // Hard-code the file for now.
         // Will want to save the action taken later.
         write_image(self);
     }
@@ -135,14 +146,9 @@ fn main() {
                 .help("Try amidar, breakout or space_invaders. (amidar by default)")
                 .takes_value(true),
         )
-        .arg(
-            Arg::with_name("--record")
-                .takes_value(false),
-        )
         .get_matches();
 
     let game = matches.value_of("game").unwrap_or("amidar");
-    let record = matches.value_of("record").unwrap_or(true); // TODO: change this to false once I am sure it is working.
     let game_num = toybox::GAME_LIST
         .iter()
         .position(|gn| gn == &game)
