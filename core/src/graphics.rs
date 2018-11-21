@@ -38,7 +38,7 @@ impl Color {
     pub fn grayscale_byte(&self) -> u8 {
         (self.luminance() * 255.0) as u8
     }
-    fn to_grayscale(&self) -> Color {
+    pub fn to_grayscale(&self) -> Color {
         let gray = self.grayscale_byte();
         Color::rgb(gray, gray, gray)
     }
@@ -104,7 +104,7 @@ impl FixedSpriteData {
         let decoder = png::Decoder::new(data);
         let (info, mut reader) = decoder.read_info().unwrap();
         let width = info.width as usize;
-        let height = info.height as usize;
+        let _height = info.height as usize;
         assert_eq!(info.color_type, png::ColorType::RGBA);
         assert_eq!(info.bit_depth, png::BitDepth::Eight);
 

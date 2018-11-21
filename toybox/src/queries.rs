@@ -144,7 +144,6 @@ mod breakout_q_tests {
     use super::super::breakout;
     use super::breakout as q;
     use super::*;
-    use Simulation;
 
     #[test]
     fn test_q_breakout_bricks_remaining() {
