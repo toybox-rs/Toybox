@@ -2,4 +2,5 @@
 pip3 install -r REQUIREMENTS.txt --user
 export PYTHONPATH=${PWD}/baselines:${PWD}/toybox:${PYTHONPATH}
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/../target/release
+export LIBCTOYBOX=${PWD}/..
 python3 "$@"

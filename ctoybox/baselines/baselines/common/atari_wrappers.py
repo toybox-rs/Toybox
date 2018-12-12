@@ -30,6 +30,36 @@ def get_turtle(env):
         else:
             raise ValueError("Can't unwrap", env)
 
+class SampleEnvs(gym.Wrapper):
+    def __init__(self, envs, weights):
+        """Alternates between input environments"""
+        assert(sum(weights) == 1.0)
+        env = np.random.choice(envs, 1)[0]
+        turtle = get_turtle(env)
+        # Kept seeing an issue with the vec environments; updating them
+        for env in envs:
+            env.reward_range = turtle.reward_range
+            env.metadata = turtle.metadata
+        print('Starting env:', get_turtle(env))
+        gym.Wrapper.__init__(self, env)
+        self.envs = envs
+        self.weights = weights
+
+    def reset(self, **kwargs):
+        # Takes optional arg for new weights
+        if kwargs.weights:
+            self.weights = kwargs.weights
+        
+        env = np.random.choice(self.envs, p=self.weights)
+        print('resetting to env:', env)
+        self.env = env
+        self.env.reset(**kwargs)
+        obs, _, _, _ = self.env.step(0)
+        return obs
+
+    def step(self, action):
+        return self.env.step(action)
+
 
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
@@ -38,7 +68,6 @@ class NoopResetEnv(gym.Wrapper):
         """
         gym.Wrapper.__init__(self, env)
         self.noop_max = noop_max
-        print("Noop max:", self.noop_max)
         self.override_num_noops = None
         self.noop_action = 0
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
@@ -87,7 +116,6 @@ class EpisodicLifeEnv(gym.Wrapper):
         Done by DeepMind for the DQN and co. since it helps value estimation.
         """
         gym.Wrapper.__init__(self, env)
-        print('triggered')
         self.lives = 0
         self.was_real_done  = True
 
@@ -242,11 +270,25 @@ class LazyFrames(object):
     def __getitem__(self, i):
         return self._force()[i]
 
-def make_atari(env_id):
+def get_complement(env_id):
+    if 'Toybox' in env_id:
+        return get_env_type(env_id.replace('Toybox', ''))
+    else:
+        game_name, suffix = env_id.split('No')
+        return get_env_type(game_name + 'ToyboxNo' + suffix)
+
+
+def make_atari(env_id, sample_weights):
     env = gym.make(env_id)
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
     env = MaxAndSkipEnv(env, skip=4)
+    if sample_weights:
+        env1 = env
+        env2 = gym.make(get_complement(env_id)[0])
+        env2 = NoopResetEnv(env2, noop_max=30)
+        env2 = MaxAndSkipEnv(env2, skip=4)
+        return SampleEnvs([env1, env2], sample_weights)
     return env
 
 def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):

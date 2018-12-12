@@ -21,6 +21,8 @@ from importlib import import_module
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common import atari_wrappers, retro_wrappers
 
+from baselines.common.atari_wrappers import SampleEnvs
+
 
 # Hot patch atari env so we can get the score
 # This is exactly the same, except we put the result of act into the info
@@ -100,7 +102,7 @@ def train(args, extra_args):
     alg_kwargs = get_learn_function_defaults(args.alg, env_type)
     alg_kwargs.update(extra_args)
 
-    env = build_env(args)
+    env = build_env(args, extra_args)
 
     if args.network:
         alg_kwargs['network'] = args.network
@@ -120,7 +122,7 @@ def train(args, extra_args):
     return model, env
 
 
-def build_env(args):
+def build_env(args, extra_args):
     ncpu = multiprocessing.cpu_count()
     if sys.platform == 'darwin': ncpu //= 2
     nenv = args.num_env or ncpu
@@ -147,8 +149,7 @@ def build_env(args):
             env.seed(seed)
         else:
             frame_stack_size = 4
-            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed), frame_stack_size)
-
+            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=extra_args['weights']), frame_stack_size)
     return env
 
 
@@ -232,7 +233,7 @@ def main():
 
     if args.play:
         logger.log("Running trained model")
-        env = build_env(args)
+        env = build_env(args, extra_args)
         obs = env.reset()
         turtle = atari_wrappers.get_turtle(env)
         scores = []
