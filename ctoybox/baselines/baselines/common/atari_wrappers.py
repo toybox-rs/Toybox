@@ -5,11 +5,45 @@ from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 import numpy as np
 import os
 os.environ.setdefault('PATH', '')
-from collections import deque
+from collections import deque, Counter
 import gym
 from gym import spaces
+from gym.wrappers import TimeLimit
+from gym.envs.atari import AtariEnv
 import cv2
 cv2.ocl.setUseOpenCL(False)
+
+
+# Hot patch atari env so we can get the score
+# This is exactly the same, except we put the result of act into the info
+def hotpatch_step(self, a):
+    reward = 0.0
+    action = self._action_set[a]
+    # Since reward appears to be incremental, dynamically add an instance variable to track.
+    # So there's a __getattribute__ function, but no __hasattribute__ function? Bold, Python.
+    try:
+        self.score = self.score
+    except AttributeError:
+        self.score = 0.0
+
+    if isinstance(self.frameskip, int):
+        num_steps = self.frameskip
+    else:
+        num_steps = self.np_random.randint(self.frameskip[0], self.frameskip[1])
+    
+    for _ in range(num_steps):
+        reward += self.ale.act(action)
+    ob = self._get_obs()
+    done = self.ale.game_over()
+    # Update score
+
+    score = self.score
+    self.score = 0.0 if done else self.score + reward
+    # Return score as part of info
+    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
+
+AtariEnv.step = hotpatch_step
+
 
 # Get innermost gym.Env (skip all Wrapper)
 def get_turtle(env):
@@ -30,35 +64,44 @@ def get_turtle(env):
         else:
             raise ValueError("Can't unwrap", env)
 
+
 class SampleEnvs(gym.Wrapper):
+    samples = Counter()
+
     def __init__(self, envs, weights):
         """Alternates between input environments"""
         assert(sum(weights) == 1.0)
         env = np.random.choice(envs, 1)[0]
         turtle = get_turtle(env)
-        # Kept seeing an issue with the vec environments; updating them
-        for env in envs:
-            env.reward_range = turtle.reward_range
-            env.metadata = turtle.metadata
-        print('Starting env:', get_turtle(env))
+        print('Starting env:', turtle)
         gym.Wrapper.__init__(self, env)
         self.envs = envs
         self.weights = weights
+        # We may need to track over multiple environments, so make
+        # this a static variable/something requiring a global lock.
+        SampleEnvs.samples[turtle] += 1
+
+    def __del__(self):
+        print('Samples encountered:\n', SampleEnvs.samples)
 
     def reset(self, **kwargs):
         # Takes optional arg for new weights
-        if kwargs.weights:
+        if 'weights' in kwargs:
             self.weights = kwargs.weights
         
         env = np.random.choice(self.envs, p=self.weights)
         print('resetting to env:', env)
         self.env = env
         self.env.reset(**kwargs)
+        SampleEnvs.samples[get_turtle(env)] += 1 
         obs, _, _, _ = self.env.step(0)
         return obs
 
     def step(self, action):
-        return self.env.step(action)
+        res = self.env.step(action)
+        info = res[-1]
+        info['samples'] = SampleEnvs.samples
+        return res
 
 
 class NoopResetEnv(gym.Wrapper):
@@ -272,20 +315,25 @@ class LazyFrames(object):
 
 def get_complement(env_id):
     if 'Toybox' in env_id:
-        return get_env_type(env_id.replace('Toybox', ''))
+        return env_id.replace('Toybox', '')
     else:
         game_name, suffix = env_id.split('No')
-        return get_env_type(game_name + 'ToyboxNo' + suffix)
+        return game_name + 'ToyboxNo' + suffix
 
 
 def make_atari(env_id, sample_weights):
     env = gym.make(env_id)
+    if 'Toybox' in env_id:
+        env = TimeLimit(env)
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
+    # TODO: skip was previously set to 4. This makes debugging hard. Setting it to 0 
+    # causes the MaxAndSkipEnv to not step at all, so we need to set it to at least 1.
+    # We can see how badly this impacts our training later.
     env = MaxAndSkipEnv(env, skip=4)
     if sample_weights:
         env1 = env
-        env2 = gym.make(get_complement(env_id)[0])
+        env2 = gym.make(get_complement(env_id))
         env2 = NoopResetEnv(env2, noop_max=30)
         env2 = MaxAndSkipEnv(env2, skip=4)
         return SampleEnvs([env1, env2], sample_weights)

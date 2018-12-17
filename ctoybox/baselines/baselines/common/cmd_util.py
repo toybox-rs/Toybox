@@ -19,7 +19,7 @@ from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.retro_wrappers import RewardScaler
 
 
-def make_vec_env(env_id, env_type, num_env, seed, wrapper_kwargs=None, start_index=0, reward_scale=1.0, weights=[]):
+def make_vec_env(env_id, env_type, num_env, seed, weights=[], wrapper_kwargs=None, start_index=0, reward_scale=1.0):
     """
     Create a wrapped, monitored SubprocVecEnv for Atari and MuJoCo.
     """

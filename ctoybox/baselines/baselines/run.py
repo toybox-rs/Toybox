@@ -23,38 +23,6 @@ from baselines.common import atari_wrappers, retro_wrappers
 
 from baselines.common.atari_wrappers import SampleEnvs
 
-
-# Hot patch atari env so we can get the score
-# This is exactly the same, except we put the result of act into the info
-from gym.envs.atari import AtariEnv
-def hotpatch_step(self, a):
-    reward = 0.0
-    action = self._action_set[a]
-    # Since reward appears to be incremental, dynamically add an instance variable to track.
-    # So there's a __getattribute__ function, but no __hasattribute__ function? Bold, Python.
-    try:
-        self.score = self.score
-    except AttributeError:
-        self.score = 0.0
-
-    if isinstance(self.frameskip, int):
-        num_steps = self.frameskip
-    else:
-        num_steps = self.np_random.randint(self.frameskip[0], self.frameskip[1])
-    
-    for _ in range(num_steps):
-        reward += self.ale.act(action)
-    ob = self._get_obs()
-    done = self.ale.game_over()
-    # Update score
-
-    score = self.score
-    self.score = 0.0 if done else self.score + reward
-    # Return score as part of info
-    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
-
-AtariEnv.step = hotpatch_step
-
 try:
     from mpi4py import MPI
 except ImportError:
@@ -99,10 +67,14 @@ def train(args, extra_args):
     seed = args.seed
 
     learn = get_learn_function(args.alg)
+    
     alg_kwargs = get_learn_function_defaults(args.alg, env_type)
     alg_kwargs.update(extra_args)
+    if 'weights' in alg_kwargs:
+        del alg_kwargs['weights']
 
     env = build_env(args, extra_args)
+
 
     if args.network:
         alg_kwargs['network'] = args.network
