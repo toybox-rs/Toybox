@@ -2,6 +2,9 @@ extern crate cfg_if;
 extern crate toybox;
 extern crate wasm_bindgen;
 
+extern crate breakout;
+extern crate amidar;
+
 mod utils;
 
 use cfg_if::cfg_if;
@@ -237,7 +240,7 @@ pub extern "C" fn breakout_brick_live_by_index(
         &mut *state_ptr
     };
 
-    let breakout: &toybox::breakout::State = state
+    let breakout: &breakout::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires breakout State for bricks_remaining.");
@@ -251,7 +254,7 @@ pub extern "C" fn breakout_bricks_remaining(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let breakout: &toybox::breakout::State = state
+    let breakout: &breakout::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires breakout State for bricks_remaining.");
@@ -265,7 +268,7 @@ pub extern "C" fn breakout_num_rows(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let breakout: &toybox::breakout::State = state
+    let breakout: &breakout::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires breakout State for num_rows.");
@@ -279,7 +282,7 @@ pub extern "C" fn breakout_num_columns(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let breakout: &toybox::breakout::State = state
+    let breakout: &breakout::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires breakout State for num_columns.");
@@ -299,7 +302,7 @@ pub extern "C" fn breakout_channels(
     };
 
     // Crash if they give us a non-breakout State.
-    let breakout: &toybox::breakout::State = state
+    let breakout: &breakout::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires breakout State for channels.");
@@ -334,7 +337,7 @@ pub extern "C" fn amidar_num_tiles_unpainted(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for num_tiles_unpainted.");
@@ -348,7 +351,7 @@ pub extern "C" fn amidar_num_enemies(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for num_enemies.");
@@ -362,7 +365,7 @@ pub extern "C" fn amidar_jumps_remaining(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for jumps_remaining.");
@@ -376,7 +379,7 @@ pub extern "C" fn amidar_regular_mode(state_ptr: *mut WrapState) -> bool {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for regular_mode.");
@@ -390,7 +393,7 @@ pub extern "C" fn amidar_chase_mode(state_ptr: *mut WrapState) -> bool {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for chase_mode.");
@@ -404,7 +407,7 @@ pub extern "C" fn amidar_jump_mode(state_ptr: *mut WrapState) -> bool {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for jump_mode.");
@@ -418,7 +421,7 @@ pub extern "C" fn amidar_player_tile_x(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for player_tile_x.");
@@ -433,7 +436,7 @@ pub extern "C" fn amidar_player_tile_y(state_ptr: *mut WrapState) -> i32 {
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for player_tile_y.");
@@ -448,7 +451,7 @@ pub extern "C" fn amidar_enemy_tile_x(state_ptr: *mut WrapState, enemy_id: i32) 
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for enemy_tile_x.");
@@ -463,7 +466,7 @@ pub extern "C" fn amidar_enemy_tile_y(state_ptr: *mut WrapState, enemy_id: i32) 
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for enemy_tile_y.");
@@ -478,7 +481,7 @@ pub extern "C" fn amidar_enemy_caught(state_ptr: *mut WrapState, enemy_id: i32) 
         &mut *state_ptr
     };
 
-    let amidar: &toybox::amidar::State = state
+    let amidar: &amidar::State = state
         .as_any()
         .downcast_ref()
         .expect("Requires amidar State for enemy_caught.");

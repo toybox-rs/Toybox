@@ -26,6 +26,9 @@ console_error_panic_hook = { version = "0.1.1", optional = true }
 # Unfortunately, `wee_alloc` requires nightly Rust when targeting wasm for now.
 wee_alloc = { version = "0.4.2", optional = true }
 
+amidar = {path = "../tb_amidar", version="*"}
+breakout = {path = "../tb_breakout", version="*"}
+
 [dependencies.toybox]
 version = "*"
 path = "../toybox"

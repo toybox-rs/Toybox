@@ -2,13 +2,6 @@
 
 A set of games designed for causal experimentation with deep RL agents.
 
-## Target Rust Version
-
-For building on older GPU clusters, we target rustc 1.28:
-```bash
-rustup override set 1.28.0
-```
-
 ## Projects
 
 - ``toybox`` - Contains core logic for games.
