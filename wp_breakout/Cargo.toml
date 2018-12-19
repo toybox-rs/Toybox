@@ -29,7 +29,8 @@ wee_alloc = { version = "0.4.2", optional = true }
 [dependencies.toybox]
 version = "*"
 path = "../toybox"
-features=["breakout"]
+default-features = false 
+features=["breakout", "amidar"]
 
 [dev-dependencies]
 wasm-bindgen-test = "0.2"

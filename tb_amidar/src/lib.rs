@@ -8,7 +8,7 @@ extern crate lazy_static;
 #[macro_use]
 extern crate failure;
 
-mod amidar;
+pub mod amidar;
 mod digit_sprites;
 
 pub use amidar::Amidar;

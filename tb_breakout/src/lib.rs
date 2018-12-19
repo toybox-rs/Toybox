@@ -8,7 +8,7 @@ extern crate serde_derive;
 extern crate lazy_static;
 
 mod body2d;
-mod breakout;
+pub mod breakout;
 mod font;
 mod vec2d;
 

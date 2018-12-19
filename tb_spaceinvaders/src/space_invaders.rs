@@ -412,14 +412,14 @@ mod tests {
 
     #[test]
     pub fn test_shield_sprite_size() {
-        let sprite = SHIELD_SPRITE.clone();
-        assert_eq!(screen::SHIELD_SIZE.0, sprite.width() * sprite.scale());
-        assert_eq!(screen::SHIELD_SIZE.1, sprite.height() * sprite.scale());
+        let sprite = super::SHIELD_SPRITE.clone();
+        assert_eq!(super::screen::SHIELD_SIZE.0, sprite.width() * sprite.scale());
+        assert_eq!(super::screen::SHIELD_SIZE.1, sprite.height() * sprite.scale());
     }
 
     #[test]
     pub fn test_create_new_state() {
-        let state = State::new();
+        let state = super::State::new();
         assert_eq!(None, state.ship_laser);
     }
 

@@ -1,5 +1,5 @@
 [package]
-name = "spaceinvaders"
+name = "space_invaders"
 version = "0.1.0"
 authors = ["John Foley <jfoley@cs.umass.edu>"]
 

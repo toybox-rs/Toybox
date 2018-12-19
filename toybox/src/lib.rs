@@ -59,9 +59,9 @@ extern crate amidar;
 extern crate breakout;
 /// Gridworld
 #[cfg(feature = "gridworld")]
-pub mod gridworld;
+extern crate gridworld;
 /// Queries
 pub mod queries;
 /// Space Invaders logic defined in this module.
 #[cfg(feature = "space_invaders")]
-pub mod space_invaders;
+extern crate space_invaders;
