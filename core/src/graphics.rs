@@ -143,6 +143,13 @@ pub struct SpriteData {
     pub data: Vec<Vec<Color>>,
 }
 impl SpriteData {
+    pub fn to_fixed(self) -> Option<FixedSpriteData> {
+        if self.scale == 1 {
+            Some(FixedSpriteData::new(self.data))
+        } else {
+            None
+        }
+    }
     pub fn new(data: Vec<Vec<Color>>, scale: i32) -> SpriteData {
         SpriteData {
             x: 0,
