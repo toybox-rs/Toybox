@@ -29,25 +29,7 @@ struct AbstractGame {
     factory: Box<toybox::Simulation>,
     state: Box<toybox::State>,
     cached_images: Vec<(FixedSpriteData, Image)>,
-}
-
-fn write_image(game: &AbstractGame) -> std::io::Result<()> {
-    // make sure that game_size returns w, h and not h, w
-    let (width, height): (i32, i32) = game.factory.game_size();
-    let img = &mut graphics::ImageBuffer::alloc(width, height);
-    img.render(&game.state.draw());
-
-    // Write to output folder
-    let path = "output/frame.png";
-    let file = File::create(Path::new(path)).unwrap();
-
-    // Do the writing
-    let w = &mut BufWriter::new(file);
-    let mut encoder = png::Encoder::new(w, img.width as u32, img.height as u32);
-    encoder.set(png::ColorType::RGBA).set(png::BitDepth::Eight);
-    let mut writer = encoder.write_header().unwrap();
-    writer.write_image_data(&img.data).unwrap();
-    Ok(())
+    slow_mo: i32,
 }
 
 impl quicksilver::State for AbstractGame {
@@ -59,20 +41,20 @@ impl quicksilver::State for AbstractGame {
         AbstractGame {
             factory,
             state,
+            slow_mo: 0,
             cached_images: Vec::new(),
         }
     }
     fn update(&mut self, window: &mut Window) {
-        let buttons = process_keys(window, self.state.as_ref());
-        if self.state.lives() < 0 {
-            self.state = self.factory.new_game();
-            return;
+        self.slow_mo += 1;
+        if (self.slow_mo % 1 == 0) {
+            let buttons = process_keys(window, self.state.as_ref());
+            if self.state.lives() < 0 {
+                self.state = self.factory.new_game();
+                return;
+            }
+            self.state.update_mut(buttons);
         }
-        self.state.update_mut(buttons);
-        // save the the current image after drawing. Later we will want to record in batches.
-        // Hard-code the file for now.
-        // Will want to save the action taken later.
-        //write_image(self).unwrap();
     }
     fn draw(&mut self, window: &mut Window) {
         let (w, h) = self.factory.game_size();

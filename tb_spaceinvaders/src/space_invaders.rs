@@ -2,6 +2,7 @@ use super::font::{draw_score, Side};
 use failure::Error;
 use serde_json;
 use std::any::Any;
+use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::{Direction, Input};
 
@@ -135,7 +136,7 @@ pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<Sp
     load_sprite(data, on_color, 'X', '.', scale)
 }
 
-pub fn get_invader_init(row: i32) -> FixedSpriteData {
+pub fn get_invader_sprite(row: i32) -> FixedSpriteData {
     match row + 1 {
         1 => INVADER_INIT_1.clone(),
         2 => INVADER_INIT_2.clone(),
@@ -193,6 +194,9 @@ impl Player {
             color: (&screen::SHIP_COLOR).into(),
         }
     }
+    fn rect(&self) -> Rect {
+        Rect::new(self.x, self.y, self.w, self.h)
+    }
 }
 
 impl Laser {
@@ -211,7 +215,7 @@ impl Laser {
         }
     }
     /// Every other frame a laser is visible.
-    fn visible(&self) -> bool {
+    fn is_visible(&self) -> bool {
         self.t % 4 < 2
     }
     fn update_mut(&mut self) {
@@ -219,6 +223,9 @@ impl Laser {
         self.x += dx * self.speed;
         self.y += dy * self.speed;
         self.t += 1;
+    }
+    fn rect(&self) -> Rect {
+        Rect::new(self.x, self.y, self.w, self.h)
     }
 }
 
@@ -246,6 +253,7 @@ pub struct Enemy {
     col: i32,
     id: u32,
     alive: bool,
+    death_counter: Option<i32>,
 }
 
 impl Enemy {
@@ -257,7 +265,11 @@ impl Enemy {
             col,
             id,
             alive: true,
+            death_counter: None,
         }
+    }
+    fn rect(&self) -> Rect {
+        Rect::new(self.x, self.y, screen::ENEMY_SIZE.0, screen::ENEMY_SIZE.1)
     }
 }
 
@@ -281,7 +293,6 @@ impl State {
         let x_offset = w + screen::ENEMY_X_SPACE;
         let y_offset = h + screen::ENEMY_Y_SPACE;
         for j in 0..screen::ENEMIES_NUM {
-            let enemy_sprite = get_invader_init(j);
             for i in 0..screen::ENEMIES_PER_ROW {
                 let x = x + (i * x_offset);
                 let y = y + (j * y_offset);
@@ -298,6 +309,69 @@ impl State {
             shields,
             enemies,
             enemy_lasers: Vec::new(),
+        }
+    }
+
+    /// Find the enemy, if any, hit by the ship_laser, and start its death timer.
+    fn laser_enemy_collisions(&mut self) {
+        let mut hit = None;
+        if let Some(laser) = &mut self.ship_laser {
+            // Move the laser:
+            laser.update_mut();
+
+            let laser_rect = laser.rect();
+
+            // Check collision with living enemies:
+            for e in self.enemies.iter().filter(|e| e.alive) {
+                let enemy_rect = e.rect();
+
+                // Broad-phase collision: is it in the rectangle?
+                if laser_rect.intersects(&enemy_rect) {
+                    let sprite = get_invader_sprite(e.row);
+                    // pixel-perfect detection:
+                    if laser_rect.collides_visible(e.x, e.y, &sprite.data) {
+                        hit = Some(e.id);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Start enemy death animations.
+        if let Some(eid) = hit {
+            let enemy = &mut self.enemies[eid as usize];
+            self.ship_laser = None;
+            if enemy.death_counter.is_none() {
+                enemy.death_counter = Some(30)
+            }
+        }
+    }
+
+    /// Run through any enemy death animation timers, marking them as dead when finished!
+    fn enemy_animation(&mut self) {
+        for enemy in self.enemies.iter_mut() {
+            if let Some(dc) = enemy.death_counter {
+                let dc = dc - 1;
+                if dc == 0 {
+                    enemy.death_counter = None;
+                    enemy.alive = false;
+                    self.score += 10;
+                } else {
+                    enemy.death_counter = Some(dc);
+                }
+            }
+        }
+    }
+
+    /// Deletes the laser if it has gone off the top of the screen.
+    fn laser_miss_check(&mut self) {
+        if self
+            .ship_laser
+            .as_ref()
+            .map(|laser| laser.y < 0)
+            .unwrap_or(false)
+        {
+            self.ship_laser = None;
         }
     }
 }
@@ -320,8 +394,8 @@ impl toybox_core::Simulation for SpaceInvaders {
     }
     fn new_state_config_from_json(
         &self,
-        json_config: &str,
-        json_state: &str,
+        _json_config: &str,
+        _json_state: &str,
     ) -> Result<Box<toybox_core::State>, Error> {
         panic!("No config implemented for SpaceInvaders.")
     }
@@ -359,47 +433,11 @@ impl toybox_core::State for State {
             ));
         }
 
-        let mut deletion = None;
-        if let Some(laser) = &mut self.ship_laser {
-            // Move the laser:
-            laser.update_mut();
-
-            // Check collision with living enemies:
-            for e in self.enemies.iter().filter(|e| e.alive) {
-                let x = e.x;
-                let y = e.y;
-                let (w, h) = screen::ENEMY_SIZE;
-                let x2 = x + w;
-                let y2 = y + h;
-                let lx = laser.x;
-                let ly = laser.y;
-                // TODO: make rect-rect collision library easy:
-                //let (lw, lh) = (laser.w, laser.h);
-
-                // laser point inside enemy rectangle:
-                if lx >= x && lx <= x2 && ly >= y && ly <= y2 {
-                    deletion = Some(e.id);
-                }
-            }
-        }
-        if let Some(eid) = deletion {
-            let enemy = &mut self.enemies[eid as usize];
-            if enemy.alive {
-                enemy.alive = false;
-                self.score += 10;
-            }
-            self.ship_laser = None;
-        }
-
-        if self
-            .ship_laser
-            .as_ref()
-            .map(|laser| laser.y < 0)
-            .unwrap_or(false)
-        {
-            self.ship_laser = None;
-        }
+        self.laser_enemy_collisions();
+        self.enemy_animation();
+        self.laser_miss_check();
     }
+
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
         output.push(Drawable::rect(
@@ -466,12 +504,12 @@ impl toybox_core::State for State {
             output.push(Drawable::sprite(
                 enemy.x,
                 enemy.y,
-                get_invader_init(enemy.row),
+                get_invader_sprite(enemy.row),
             ));
         }
 
         if let Some(ref laser) = self.ship_laser {
-            if (laser.visible()) {
+            if laser.is_visible() {
                 output.push(Drawable::rect(
                     laser.color,
                     laser.x,

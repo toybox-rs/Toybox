@@ -5,6 +5,7 @@ extern crate serde_json;
 extern crate serde_derive;
 extern crate png;
 
+pub mod collision;
 pub mod graphics;
 pub mod random;
 
