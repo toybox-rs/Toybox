@@ -72,7 +72,7 @@ impl quicksilver::State for AbstractGame {
         // save the the current image after drawing. Later we will want to record in batches.
         // Hard-code the file for now.
         // Will want to save the action taken later.
-        write_image(self);
+        //write_image(self).unwrap();
     }
     fn draw(&mut self, window: &mut Window) {
         let (w, h) = self.factory.game_size();

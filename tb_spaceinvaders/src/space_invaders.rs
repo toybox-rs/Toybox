@@ -5,37 +5,24 @@ use toybox_core::graphics::{Color, Drawable, SpriteData};
 use toybox_core::{Direction, Input};
 
 pub mod screen {
-    // pub const GAME_SIZE: (i32, i32) = (480, 319);
     pub const GAME_SIZE: (i32, i32) = (320, 210);
-    //pub const SKY_TO_GROUND: i32 = 298;
     pub const SKY_TO_GROUND: i32 = 195;
 
-    // pub const GAME_DOT_LEFT: i32 = 99;
     pub const GAME_DOT_LEFT: i32 = 66;
-    // pub const GAME_DOT_RIGHT: i32 = 108;
     pub const GAME_DOT_RIGHT: i32 = 244;
-    // pub const GAME_DOT_SIZE: (i32, i32) = (6, 7);
     pub const GAME_DOT_SIZE: (i32, i32) = (4, 5);
-    // pub const SHIP_SIZE: (i32, i32) = (21, 15);
-    pub const SHIP_SIZE: (i32, i32) = (21, 15); // needs updating
-                                                // pub const SHIELD_SIZE: (i32, i32) = (24, 27);
+    pub const SHIP_SIZE: (i32, i32) = (14, 10); 
     pub const SHIELD_SIZE: (i32, i32) = (16, 18);
-    // pub const SHIELD1_POS: (i32, i32) = (126, 241);
     pub const SHIELD1_POS: (i32, i32) = (84, 157);
-    // pub const SHIELD2_POS: (i32, i32) = (222, 241);
     pub const SHIELD2_POS: (i32, i32) = (148, 157);
-    // pub const SHIELD3_POS: (i32, i32) = (318, 241);
     pub const SHIELD3_POS: (i32, i32) = (212, 157);
-    pub const SHIELD_SCALE: i32 = 3;
+    pub const SHIELD_SCALE: i32 = 2;
 
-    // pub const ENEMY_SIZE: (i32, i32) = (24, 15);
     pub const ENEMY_SIZE: (i32, i32) = (16, 10);
     pub const ENEMY_START_POS: (i32, i32) = (44, 31);
     pub const ENEMIES_PER_ROW: i32 = 6;
     pub const ENEMIES_NUM: i32 = 6;
-    // pub const ENEMY_Y_SPACE: i32 = 12;
     pub const ENEMY_Y_SPACE: i32 = 8;
-    // pub const ENEMY_X_SPACE: i32 = 24;
     pub const ENEMY_X_SPACE: i32 = 16;
     pub const ENEMY_SCALE: i32 = 1;
     pub const UFO_SIZE: (i32, i32) = (21, 13);
@@ -51,8 +38,8 @@ pub mod screen {
     pub const GROUND_COLOR: (u8, u8, u8) = (76, 80, 28);
     pub const SHIP_COLOR: (u8, u8, u8) = (35, 129, 59);
 
-    pub const SHIP_LIMIT_X1: i32 = GAME_DOT_LEFT + SHIP_SIZE.0 / 2;
-    pub const SHIP_LIMIT_X2: i32 = GAME_SIZE.0 - GAME_DOT_RIGHT - SHIP_SIZE.0 / 2;
+    pub const SHIP_LIMIT_X1: i32 = GAME_DOT_LEFT + GAME_DOT_SIZE.0 / 2;
+    pub const SHIP_LIMIT_X2: i32 = (GAME_DOT_RIGHT + GAME_DOT_SIZE.0 / 2) - SHIP_SIZE.0;
 
     pub const SHIELD_SPRITE_DATA: &str = include_str!("resources/space_invader_shield_x3");
     pub const INVADER_INIT_1: &str = include_str!("resources/space_invaders/invader_init_1");
@@ -97,6 +84,7 @@ pub fn load_sprite(
 pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<SpriteData, Error> {
     load_sprite(data, on_color, 'X', '.', scale)
 }
+
 pub fn get_invader_init(row: i32) -> SpriteData {
     match row + 1 {
         1 => load_sprite_default(
@@ -362,6 +350,21 @@ impl toybox_core::State for State {
             screen::SKY_TO_GROUND,
             screen::GAME_SIZE.0,
             screen::GAME_SIZE.1 - screen::SKY_TO_GROUND,
+        ));
+        // draw dots
+        output.push(Drawable::rect(
+            (&screen::LEFT_GAME_DOT_COLOR).into(), 
+            screen::GAME_DOT_LEFT,
+            screen::SKY_TO_GROUND + 1, 
+            screen::GAME_DOT_SIZE.0,
+            screen::GAME_DOT_SIZE.1
+        ));
+        output.push(Drawable::rect(
+            (&screen::RIGHT_GAME_DOT_COLOR).into(),
+            screen::GAME_DOT_RIGHT,
+            screen::SKY_TO_GROUND + 1,
+            screen::GAME_DOT_SIZE.0,
+            screen::GAME_DOT_SIZE.1
         ));
 
         if self.lives() < 0 {
