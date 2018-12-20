@@ -12,9 +12,9 @@ A set of games designed for causal experimentation with deep RL agents.
 
     cargo build --release
     cd ctoybox
-    ./start_python human_play.py --game=breakout
-    ./start_python human_play.py --game=amidar
-    ./start_python human_play.py --game=space_invaders
+    ./start_python human_play.py breakout
+    ./start_python human_play.py amidar
+    ./start_python human_play.py space_invaders
 
 ## Mac Dev Setup Instructions
 * `brew install rustup`
