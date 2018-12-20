@@ -33,6 +33,10 @@ pub mod screen {
     pub const ENEMY_DELTA: i32 = 2;
     pub const ENEMY_PERIOD: i32 = 32;
 
+    pub const DEATH_TIME: i32 = 29;
+    pub const DEATH_HIT_1: i32 = 5;
+    pub const DEATH_HIT_N: i32 = 8;
+
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE_W: i32 = 2;
     pub const LASER_SIZE_H1: i32 = 11;
@@ -128,6 +132,23 @@ lazy_static! {
         (&screen::ENEMY_COLOR).into(),
         1).unwrap().to_fixed().unwrap();
 
+    static ref INVADER_HIT_1: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_1"),
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_HIT_2: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_2"),
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_HIT_3: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_3"),
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_HIT_4: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_4"),
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+
     static ref PLAYER_SPRITE: FixedSpriteData = load_sprite_default(
         include_str!("resources/player_ship"), 
         (&screen::SHIP_COLOR).into(),
@@ -172,21 +193,39 @@ pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<Sp
     load_sprite(data, on_color, 'X', '.', scale)
 }
 
-pub fn get_invader_sprite(row: i32, orientation: &Orientation) -> FixedSpriteData {
-    match (row + 1, orientation) {
-        (1, Orientation::INIT) => INVADER_INIT_1.clone(),
-        (2, Orientation::INIT) => INVADER_INIT_2.clone(),
-        (3, Orientation::INIT) => INVADER_INIT_3.clone(),
-        (4, Orientation::INIT) => INVADER_INIT_4.clone(),
-        (5, Orientation::INIT) => INVADER_INIT_5.clone(),
-        (6, Orientation::INIT) => INVADER_INIT_6.clone(),
-        (1, Orientation::FLIP) => INVADER_FLIP_1.clone(),
-        (2, Orientation::FLIP) => INVADER_FLIP_2.clone(),
-        (3, Orientation::FLIP) => INVADER_FLIP_3.clone(),
-        (4, Orientation::FLIP) => INVADER_FLIP_4.clone(),
-        (5, Orientation::FLIP) => INVADER_FLIP_5.clone(),
-        (6, Orientation::FLIP) => INVADER_FLIP_6.clone(),
-        _ => unreachable!("Only expecting 6 invader types"),
+pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
+    let row = enemy.row;
+    let orientation = &enemy.orientation;
+    if let Some(dc) = enemy.death_counter {
+        for i in 0..4 {
+            let bound = screen::DEATH_TIME - (screen::DEATH_HIT_1 + i * screen::DEATH_HIT_N);
+            if dc > bound {
+                match i + 1 {
+                    1 => return INVADER_HIT_1.clone(),
+                    2 => return INVADER_HIT_2.clone(),
+                    3 => return INVADER_HIT_3.clone(),
+                    4 => return INVADER_HIT_4.clone(),
+                    _ => unreachable!("There are only 4 animations.")
+                }
+            }
+        }
+        unreachable!("Something is messed up in your death clock.")
+    } else {
+        match (row + 1, orientation) {
+            (1, Orientation::INIT) => INVADER_INIT_1.clone(),
+            (2, Orientation::INIT) => INVADER_INIT_2.clone(),
+            (3, Orientation::INIT) => INVADER_INIT_3.clone(),
+            (4, Orientation::INIT) => INVADER_INIT_4.clone(),
+            (5, Orientation::INIT) => INVADER_INIT_5.clone(),
+            (6, Orientation::INIT) => INVADER_INIT_6.clone(),
+            (1, Orientation::FLIP) => INVADER_FLIP_1.clone(),
+            (2, Orientation::FLIP) => INVADER_FLIP_2.clone(),
+            (3, Orientation::FLIP) => INVADER_FLIP_3.clone(),
+            (4, Orientation::FLIP) => INVADER_FLIP_4.clone(),
+            (5, Orientation::FLIP) => INVADER_FLIP_5.clone(),
+            (6, Orientation::FLIP) => INVADER_FLIP_6.clone(),
+            _ => unreachable!("Only expecting 6 invader types"),
+        }
     }
 }
 
@@ -393,7 +432,7 @@ impl State {
 
                 // Broad-phase collision: is it in the rectangle?
                 if laser_rect.intersects(&enemy_rect) {
-                    let sprite = get_invader_sprite(e.row, &e.orientation);
+                    let sprite = get_invader_sprite(&e);
                     // pixel-perfect detection:
                     if laser_rect.collides_visible(e.x, e.y, &sprite.data) {
                         hit = Some(e.id);
@@ -408,7 +447,7 @@ impl State {
             let enemy = &mut self.enemies[eid as usize];
             self.ship_laser = None;
             if enemy.death_counter.is_none() {
-                enemy.death_counter = Some(30)
+                enemy.death_counter = Some(screen::DEATH_TIME)
             }
         }
     }
@@ -576,7 +615,7 @@ impl toybox_core::State for State {
             output.push(Drawable::sprite(
                 enemy.x,
                 enemy.y,
-                get_invader_sprite(enemy.row, &enemy.orientation),
+                get_invader_sprite(&enemy),
             ));
         }
 
