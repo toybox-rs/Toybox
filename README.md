@@ -6,8 +6,13 @@ A set of games designed for causal experimentation with deep RL agents.
 
 - ``toybox`` - Contains core logic for games.
 - ``ctoybox`` - Contains OpenAI Gym environment bindings.
-- ``human_play`` - Contains a front-end for playing those games as a human. 
 - ``breakout-web-play`` - Contains a web front-end for playing those games as a human.
+
+## Play the games (using pygame)
+
+    cargo build --release
+    cd ctoybox
+    ./start_python human_play.py breakout
 
 ## Mac Dev Setup Instructions
 * `brew install rustup`

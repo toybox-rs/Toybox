@@ -527,7 +527,6 @@ impl toybox_core::State for State {
         ));
 
         for shield in &self.shields {
-            output.push(Drawable::rect(Color::white(), shield.x, shield.y, shield.width(), shield.height()));
             output.push(Drawable::DestructibleSprite(shield.clone()));
         }
 
