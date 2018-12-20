@@ -266,7 +266,7 @@ impl GrayscaleBuffer {
                             let color = sprite.data[yi as usize][xi as usize];
                             for xt in 0..sprite.scale {
                                 for yt in 0..sprite.scale {
-                                    self.set_pixel_alpha(xi + x + xt, yi + y + yt, color)
+                                    self.set_pixel_alpha(xi*sprite.scale + x + xt, yi*sprite.scale + y + yt, color)
                                 }
                             }
                         }
