@@ -25,10 +25,14 @@ pub mod screen {
 
     pub const ENEMY_SIZE: (i32, i32) = (16, 10);
     pub const ENEMY_START_POS: (i32, i32) = (44, 31);
+    pub const ENEMY_END_POS: (i32, i32) = (98, 31);
     pub const ENEMIES_PER_ROW: i32 = 6;
     pub const ENEMIES_NUM: i32 = 6;
     pub const ENEMY_Y_SPACE: i32 = 8;
     pub const ENEMY_X_SPACE: i32 = 16;
+    pub const ENEMY_DELTA: i32 = 2;
+    pub const ENEMY_PERIOD: i32 = 32;
+
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE_W: i32 = 2;
     pub const LASER_SIZE_H1: i32 = 11;
@@ -99,7 +103,34 @@ lazy_static! {
     .unwrap()
     .to_fixed()
     .unwrap();
+    static ref INVADER_FLIP_1: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_flip_1"), 
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_FLIP_2: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_flip_2"), 
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_FLIP_3: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_flip_3"), 
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_FLIP_4: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_flip_4"), 
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_FLIP_5: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_flip_5"), 
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
+    static ref INVADER_FLIP_6: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_flip_6"), 
+        (&screen::ENEMY_COLOR).into(),
+        1).unwrap().to_fixed().unwrap();
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub enum Orientation {INIT, FLIP}
 
 pub fn load_sprite(
     data: &str,
@@ -136,14 +167,20 @@ pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<Sp
     load_sprite(data, on_color, 'X', '.', scale)
 }
 
-pub fn get_invader_sprite(row: i32) -> FixedSpriteData {
-    match row + 1 {
-        1 => INVADER_INIT_1.clone(),
-        2 => INVADER_INIT_2.clone(),
-        3 => INVADER_INIT_3.clone(),
-        4 => INVADER_INIT_4.clone(),
-        5 => INVADER_INIT_5.clone(),
-        6 => INVADER_INIT_6.clone(),
+pub fn get_invader_sprite(row: i32, orientation: &Orientation) -> FixedSpriteData {
+    match (row + 1, orientation) {
+        (1, Orientation::INIT) => INVADER_INIT_1.clone(),
+        (2, Orientation::INIT) => INVADER_INIT_2.clone(),
+        (3, Orientation::INIT) => INVADER_INIT_3.clone(),
+        (4, Orientation::INIT) => INVADER_INIT_4.clone(),
+        (5, Orientation::INIT) => INVADER_INIT_5.clone(),
+        (6, Orientation::INIT) => INVADER_INIT_6.clone(),
+        (1, Orientation::FLIP) => INVADER_FLIP_1.clone(),
+        (2, Orientation::FLIP) => INVADER_FLIP_2.clone(),
+        (3, Orientation::FLIP) => INVADER_FLIP_3.clone(),
+        (4, Orientation::FLIP) => INVADER_FLIP_4.clone(),
+        (5, Orientation::FLIP) => INVADER_FLIP_5.clone(),
+        (6, Orientation::FLIP) => INVADER_FLIP_6.clone(),
         _ => unreachable!("Only expecting 6 invader types"),
     }
 }
@@ -254,6 +291,9 @@ pub struct Enemy {
     id: u32,
     alive: bool,
     death_counter: Option<i32>,
+    move_counter: i32,
+    move_right: bool,
+    orientation: Orientation
 }
 
 impl Enemy {
@@ -266,10 +306,31 @@ impl Enemy {
             id,
             alive: true,
             death_counter: None,
+            move_counter: screen::ENEMY_PERIOD,
+            move_right: true, 
+            orientation: Orientation::INIT
         }
     }
     fn rect(&self) -> Rect {
         Rect::new(self.x, self.y, screen::ENEMY_SIZE.0, screen::ENEMY_SIZE.1)
+    }
+    fn enemy_shift(&mut self) {
+        if self.move_counter == 0 {
+            let width = screen::ENEMY_SIZE.0;
+            let delta = screen::ENEMY_DELTA;
+            let pad = screen::ENEMY_X_SPACE;
+            let start = screen::ENEMY_START_POS.0 + self.col * (width + pad);
+            let end = screen::ENEMY_END_POS.0 + self.col * (width + pad);
+            self.move_right = if self.x == start { true } else if self.x == end { false } else { self.move_right };
+            self.x = if self.move_right { self.x + delta } else { self.x - delta };
+            self.orientation = match self.orientation {
+                Orientation::INIT => Orientation::FLIP,
+                Orientation::FLIP => Orientation::INIT
+            };
+            self.move_counter = screen::ENEMY_PERIOD;
+        } else {
+            self.move_counter -= 1;
+        }
     }
 }
 
@@ -327,7 +388,7 @@ impl State {
 
                 // Broad-phase collision: is it in the rectangle?
                 if laser_rect.intersects(&enemy_rect) {
-                    let sprite = get_invader_sprite(e.row);
+                    let sprite = get_invader_sprite(e.row, &e.orientation);
                     // pixel-perfect detection:
                     if laser_rect.collides_visible(e.x, e.y, &sprite.data) {
                         hit = Some(e.id);
@@ -372,6 +433,13 @@ impl State {
             .unwrap_or(false)
         {
             self.ship_laser = None;
+        }
+    }
+
+    /// Move enemies 
+    fn enemy_shift(&mut self) {
+        for enemy in self.enemies.iter_mut() {
+            enemy.enemy_shift();
         }
     }
 }
@@ -434,6 +502,7 @@ impl toybox_core::State for State {
         }
 
         self.laser_enemy_collisions();
+        self.enemy_shift();
         self.enemy_animation();
         self.laser_miss_check();
     }
@@ -504,7 +573,7 @@ impl toybox_core::State for State {
             output.push(Drawable::sprite(
                 enemy.x,
                 enemy.y,
-                get_invader_sprite(enemy.row),
+                get_invader_sprite(enemy.row, &enemy.orientation),
             ));
         }
 
