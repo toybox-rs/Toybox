@@ -10,7 +10,6 @@ pub fn destructive_collide(laser: &Rect, x: i32, y: i32, sprite: &mut Vec<Vec<Co
                 let px = (xi as i32) + x;
                 let py = (yi as i32) + y;
 
-
                 if laser.contains_xy(px, py) {
                     *color = Color::invisible();
                     hit = true;

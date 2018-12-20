@@ -1,6 +1,6 @@
 use super::graphics::Color;
 
-#[derive(Clone,PartialEq,Eq,Hash,Debug)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Rect {
     x: i32,
     y: i32,
