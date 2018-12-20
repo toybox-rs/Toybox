@@ -7,7 +7,6 @@ members = [
   "core",
   "ctoybox",
   "toybox",
-  "human_play",
   "tb_amidar",
   "tb_breakout",
   "tb_gridworld",
