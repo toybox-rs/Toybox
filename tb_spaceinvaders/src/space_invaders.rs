@@ -1,7 +1,7 @@
 use failure::Error;
 use serde_json;
 use std::any::Any;
-use toybox_core::graphics::{Color, Drawable, SpriteData};
+use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::{Direction, Input};
 
 pub mod screen {
@@ -24,7 +24,6 @@ pub mod screen {
     pub const ENEMIES_NUM: i32 = 6;
     pub const ENEMY_Y_SPACE: i32 = 8;
     pub const ENEMY_X_SPACE: i32 = 16;
-    pub const ENEMY_SCALE: i32 = 1;
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE: (i32, i32) = (3, 11);
 
@@ -42,12 +41,57 @@ pub mod screen {
     pub const SHIP_LIMIT_X2: i32 = (GAME_DOT_RIGHT + GAME_DOT_SIZE.0 / 2) - SHIP_SIZE.0;
 
     pub const SHIELD_SPRITE_DATA: &str = include_str!("resources/space_invader_shield_x3");
-    pub const INVADER_INIT_1: &str = include_str!("resources/space_invaders/invader_init_1");
-    pub const INVADER_INIT_2: &str = include_str!("resources/space_invaders/invader_init_2");
-    pub const INVADER_INIT_3: &str = include_str!("resources/space_invaders/invader_init_3");
-    pub const INVADER_INIT_4: &str = include_str!("resources/space_invaders/invader_init_4");
-    pub const INVADER_INIT_5: &str = include_str!("resources/space_invaders/invader_init_5");
-    pub const INVADER_INIT_6: &str = include_str!("resources/space_invaders/invader_init_6");
+
+}
+lazy_static! {
+    static ref INVADER_INIT_1: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_init_1"),
+        (&screen::ENEMY_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
+    static ref INVADER_INIT_2: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_init_2"),
+        (&screen::ENEMY_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
+    static ref INVADER_INIT_3: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_init_3"),
+        (&screen::ENEMY_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
+    static ref INVADER_INIT_4: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_init_4"),
+        (&screen::ENEMY_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
+    static ref INVADER_INIT_5: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_init_5"),
+        (&screen::ENEMY_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
+    static ref INVADER_INIT_6: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_init_6"),
+        (&screen::ENEMY_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
 }
 
 pub fn load_sprite(
@@ -85,44 +129,14 @@ pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<Sp
     load_sprite(data, on_color, 'X', '.', scale)
 }
 
-pub fn get_invader_init(row: i32) -> SpriteData {
+pub fn get_invader_init(row: i32) -> FixedSpriteData {
     match row + 1 {
-        1 => load_sprite_default(
-            screen::INVADER_INIT_1,
-            (&screen::ENEMY_COLOR).into(),
-            screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
-        2 => load_sprite_default(
-            screen::INVADER_INIT_2,
-            (&screen::ENEMY_COLOR).into(),
-            screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
-        3 => load_sprite_default(
-            screen::INVADER_INIT_3,
-            (&screen::ENEMY_COLOR).into(),
-            screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
-        4 => load_sprite_default(
-            screen::INVADER_INIT_4,
-            (&screen::ENEMY_COLOR).into(),
-            screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
-        5 => load_sprite_default(
-            screen::INVADER_INIT_5,
-            (&screen::ENEMY_COLOR).into(),
-            screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
-        6 => load_sprite_default(
-            screen::INVADER_INIT_6,
-            (&screen::ENEMY_COLOR).into(),
-            screen::ENEMY_SCALE,
-        )
-        .expect("Invader1 sprite should be included!"),
+        1 => INVADER_INIT_1.clone(),
+        2 => INVADER_INIT_2.clone(),
+        3 => INVADER_INIT_3.clone(),
+        4 => INVADER_INIT_4.clone(),
+        5 => INVADER_INIT_5.clone(),
+        6 => INVADER_INIT_6.clone(),
         _ => unreachable!("Only expecting 6 invader types"),
     }
 }
@@ -175,17 +189,6 @@ impl Actor {
             ..Default::default()
         }
     }
-    fn enemy(x: i32, y: i32) -> Actor {
-        let (w, h) = screen::ENEMY_SIZE;
-        Actor {
-            x,
-            y,
-            w,
-            h,
-            color: (&screen::ENEMY_COLOR).into(),
-            ..Default::default()
-        }
-    }
     fn laser(x: i32, y: i32, dir: Direction) -> Actor {
         let (w, h) = screen::LASER_SIZE;
         Actor {
@@ -221,9 +224,23 @@ pub struct State {
     /// Shields are destructible, so we need to track their pixels...
     pub shields: Vec<SpriteData>,
     /// Enemies are rectangular actors (logically speaking).
-    pub enemies: Vec<SpriteData>,
+    pub enemies: Vec<Enemy>,
     /// Enemy lasers are actors as well.
     pub enemy_lasers: Vec<Actor>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Enemy {
+    x: i32,
+    y: i32,
+    row: i32,
+    col: i32,
+}
+
+impl Enemy {
+    fn new(x: i32, y: i32, row: i32, col: i32) -> Enemy {
+        Enemy { x, y, row, col }
+    }
 }
 
 impl State {
@@ -250,7 +267,7 @@ impl State {
             for i in 0..screen::ENEMIES_PER_ROW {
                 let x = x + (i * x_offset);
                 let y = y + (j * y_offset);
-                enemies.push(enemy_sprite.translate(x, y))
+                enemies.push(Enemy::new(x, y, j, i));
             }
         }
 
@@ -384,7 +401,11 @@ impl toybox_core::State for State {
         }
 
         for enemy in &self.enemies {
-            output.push(Drawable::DestructibleSprite(enemy.clone()));
+            output.push(Drawable::sprite(
+                enemy.x,
+                enemy.y,
+                get_invader_init(enemy.row),
+            ));
         }
 
         if let Some(ref laser) = self.ship_laser {
