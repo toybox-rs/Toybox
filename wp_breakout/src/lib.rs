@@ -2,8 +2,8 @@ extern crate cfg_if;
 extern crate toybox;
 extern crate wasm_bindgen;
 
-extern crate breakout;
 extern crate amidar;
+extern crate breakout;
 
 mod utils;
 

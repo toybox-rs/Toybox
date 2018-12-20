@@ -189,7 +189,10 @@ impl toybox_core::Simulation for GridWorld {
         Box::new(State::from_config(&self.config))
     }
 
-    fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, failure::Error> {
+    fn new_state_from_json(
+        &self,
+        json_str: &str,
+    ) -> Result<Box<toybox_core::State>, failure::Error> {
         let state: State = serde_json::from_str(json_str)?;
         Ok(Box::new(state))
     }
