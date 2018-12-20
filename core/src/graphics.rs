@@ -335,6 +335,7 @@ impl ImageBuffer {
         }
     }
 
+    /// Used in breakout_wp
     pub fn render_sprite(&mut self, scale: i32, data: &Vec<Vec<Color>>) {
         let h = data.len() as i32;
         let w = data[0].len() as i32;
@@ -385,7 +386,11 @@ impl ImageBuffer {
                             let color = sprite.data[yi as usize][xi as usize];
                             for xt in 0..sprite.scale {
                                 for yt in 0..sprite.scale {
-                                    self.set_pixel_alpha(xi + x + xt, yi + y + yt, color)
+                                    self.set_pixel_alpha(
+                                        xi * scale + x + xt,
+                                        yi * scale + y + yt,
+                                        color,
+                                    )
                                 }
                             }
                         }
