@@ -11,7 +11,7 @@ pub mod screen {
     pub const GAME_DOT_LEFT: i32 = 66;
     pub const GAME_DOT_RIGHT: i32 = 244;
     pub const GAME_DOT_SIZE: (i32, i32) = (4, 5);
-    pub const SHIP_SIZE: (i32, i32) = (14, 10); 
+    pub const SHIP_SIZE: (i32, i32) = (14, 10);
     pub const SHIELD_SIZE: (i32, i32) = (16, 18);
     pub const SHIELD1_POS: (i32, i32) = (84, 157);
     pub const SHIELD2_POS: (i32, i32) = (148, 157);
@@ -353,18 +353,18 @@ impl toybox_core::State for State {
         ));
         // draw dots
         output.push(Drawable::rect(
-            (&screen::LEFT_GAME_DOT_COLOR).into(), 
+            (&screen::LEFT_GAME_DOT_COLOR).into(),
             screen::GAME_DOT_LEFT,
-            screen::SKY_TO_GROUND + 1, 
+            screen::SKY_TO_GROUND + 1,
             screen::GAME_DOT_SIZE.0,
-            screen::GAME_DOT_SIZE.1
+            screen::GAME_DOT_SIZE.1,
         ));
         output.push(Drawable::rect(
             (&screen::RIGHT_GAME_DOT_COLOR).into(),
             screen::GAME_DOT_RIGHT,
             screen::SKY_TO_GROUND + 1,
             screen::GAME_DOT_SIZE.0,
-            screen::GAME_DOT_SIZE.1
+            screen::GAME_DOT_SIZE.1,
         ));
 
         if self.lives() < 0 {
@@ -416,8 +416,14 @@ mod tests {
     #[test]
     pub fn test_shield_sprite_size() {
         let sprite = super::SHIELD_SPRITE.clone();
-        assert_eq!(super::screen::SHIELD_SIZE.0, sprite.width() * sprite.scale());
-        assert_eq!(super::screen::SHIELD_SIZE.1, sprite.height() * sprite.scale());
+        assert_eq!(
+            super::screen::SHIELD_SIZE.0,
+            sprite.width() * sprite.scale()
+        );
+        assert_eq!(
+            super::screen::SHIELD_SIZE.1,
+            sprite.height() * sprite.scale()
+        );
     }
 
     #[test]
