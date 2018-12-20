@@ -1,5 +1,6 @@
 use super::graphics::Color;
 
+#[derive(Clone,PartialEq,Eq,Hash,Debug)]
 pub struct Rect {
     x: i32,
     y: i32,
@@ -51,19 +52,6 @@ impl Rect {
         }
         false
     }
-}
-
-fn rect_rect_intersect(
-    x1: i32,
-    y1: i32,
-    w1: i32,
-    h1: i32,
-    x2: i32,
-    y2: i32,
-    w2: i32,
-    h2: i32,
-) -> bool {
-    rect_intersect(&Rect::new(x1, y1, w1, h1), &Rect::new(x2, y2, w2, h2))
 }
 
 /// Core algorithm from [developer.mozilla.org](https://developer.mozilla.org/en-US/docs/Games/Techniques/2D_collision_detection)

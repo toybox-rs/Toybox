@@ -1,4 +1,5 @@
 use super::font::{draw_score, Side};
+use super::destruction;
 use failure::Error;
 use serde_json;
 use std::any::Any;
@@ -21,7 +22,6 @@ pub mod screen {
     pub const SHIELD1_POS: (i32, i32) = (84, 157);
     pub const SHIELD2_POS: (i32, i32) = (148, 157);
     pub const SHIELD3_POS: (i32, i32) = (212, 157);
-    pub const SHIELD_SCALE: i32 = 2;
 
     pub const ENEMY_SIZE: (i32, i32) = (16, 10);
     pub const ENEMY_START_POS: (i32, i32) = (44, 31);
@@ -106,7 +106,7 @@ pub fn load_sprite(
     on_color: Color,
     on_symbol: char,
     off_symbol: char,
-    scale: i32,
+    _scale: i32,
 ) -> Result<SpriteData, Error> {
     let off_color = Color::invisible();
     let mut pixels = Vec::new();
@@ -130,7 +130,7 @@ pub fn load_sprite(
     }
     let width = pixels[0].len();
     debug_assert!(pixels.iter().all(|row| row.len() == width));
-    Ok(SpriteData::new(pixels, scale))
+    Ok(SpriteData::new(pixels, 1))
 }
 pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<SpriteData, Error> {
     load_sprite(data, on_color, 'X', '.', scale)
@@ -152,7 +152,7 @@ lazy_static! {
     static ref SHIELD_SPRITE: SpriteData = load_sprite_default(
         screen::SHIELD_SPRITE_DATA,
         (&screen::SHIELD_COLOR).into(),
-        screen::SHIELD_SCALE
+        1
     )
     .expect("Shield sprite should be included!");
 }
@@ -217,12 +217,6 @@ impl Laser {
     /// Every other frame a laser is visible.
     fn is_visible(&self) -> bool {
         self.t % 4 < 2
-    }
-    fn update_mut(&mut self) {
-        let (dx, dy) = self.movement.delta();
-        self.x += dx * self.speed;
-        self.y += dy * self.speed;
-        self.t += 1;
     }
     fn rect(&self) -> Rect {
         Rect::new(self.x, self.y, self.w, self.h)
@@ -316,9 +310,6 @@ impl State {
     fn laser_enemy_collisions(&mut self) {
         let mut hit = None;
         if let Some(laser) = &mut self.ship_laser {
-            // Move the laser:
-            laser.update_mut();
-
             let laser_rect = laser.rect();
 
             // Check collision with living enemies:
@@ -371,6 +362,30 @@ impl State {
             .map(|laser| laser.y < 0)
             .unwrap_or(false)
         {
+            self.ship_laser = None;
+        }
+    }
+
+    fn laser_shield_check(&mut self) {
+        let mut hit = false;
+        if let Some(laser) = &self.ship_laser {
+            let laser_rect = laser.rect();
+
+            // Check collision with living shields:
+            for shield in self.shields.iter_mut() {
+                let shield_rect = Rect::new(shield.x, shield.y, shield.width(), shield.height());
+
+                // Broad-phase collision: is it in the rectangle?
+                if laser_rect.intersects(&shield_rect) {
+                    if destruction::destructive_collide(&laser_rect, shield.x, shield.y, &mut shield.data) {
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if hit {
             self.ship_laser = None;
         }
     }
@@ -433,8 +448,23 @@ impl toybox_core::State for State {
             ));
         }
 
-        self.laser_enemy_collisions();
         self.enemy_animation();
+
+        if self.ship_laser.is_some() {
+            let laser_speed = self.ship_laser.as_ref().map(|l| l.speed).unwrap();
+
+            // Move the laser 1px at a time (for collisions) within a frame up to its speed.
+            for _ in 0..laser_speed {
+                if let Some(laser) = &mut self.ship_laser {
+                    laser.y -= 1;
+                } else {
+                    break;
+                }
+                self.laser_enemy_collisions();
+                self.laser_shield_check();
+            }
+        }
+
         self.laser_miss_check();
     }
 
@@ -497,6 +527,7 @@ impl toybox_core::State for State {
         ));
 
         for shield in &self.shields {
+            output.push(Drawable::rect(Color::white(), shield.x, shield.y, shield.width(), shield.height()));
             output.push(Drawable::DestructibleSprite(shield.clone()));
         }
 
@@ -539,11 +570,11 @@ mod tests {
         let sprite = super::SHIELD_SPRITE.clone();
         assert_eq!(
             super::screen::SHIELD_SIZE.0,
-            sprite.width() * sprite.scale()
+            sprite.width()
         );
         assert_eq!(
             super::screen::SHIELD_SIZE.1,
-            sprite.height() * sprite.scale()
+            sprite.height()
         );
     }
 
