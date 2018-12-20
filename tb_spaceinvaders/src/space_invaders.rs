@@ -1,3 +1,4 @@
+use super::font::{draw_score, Side};
 use failure::Error;
 use serde_json;
 use std::any::Any;
@@ -11,6 +12,9 @@ pub mod screen {
     pub const GAME_DOT_LEFT: i32 = 66;
     pub const GAME_DOT_RIGHT: i32 = 244;
     pub const GAME_DOT_SIZE: (i32, i32) = (4, 5);
+    pub const SCORE_LEFT_X_POS: i32 = 8;
+    pub const SCORE_RIGHT_X_POS: i32 = 168;
+    pub const SCORE_Y_POS: i32 = 8;
     pub const SHIP_SIZE: (i32, i32) = (14, 10);
     pub const SHIELD_SIZE: (i32, i32) = (16, 18);
     pub const SHIELD1_POS: (i32, i32) = (84, 157);
@@ -427,6 +431,19 @@ impl toybox_core::State for State {
             screen::SKY_TO_GROUND + 1,
             screen::GAME_DOT_SIZE.0,
             screen::GAME_DOT_SIZE.1,
+        ));
+        // draw score
+        output.extend(draw_score(
+            self.score,
+            screen::SCORE_LEFT_X_POS,
+            screen::SCORE_Y_POS,
+            Side::LEFT,
+        ));
+        output.extend(draw_score(
+            0,
+            screen::SCORE_RIGHT_X_POS,
+            screen::SCORE_Y_POS,
+            Side::RIGHT,
         ));
 
         if self.lives() < 0 {
