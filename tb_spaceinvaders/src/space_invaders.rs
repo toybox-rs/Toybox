@@ -16,7 +16,7 @@ pub mod screen {
     pub const SCORE_LEFT_X_POS: i32 = 8;
     pub const SCORE_RIGHT_X_POS: i32 = 168;
     pub const SCORE_Y_POS: i32 = 8;
-    pub const SHIP_SIZE: (i32, i32) = (14, 10);
+    pub const SHIP_SIZE: (i32, i32) = (16, 10);
     pub const SHIELD_SIZE: (i32, i32) = (16, 18);
     pub const SHIELD1_POS: (i32, i32) = (84, 157);
     pub const SHIELD2_POS: (i32, i32) = (148, 157);
@@ -127,6 +127,11 @@ lazy_static! {
         include_str!("resources/space_invaders/invader_flip_6"), 
         (&screen::ENEMY_COLOR).into(),
         1).unwrap().to_fixed().unwrap();
+
+    static ref PLAYER_SPRITE: FixedSpriteData = load_sprite_default(
+        include_str!("resources/player_ship"), 
+        (&screen::SHIP_COLOR).into(),
+       1).unwrap().to_fixed().unwrap();
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -557,12 +562,10 @@ impl toybox_core::State for State {
             return output;
         }
 
-        output.push(Drawable::rect(
-            self.ship.color,
+        output.push(Drawable::sprite(
             self.ship.x,
             self.ship.y,
-            self.ship.w,
-            self.ship.h,
+            PLAYER_SPRITE.clone()
         ));
 
         for shield in &self.shields {
