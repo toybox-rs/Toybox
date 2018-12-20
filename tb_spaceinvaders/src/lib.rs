@@ -8,6 +8,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
 
+mod font;
 mod space_invaders;
 
 pub use space_invaders::screen;

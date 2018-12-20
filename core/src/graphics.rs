@@ -406,3 +406,52 @@ impl ImageBuffer {
 pub fn render_to_buffer(target: &mut ImageBuffer, commands: &[Drawable]) {
     target.render(commands);
 }
+
+/// Parse a number from number_sprites.txt into a SpriteData.
+fn load_sprite(data: &[&str], on_color: Color, set: char, ignore: char) -> FixedSpriteData {
+    let off_color = Color::invisible();
+    let mut pixels: Vec<Vec<Color>> = Vec::new();
+    for line in data {
+        let mut pixel_row = Vec::new();
+        for ch in line.chars() {
+            if ch == set {
+                pixel_row.push(on_color);
+            } else if ch == ignore {
+                pixel_row.push(off_color);
+            } else {
+                panic!(
+                    "Cannot construct pixel from {}, expected one of (on={}, off={})",
+                    ch, set, ignore
+                );
+            }
+        }
+        pixels.push(pixel_row);
+    }
+    let width = pixels[0].len();
+    debug_assert!(pixels.iter().all(|row| row.len() == width));
+    FixedSpriteData::new(pixels)
+}
+
+/// Parse digit sprites text files, splitting on blank lines.
+pub fn load_digit_sprites(
+    data: &str,
+    on_color: Color,
+    set: char,
+    ignore: char,
+) -> Vec<FixedSpriteData> {
+    let mut sprites = Vec::new();
+    let mut current = Vec::new();
+    for line in data.lines() {
+        if line.trim().is_empty() && current.len() > 0 {
+            sprites.push(load_sprite(&current, on_color, set, ignore));
+            current.clear();
+        } else {
+            current.push(line);
+        }
+    }
+    if current.len() > 0 {
+        sprites.push(load_sprite(&current, on_color, set, ignore));
+    }
+
+    sprites.into_iter().rev().collect()
+}
