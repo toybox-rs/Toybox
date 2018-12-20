@@ -29,7 +29,9 @@ pub mod screen {
     pub const ENEMY_Y_SPACE: i32 = 8;
     pub const ENEMY_X_SPACE: i32 = 16;
     pub const UFO_SIZE: (i32, i32) = (21, 13);
-    pub const LASER_SIZE: (i32, i32) = (3, 11);
+    pub const LASER_SIZE_W: i32 = 2;
+    pub const LASER_SIZE_H1: i32 = 11;
+    pub const LASER_SIZE_H2: i32 = 8;
 
     // Colors:
     pub const LEFT_GAME_DOT_COLOR: (u8, u8, u8) = (64, 124, 64);
@@ -155,65 +157,68 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Actor {
+pub struct Player {
     pub x: i32,
     pub y: i32,
     pub w: i32,
     pub h: i32,
-    /// Lasers have a direction.
-    pub movement: Option<Direction>,
-    /// Many things may have a speed.
+    /// Speed of movenet.
     pub speed: i32,
     pub color: Color,
 }
 
-impl Default for Actor {
-    fn default() -> Self {
-        Actor {
-            x: 0,
-            y: 0,
-            w: 40,
-            h: 0,
-            movement: None,
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Laser {
+    pub x: i32,
+    pub y: i32,
+    pub w: i32,
+    pub h: i32,
+    /// Laser timing (visible / not-visible) based on this.
+    pub t: i32,
+    /// Lasers have a direction.
+    pub movement: Direction,
+    pub speed: i32,
+    pub color: Color,
+}
+
+impl Player {
+    fn new(x: i32, y: i32) -> Player {
+        let (w, h) = screen::SHIP_SIZE;
+        Player {
+            x,
+            y,
+            w,
+            h,
             speed: 3,
-            color: Color::white(),
+            color: (&screen::SHIP_COLOR).into(),
         }
     }
 }
 
-impl Actor {
-    fn ship(x: i32, y: i32) -> Actor {
-        let (w, h) = screen::SHIP_SIZE;
-        Actor {
+impl Laser {
+    fn new(x: i32, y: i32, dir: Direction) -> Laser {
+        let w = screen::LASER_SIZE_W;
+        let h = screen::LASER_SIZE_H1;
+        Laser {
             x,
             y,
             w,
             h,
-            color: (&screen::SHIP_COLOR).into(),
-            ..Default::default()
-        }
-    }
-    fn laser(x: i32, y: i32, dir: Direction) -> Actor {
-        let (w, h) = screen::LASER_SIZE;
-        Actor {
-            x,
-            y,
-            w,
-            h,
+            t: 0,
             color: (&screen::LASER_COLOR).into(),
-            movement: Some(dir),
-            speed: 5,
+            movement: dir,
+            speed: 3,
         }
     }
-    fn update_mut(&mut self) -> bool {
-        if let Some(dir) = self.movement {
-            let (dx, dy) = dir.delta();
-            self.x += dx * self.speed;
-            self.y += dy * self.speed;
-            true
-        } else {
-            false
-        }
+    /// Every other frame a laser is visible.
+    fn visible(&self) -> bool {
+        self.t % 4 < 2
+    }
+    fn update_mut(&mut self) {
+        let (dx, dy) = self.movement.delta();
+        self.x += dx * self.speed;
+        self.y += dy * self.speed;
+        self.t += 1;
     }
 }
 
@@ -222,15 +227,15 @@ pub struct State {
     pub lives: i32,
     pub score: i32,
     /// Ship is a rectangular actor (logically).
-    pub ship: Actor,
+    pub ship: Player,
     /// Emulate the fact that Atari could only have one laser at a time (and it "recharges" faster if you hit the front row...)
-    pub ship_laser: Option<Actor>,
+    pub ship_laser: Option<Laser>,
     /// Shields are destructible, so we need to track their pixels...
     pub shields: Vec<SpriteData>,
     /// Enemies are rectangular actors (logically speaking).
     pub enemies: Vec<Enemy>,
     /// Enemy lasers are actors as well.
-    pub enemy_lasers: Vec<Actor>,
+    pub enemy_lasers: Vec<Laser>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -288,7 +293,7 @@ impl State {
         State {
             lives: 0,
             score: 0,
-            ship: Actor::ship(player_start_x, player_start_y),
+            ship: Player::new(player_start_x, player_start_y),
             ship_laser: None,
             shields,
             enemies,
@@ -333,24 +338,21 @@ impl toybox_core::State for State {
         self.score
     }
     fn update_mut(&mut self, buttons: Input) {
-        self.ship.movement = if buttons.left {
-            Some(Direction::Left)
+        if buttons.left {
+            self.ship.x -= self.ship.speed;
         } else if buttons.right {
-            Some(Direction::Right)
-        } else {
-            None
-        };
-
-        if self.ship.update_mut() {
-            if self.ship.x > screen::SHIP_LIMIT_X2 {
-                self.ship.x = screen::SHIP_LIMIT_X2;
-            } else if self.ship.x < screen::SHIP_LIMIT_X1 {
-                self.ship.x = screen::SHIP_LIMIT_X1;
-            }
+            self.ship.x += self.ship.speed;
         }
+
+        if self.ship.x > screen::SHIP_LIMIT_X2 {
+            self.ship.x = screen::SHIP_LIMIT_X2;
+        } else if self.ship.x < screen::SHIP_LIMIT_X1 {
+            self.ship.x = screen::SHIP_LIMIT_X1;
+        }
+
         // Only shoot a laser if not present:
         if self.ship_laser.is_none() && buttons.button1 {
-            self.ship_laser = Some(Actor::laser(
+            self.ship_laser = Some(Laser::new(
                 self.ship.x + self.ship.w / 2,
                 self.ship.y,
                 Direction::Up,
@@ -469,13 +471,15 @@ impl toybox_core::State for State {
         }
 
         if let Some(ref laser) = self.ship_laser {
-            output.push(Drawable::rect(
-                laser.color,
-                laser.x,
-                laser.y,
-                laser.w,
-                laser.h,
-            ))
+            if (laser.visible()) {
+                output.push(Drawable::rect(
+                    laser.color,
+                    laser.x,
+                    laser.y,
+                    laser.w,
+                    laser.h,
+                ))
+            }
         }
 
         output
