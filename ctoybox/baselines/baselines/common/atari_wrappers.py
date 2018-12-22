@@ -87,11 +87,12 @@ class SampleEnvs(gym.Wrapper):
     def reset(self, **kwargs):
         # Takes optional arg for new weights
         if 'weights' in kwargs:
-            self.weights = kwargs.weights
+            self.weights = kwargs['weights']
         
         env = np.random.choice(self.envs, p=self.weights)
         print('resetting to env:', env)
         self.env = env
+        gym.Wrapper.__init__(self, env)
         self.env.reset(**kwargs)
         SampleEnvs.samples[get_turtle(env)] += 1 
         obs, _, _, _ = self.env.step(0)
