@@ -1,6 +1,7 @@
 use super::destruction;
 use super::font::{draw_score, Side};
 use failure::Error;
+use itertools::Itertools;
 use serde_json;
 use std::any::Any;
 use toybox_core::collision::Rect;
@@ -361,6 +362,8 @@ pub struct State {
     pub shields: Vec<SpriteData>,
     /// Enemies are rectangular actors (logically speaking).
     pub enemies: Vec<Enemy>,
+    /// Enemy shot delay:
+    pub enemy_shot_delay: i32,
     /// Enemy lasers are actors as well.
     pub enemy_lasers: Vec<Laser>,
 }
@@ -460,6 +463,7 @@ impl State {
             score: 0,
             ship: Player::new(player_start_x, player_start_y),
             ship_laser: None,
+            enemy_shot_delay: 50,
             shields,
             enemies,
             enemy_lasers: Vec::new(),
@@ -524,41 +528,102 @@ impl State {
         {
             self.ship_laser = None;
         }
+
+        // Collect lasers that will have gone off-screen:
+        let mut delete = Vec::new();
+        for (idx, laser) in self.enemy_lasers.iter().enumerate() {
+            if laser.y > screen::GAME_SIZE.1 {
+                delete.push(idx);
+            }
+        }
+        // Delete indexes in backwards order.
+        for index in delete.into_iter().rev() {
+            self.enemy_lasers.remove(index);
+        }
     }
 
-    fn laser_shield_check(&mut self) {
-        let mut hit = false;
-        if let Some(laser) = &self.ship_laser {
-            let laser_rect = laser.rect();
+    fn laser_shield_check(&mut self, laser: &Rect) -> bool {
+        // Check collision with living shields:
+        for shield in self.shields.iter_mut() {
+            let shield_rect = Rect::new(shield.x, shield.y, shield.width(), shield.height());
 
-            // Check collision with living shields:
-            for shield in self.shields.iter_mut() {
-                let shield_rect = Rect::new(shield.x, shield.y, shield.width(), shield.height());
-
-                // Broad-phase collision: is it in the rectangle?
-                if laser_rect.intersects(&shield_rect) {
-                    if destruction::destructive_collide(
-                        &laser_rect,
-                        shield.x,
-                        shield.y,
-                        &mut shield.data,
-                    ) {
-                        hit = true;
-                        break;
-                    }
+            // Broad-phase collision: is it in the rectangle?
+            if laser.intersects(&shield_rect) {
+                if destruction::destructive_collide(&laser, shield.x, shield.y, &mut shield.data) {
+                    return true;
                 }
             }
         }
-
-        if hit {
-            self.ship_laser = None;
-        }
+        false
     }
 
     /// Move enemies
     fn enemy_shift(&mut self) {
         for enemy in self.enemies.iter_mut() {
             enemy.enemy_shift();
+        }
+    }
+
+    fn enemy_fire_lasers(&mut self) {
+        // Don't fire too many lasers.
+        if self.enemy_lasers.len() > 1 {
+            return;
+        }
+        self.enemy_shot_delay -= 1;
+        if self.enemy_shot_delay <= 0 {
+            // TODO: better delay? Less predictable?
+            // Random state?
+            self.enemy_shot_delay = 50;
+
+            // Everybody shoots for now...
+            for eid in self.active_weapon_enemy_ids() {
+                let enemy = &mut self.enemies[eid as usize];
+                let start = enemy.rect();
+
+                let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
+                self.enemy_lasers.push(shot);
+            }
+        }
+    }
+
+    /// Find all enemies that are at the "bottom" of their column and can therefore fire weapons.
+    /// Return ids in case you want to mutably or immutably borrow them.
+    fn active_weapon_enemy_ids(&self) -> Vec<u32> {
+        let mut out = Vec::new();
+
+        let alive: Vec<&Enemy> = self.enemies.iter().filter(|e| e.alive).collect();
+        let columns: Vec<i32> = alive.iter().map(|e| e.col).unique().collect();
+
+        for col in columns.into_iter() {
+            let bottom = alive
+                .iter()
+                .filter(|e| e.col == col)
+                .max_by_key(|e| e.row)
+                .map(|e| e.id);
+            if let Some(eid) = bottom {
+                out.push(eid);
+            }
+        }
+
+        out
+    }
+
+    /// Move all lasers watching for collision with shields!
+    fn enemy_laser_movement(&mut self) {
+        let mut delete_lasers = Vec::new();
+        for laser_idx in 0..self.enemy_lasers.len() {
+            let laser_speed = self.enemy_lasers[laser_idx].speed;
+            for _ in 0..laser_speed {
+                self.enemy_lasers[laser_idx].y += 1;
+                let laser_rectangle = self.enemy_lasers[laser_idx].rect();
+                if self.laser_shield_check(&laser_rectangle) {
+                    delete_lasers.push(laser_idx);
+                    break;
+                }
+            }
+        }
+        for laser_idx in delete_lasers.into_iter().rev() {
+            self.enemy_lasers.remove(laser_idx);
         }
     }
 }
@@ -623,6 +688,8 @@ impl toybox_core::State for State {
         self.laser_enemy_collisions();
         self.enemy_shift();
         self.enemy_animation();
+        self.enemy_fire_lasers();
+        self.enemy_laser_movement();
 
         if self.ship_laser.is_some() {
             let laser_speed = self.ship_laser.as_ref().map(|l| l.speed).unwrap();
@@ -634,11 +701,18 @@ impl toybox_core::State for State {
                 } else {
                     break;
                 }
+                if self.ship_laser.is_some() {
+                    let laser = self.ship_laser.as_ref().map(|l| l.rect()).unwrap();
+                    if self.laser_shield_check(&laser) {
+                        self.ship_laser = None;
+                        break;
+                    }
+                }
                 self.laser_enemy_collisions();
-                self.laser_shield_check();
             }
         }
 
+        // See if lasers have gone off-screen.
         self.laser_miss_check();
     }
 
@@ -719,6 +793,18 @@ impl toybox_core::State for State {
                     laser.w,
                     laser.h,
                 ))
+            }
+        }
+
+        for laser in &self.enemy_lasers {
+            if laser.is_visible() {
+                output.push(Drawable::rect(
+                    laser.color,
+                    laser.x,
+                    laser.y,
+                    laser.w,
+                    laser.h,
+                ));
             }
         }
 
