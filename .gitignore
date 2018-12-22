@@ -7,3 +7,4 @@ images
 *.err
 *.out
 *.sbatch
+install_rust.sh
