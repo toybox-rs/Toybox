@@ -15,7 +15,7 @@ def main(args):
     print('%s not found; did you mean:\n%s' % (args.game, '\t'.join(starts_with)))
     exit(0)
 
-  actions = None
+  actions = []
   if args.actions:
     with open(args.actions, 'r') as f:
       actions = [eval(action) for action in f.readlines()]
@@ -30,6 +30,7 @@ def main(args):
   legal_actions = ale.getLegalActionSet()
 
   frame_num = 0
+
   while not ale.game_over() and frame_num < args.num_frames:
     index = frame_num if actions else \
       (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
