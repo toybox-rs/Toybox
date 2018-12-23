@@ -238,7 +238,7 @@ def main():
 
     # get initial state
     start_state = turtle.toybox.to_json()
-    config = start_state['config']
+    config = turtle.toybox.config_to_json()
     ball_speed_slow = config['ball_speed_slow']
 
     # Only let them beat one level.

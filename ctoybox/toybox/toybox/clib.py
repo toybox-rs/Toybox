@@ -131,6 +131,9 @@ _lib.render_current_frame.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c
 _lib.to_json.argtypes = [ctypes.POINTER(WrapState)]
 _lib.to_json.restype = ctypes.c_char_p
 
+_lib.config_to_json.argtypes = [ctypes.POINTER(WrapState)]
+_lib.config_to_json.restype = ctypes.c_char_p
+
 _lib.from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.from_json.restype = ctypes.POINTER(WrapState)
 

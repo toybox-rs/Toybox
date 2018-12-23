@@ -197,6 +197,10 @@ class State(object):
         json_str = _lib.to_json(self.__state).decode('utf-8')
         return json.loads(str(json_str))
 
+    def config_to_json(self):
+        json_str = _lib.config_to_json(self.__state).decode('utf-8')
+        return json.loads(str(json_str))
+
 class Toybox(object):
     def __init__(self, game_name, grayscale=True, frameskip=0):
         self.game_name = game_name
@@ -251,6 +255,9 @@ class Toybox(object):
 
     def to_json(self):
         return self.rstate.to_json()
+
+    def config_to_json(self):
+        return self.rstate.config_to_json()
 
     def from_json(self, js):
         return self.rsimulator.from_json(js)

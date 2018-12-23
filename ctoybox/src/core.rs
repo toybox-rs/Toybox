@@ -164,6 +164,18 @@ pub extern "C" fn to_json(state_ptr: *mut WrapState) -> *const c_char {
 }
 
 #[no_mangle]
+pub extern "C" fn config_to_json(state_ptr: *mut WrapState) -> *const c_char {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let json: String = state.config_to_json();
+    let cjson: CString = CString::new(json).expect("crap!");
+    CString::into_raw(cjson)
+}
+
+#[no_mangle]
 pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mut WrapState {
     let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
     let json_str: &str = json_str
