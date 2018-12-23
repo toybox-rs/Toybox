@@ -8,3 +8,4 @@ images
 *.out
 *.sbatch
 install_rust.sh
+ctoybox/run_cmd_*
