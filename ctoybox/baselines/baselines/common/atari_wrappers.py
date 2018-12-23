@@ -64,9 +64,10 @@ def get_turtle(env):
         else:
             raise ValueError("Can't unwrap", env)
 
+# module variables have faster lookup than class or instance vars.
+SE_samples = Counter()
 
 class SampleEnvs(gym.Wrapper):
-    samples = Counter()
 
     def __init__(self, envs, weights):
         """Alternates between input environments"""
@@ -77,12 +78,11 @@ class SampleEnvs(gym.Wrapper):
         gym.Wrapper.__init__(self, env)
         self.envs = envs
         self.weights = weights
-        # We may need to track over multiple environments, so make
-        # this a static variable/something requiring a global lock.
-        SampleEnvs.samples[turtle] += 1
+        SE_samples[turtle] += 1
+        print('SampleEnvs map', SE_samples)
 
     def __del__(self):
-        print('Samples encountered:\n', SampleEnvs.samples)
+        print('Samples encountered:\n', SE_samples)
 
     def reset(self, **kwargs):
         # Takes optional arg for new weights
@@ -94,14 +94,14 @@ class SampleEnvs(gym.Wrapper):
         self.env = env
         gym.Wrapper.__init__(self, env)
         self.env.reset(**kwargs)
-        SampleEnvs.samples[get_turtle(env)] += 1 
+        SE_samples[get_turtle(env)] += 1 
         obs, _, _, _ = self.env.step(0)
         return obs
 
     def step(self, action):
         res = self.env.step(action)
         info = res[-1]
-        info['samples'] = SampleEnvs.samples
+        info['samples'] = SE_samples
         return res
 
 
@@ -321,22 +321,25 @@ def get_complement(env_id):
         game_name, suffix = env_id.split('No')
         return game_name + 'ToyboxNo' + suffix
 
-
-def make_atari(env_id, sample_weights):
-    env = gym.make(env_id)
+def make_wrapper(env_id):
     if 'Toybox' in env_id:
-        env = TimeLimit(env)
+        env = TimeLimit(gym.make(env_id))
+    else:
+        env= gym.make(env_id)
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
     # TODO: skip was previously set to 4. This makes debugging hard. Setting it to 0 
     # causes the MaxAndSkipEnv to not step at all, so we need to set it to at least 1.
     # We can see how badly this impacts our training later.
     env = MaxAndSkipEnv(env, skip=4)
+    return env
+
+
+def make_atari(env_id, sample_weights):
+    env = make_wrapper(env_id)
     if sample_weights:
         env1 = env
-        env2 = gym.make(get_complement(env_id))
-        env2 = NoopResetEnv(env2, noop_max=30)
-        env2 = MaxAndSkipEnv(env2, skip=4)
+        env2 = make_wrapper(get_complement(env_id))
         return SampleEnvs([env1, env2], sample_weights)
     return env
 
