@@ -1,4 +1,4 @@
-import * as wasm from "breakout-web-play";
+import * as wasm from "../gen/toybox_wasm";
 
 var canvas = document.getElementById("breakout");
 var ctx = canvas.getContext("2d");
