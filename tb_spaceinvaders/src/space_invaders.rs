@@ -5,9 +5,8 @@ use serde_json;
 use std::any::Any;
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
-use toybox_core::{Direction, Input};
 use toybox_core::random;
-
+use toybox_core::{Direction, Input};
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (320, 210);
@@ -630,7 +629,7 @@ impl State {
 }
 
 pub struct SpaceInvaders {
-    pub rand: random::Gen
+    pub rand: random::Gen,
 }
 impl Default for SpaceInvaders {
     fn default() -> Self {
@@ -650,9 +649,7 @@ impl toybox_core::Simulation for SpaceInvaders {
         screen::GAME_SIZE
     }
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::new(
-            random::Gen::new_child(&mut self.rand)
-        ))
+        Box::new(State::new(random::Gen::new_child(&mut self.rand)))
     }
     fn new_state_from_json(
         &self,
