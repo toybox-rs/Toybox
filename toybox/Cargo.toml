@@ -5,9 +5,7 @@ authors = ["John Foley <jfoley@cs.umass.edu>"]
 
 [dependencies]
 failure = "*"
-lazy_static = "*"
 png = "*"
-clap = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
