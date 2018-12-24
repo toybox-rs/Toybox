@@ -27,7 +27,7 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
         #[cfg(feature = "breakout")]
         "breakout" => Ok(Box::new(breakout::Breakout::default())),
         #[cfg(feature = "space_invaders")]
-        "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
+        "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders::default())),
         #[cfg(feature = "gridworld")]
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
         _ => Err(format_err!(

@@ -7,6 +7,8 @@ use std::any::Any;
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::{Direction, Input};
+use toybox_core::random;
+
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (320, 210);
@@ -352,6 +354,7 @@ impl Laser {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
+    pub rand: random::Gen,
     pub lives: i32,
     pub score: i32,
     /// Ship is a rectangular actor (logically).
@@ -431,7 +434,7 @@ impl Enemy {
 }
 
 impl State {
-    fn new() -> State {
+    fn new(rand: random::Gen) -> State {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
         let mut shields = Vec::new();
@@ -459,6 +462,7 @@ impl State {
         }
 
         State {
+            rand,
             lives: 0,
             score: 0,
             ship: Player::new(player_start_x, player_start_y),
@@ -628,17 +632,30 @@ impl State {
     }
 }
 
-pub struct SpaceInvaders;
+pub struct SpaceInvaders {
+    pub rand: random::Gen
+}
+impl Default for SpaceInvaders {
+    fn default() -> Self {
+        SpaceInvaders {
+            rand: random::Gen::new_from_seed(17),
+        }
+    }
+}
 impl toybox_core::Simulation for SpaceInvaders {
     fn as_any(&self) -> &Any {
         self
     }
-    fn reset_seed(&mut self, _seed: u32) {}
+    fn reset_seed(&mut self, seed: u32) {
+        self.rand.reset_seed(seed)
+    }
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::new())
+        Box::new(State::new(
+            random::Gen::new_child(&mut self.rand)
+        ))
     }
     fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, Error> {
         let state: State = serde_json::from_str(json_str)?;
