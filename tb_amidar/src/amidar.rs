@@ -829,7 +829,10 @@ impl toybox_core::Simulation for Amidar {
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
-    fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, serde_json::Error> {
+    fn new_state_from_json(
+        &self,
+        json_str: &str,
+    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         let config: Config = Config::default();
         Ok(Box::new(State {

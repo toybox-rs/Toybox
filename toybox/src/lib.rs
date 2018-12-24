@@ -25,8 +25,7 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, String> {
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
         _ => Err(format!(
             "Cannot construct game: `{}`. Try any of {:?}.",
-            name,
-            GAME_LIST
+            name, GAME_LIST
         )),
     };
     y
