@@ -3,3 +3,6 @@
 **/*.rs.bk
 Cargo.lock
 wasm-pack.log
+gen
+html/dist
+html/node_modules

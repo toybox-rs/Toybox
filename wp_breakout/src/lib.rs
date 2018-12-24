@@ -225,4 +225,3 @@ pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: &str) -> *mut Wra
     let state = Box::new(WrapState { state });
     Box::into_raw(state)
 }
-
