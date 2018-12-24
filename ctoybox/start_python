@@ -3,5 +3,4 @@
 export PYTHONPATH=${PWD}/baselines:${PWD}/toybox:${PYTHONPATH}
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/../target/release
 export LIBCTOYBOX=${PWD}/..
-nvidia-smi
 python3 "$@"

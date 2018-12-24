@@ -76,6 +76,83 @@ class Input(ctypes.Structure):
         self.button1 = False
         self.button2 = False
 
+    """
+        ALE_ACTION_MEANING = {
+            0 : "NOOP",
+            1 : "FIRE",
+            2 : "UP",
+            3 : "RIGHT",
+            4 : "LEFT",
+            5 : "DOWN",
+            6 : "UPRIGHT",
+            7 : "UPLEFT",
+            8 : "DOWNRIGHT",
+            9 : "DOWNLEFT",
+            10 : "UPFIRE",
+            11 : "RIGHTFIRE",
+            12 : "LEFTFIRE",
+            13 : "DOWNFIRE",
+            14 : "UPRIGHTFIRE",
+            15 : "UPLEFTFIRE",
+            16 : "DOWNRIGHTFIRE",
+            17 : "DOWNLEFTFIRE",
+        }
+    """
+    def set_ale(self, num):
+        if num == 0:
+            pass
+        elif num == 1:
+            self.button1 = True
+        elif num == 2:
+            self.up = True
+        elif num == 3:
+            self.right = True
+        elif num == 4:
+            self.left = True
+        elif num == 5:
+            self.down = True
+        elif num == 6:
+            self.up = True
+            self.right = True
+        elif num == 7:
+            self.up = True
+            self.left = True
+        elif num == 8:
+            self.down = True
+            self.right = True
+        elif num == 9:
+            self.down = True
+            self.left = True
+        elif num == 10:
+            self.up = True
+            self.button1 = True
+        elif num == 11:
+            self.right = True
+            self.button1 = True
+        elif num == 12:
+            self.left = True
+            self.button1 = True
+        elif num == 13:
+            self.down = True
+            self.button1 = True
+        elif num == 14:
+            self.up = True
+            self.right = True
+            self.button1 = True
+        elif num == 15:
+            self.up = True
+            self.left = True
+            self.button1 = True
+        elif num == 16:
+            self.down = True
+            self.right = True
+            self.button1 = True
+        elif num == 17:
+            self.down = True
+            self.left = True
+            self.button1 = True
+
+
     def set_input(self, input_dir, button=NOOP):
         self._set_default()
         input_dir = input_dir.lower()
