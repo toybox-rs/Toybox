@@ -4,7 +4,7 @@ use super::vec2d::Vec2D;
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable};
 use toybox_core::random;
-use toybox_core::Input;
+use toybox_core::{AleAction, Input};
 
 use serde_json;
 use std::any::Any;
@@ -222,6 +222,16 @@ impl toybox_core::Simulation for Breakout {
     }
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
+    }
+
+    /// Sync with [ALE Impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/Breakout.cpp#L80)
+    fn legal_action_set(&self) -> Vec<AleAction> {
+        vec![
+            AleAction::NOOP,
+            AleAction::FIRE,
+            AleAction::LEFT,
+            AleAction::RIGHT,
+        ]
     }
 
     /// Create a new game of breakout.

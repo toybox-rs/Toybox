@@ -6,7 +6,7 @@ use std::any::Any;
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::random;
-use toybox_core::{Direction, Input};
+use toybox_core::{AleAction, Direction, Input};
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (320, 210);
@@ -651,6 +651,17 @@ impl toybox_core::Simulation for SpaceInvaders {
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State::new(random::Gen::new_child(&mut self.rand)))
     }
+    /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/SpaceInvaders.cpp#L85)
+    fn legal_action_set(&self) -> Vec<AleAction> {
+        vec![
+            AleAction::NOOP,
+            AleAction::RIGHT,
+            AleAction::RIGHTFIRE,
+            AleAction::FIRE,
+            AleAction::LEFT,
+            AleAction::LEFTFIRE,
+        ]
+    }
     fn new_state_from_json(
         &self,
         json_str: &str,
@@ -841,12 +852,6 @@ mod tests {
         let sprite = super::SHIELD_SPRITE.clone();
         assert_eq!(super::screen::SHIELD_SIZE.0, sprite.width());
         assert_eq!(super::screen::SHIELD_SIZE.1, sprite.height());
-    }
-
-    #[test]
-    pub fn test_create_new_state() {
-        let state = super::State::new();
-        assert_eq!(None, state.ship_laser);
     }
 
 }

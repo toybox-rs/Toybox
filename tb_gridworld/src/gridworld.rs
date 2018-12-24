@@ -1,6 +1,5 @@
 use toybox_core::graphics::{Color, Drawable};
-use toybox_core::Direction;
-use toybox_core::Input;
+use toybox_core::{AleAction, Direction, Input};
 
 use serde_json;
 use std::any::Any;
@@ -182,6 +181,16 @@ impl toybox_core::Simulation for GridWorld {
     fn reset_seed(&mut self, seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
         self.config.game_size
+    }
+
+    fn legal_action_set(&self) -> Vec<AleAction> {
+        vec![
+            AleAction::NOOP,
+            AleAction::LEFT,
+            AleAction::RIGHT,
+            AleAction::UP,
+            AleAction::DOWN,
+        ]
     }
 
     fn new_game(&mut self) -> Box<toybox_core::State> {

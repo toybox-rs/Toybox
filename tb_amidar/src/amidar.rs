@@ -4,8 +4,7 @@ use std::any::Any;
 use std::collections::{HashSet, VecDeque};
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
-use toybox_core::Direction;
-use toybox_core::Input;
+use toybox_core::{AleAction, Direction, Input};
 
 // Window constants:
 pub mod screen {
@@ -829,6 +828,23 @@ impl toybox_core::Simulation for Amidar {
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
+
+    /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/Amidar.cpp#L80)
+    fn legal_action_set(&self) -> Vec<AleAction> {
+        vec![
+            AleAction::NOOP,
+            AleAction::FIRE,
+            AleAction::UP,
+            AleAction::RIGHT,
+            AleAction::LEFT,
+            AleAction::DOWN,
+            AleAction::UPFIRE,
+            AleAction::RIGHTFIRE,
+            AleAction::LEFTFIRE,
+            AleAction::DOWNFIRE,
+        ]
+    }
+
     fn new_state_from_json(
         &self,
         json_str: &str,
