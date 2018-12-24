@@ -1,55 +1,54 @@
-use toybox_core::graphics::{load_digit_sprites, Color, Drawable, FixedSpriteData};
+use super::screen::{LEFT_GAME_DOT_COLOR, LIVES_DISPLAY_COLOR, RIGHT_GAME_DOT_COLOR};
+use toybox_core::graphics::{load_digit_sprites, Drawable, FixedSpriteData};
 
 const SET: char = 'X';
 const IGNORE: char = '.';
 pub const DIGIT_WIDTH: i32 = 24;
-pub const DIGIT_HEIGHT: i32 = 9;
 pub const DIGIT_PAD: i32 = 8;
-
-pub const LEFT_GAME_DOT_COLOR: (u8, u8, u8) = (64, 124, 64);
-pub const RIGHT_GAME_DOT_COLOR: (u8, u8, u8) = (160, 132, 68);
+pub const _DIGIT_HEIGHT: i32 = 9;
+pub const _LIVES_DIGIT_HEIGHT: i32 = 10;
 
 lazy_static! {
     static ref LEFT_DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(
         include_str!("resources/space_invaders_digit_sprites.txt"),
-        Color::rgb(
-            LEFT_GAME_DOT_COLOR.0,
-            LEFT_GAME_DOT_COLOR.1,
-            LEFT_GAME_DOT_COLOR.2
-        ),
+        (&LEFT_GAME_DOT_COLOR).into(),
         SET,
         IGNORE
     );
     static ref RIGHT_DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(
         include_str!("resources/space_invaders_digit_sprites.txt"),
-        Color::rgb(
-            RIGHT_GAME_DOT_COLOR.0,
-            RIGHT_GAME_DOT_COLOR.1,
-            RIGHT_GAME_DOT_COLOR.2
-        ),
+        (&RIGHT_GAME_DOT_COLOR).into(),
+        SET,
+        IGNORE
+    );
+    static ref LIVES_DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(
+        include_str!("resources/lives_font.txt"),
+        (&LIVES_DISPLAY_COLOR).into(),
         SET,
         IGNORE
     );
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
-pub enum Side {
+pub enum FontChoice {
     LEFT,
     RIGHT,
+    LIVES,
 }
 
 /// Given a font return an atomic reference to a digit sprite as a FixedSpriteData.
-fn get_sprite(digit_index: u32, side: Side) -> FixedSpriteData {
+pub fn get_sprite(digit_index: u32, side: FontChoice) -> FixedSpriteData {
     debug_assert!(digit_index < 10);
     // Space invaders digits in the text file were entered reverse from the other digits, which
     // is why we are doing 9 - digit_index here.
     match side {
-        Side::LEFT => LEFT_DIGIT_SPRITES[9 - digit_index as usize].clone(),
-        Side::RIGHT => RIGHT_DIGIT_SPRITES[9 - digit_index as usize].clone(),
+        FontChoice::LEFT => LEFT_DIGIT_SPRITES[9 - digit_index as usize].clone(),
+        FontChoice::RIGHT => RIGHT_DIGIT_SPRITES[9 - digit_index as usize].clone(),
+        FontChoice::LIVES => LIVES_DIGIT_SPRITES[9 - digit_index as usize].clone(),
     }
 }
 
-pub fn draw_score(score: i32, x: i32, y: i32, side: Side) -> Vec<Drawable> {
+pub fn draw_score(score: i32, x: i32, y: i32, side: FontChoice) -> Vec<Drawable> {
     let score = if score < 0 { 0 } else { score as u32 };
     let width = DIGIT_WIDTH;
     let pad = DIGIT_PAD;

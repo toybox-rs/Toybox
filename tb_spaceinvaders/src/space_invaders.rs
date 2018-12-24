@@ -1,5 +1,5 @@
 use super::destruction;
-use super::font::{draw_score, Side};
+use super::font::{draw_score, get_sprite, FontChoice};
 use itertools::Itertools;
 use serde_json;
 use std::any::Any;
@@ -34,6 +34,8 @@ pub mod screen {
     pub const ENEMY_DELTA: i32 = 2;
     pub const ENEMY_PERIOD: i32 = 32;
 
+    pub const NEW_LIFE_TIME: i32 = 128;
+
     pub const DEATH_TIME: i32 = 29;
     pub const DEATH_HIT_1: i32 = 5;
     pub const DEATH_HIT_N: i32 = 8;
@@ -46,12 +48,15 @@ pub mod screen {
     // Colors:
     pub const LEFT_GAME_DOT_COLOR: (u8, u8, u8) = (64, 124, 64);
     pub const RIGHT_GAME_DOT_COLOR: (u8, u8, u8) = (160, 132, 68);
+    pub const LIVES_DISPLAY_COLOR: (u8, u8, u8) = (162, 134, 56);
     pub const SHIELD_COLOR: (u8, u8, u8) = (172, 80, 48);
     pub const ENEMY_COLOR: (u8, u8, u8) = (132, 132, 36);
     pub const UFO_COLOR: (u8, u8, u8) = (140, 32, 116);
     pub const LASER_COLOR: (u8, u8, u8) = (144, 144, 144);
     pub const GROUND_COLOR: (u8, u8, u8) = (76, 80, 28);
     pub const SHIP_COLOR: (u8, u8, u8) = (35, 129, 59);
+
+    pub const LIVES_DISPLAY_POSITION: (i32, i32) = (168, 185);
 
     pub const SHIP_LIMIT_X1: i32 = GAME_DOT_LEFT + GAME_DOT_SIZE.0 / 2;
     pub const SHIP_LIMIT_X2: i32 = (GAME_DOT_RIGHT + GAME_DOT_SIZE.0 / 2) - SHIP_SIZE.0;
@@ -319,7 +324,7 @@ impl Player {
             color: (&screen::SHIP_COLOR).into(),
         }
     }
-    fn rect(&self) -> Rect {
+    fn _rect(&self) -> Rect {
         Rect::new(self.x, self.y, self.w, self.h)
     }
 }
@@ -351,6 +356,7 @@ impl Laser {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct State {
     pub rand: random::Gen,
+    pub life_display_timer: i32,
     pub lives: i32,
     pub score: i32,
     /// Ship is a rectangular actor (logically).
@@ -459,7 +465,8 @@ impl State {
 
         State {
             rand,
-            lives: 0,
+            life_display_timer: screen::NEW_LIFE_TIME,
+            lives: 3,
             score: 0,
             ship: Player::new(player_start_x, player_start_y),
             ship_laser: None,
@@ -689,6 +696,12 @@ impl toybox_core::State for State {
         self.score
     }
     fn update_mut(&mut self, buttons: Input) {
+        // Don't play game yet if displaying lives.
+        if self.life_display_timer > 0 {
+            self.life_display_timer -= 1;
+            return;
+        }
+
         if buttons.left {
             self.ship.x -= self.ship.speed;
         } else if buttons.right {
@@ -778,14 +791,23 @@ impl toybox_core::State for State {
             self.score,
             screen::SCORE_LEFT_X_POS,
             screen::SCORE_Y_POS,
-            Side::LEFT,
+            FontChoice::LEFT,
         ));
         output.extend(draw_score(
             0,
             screen::SCORE_RIGHT_X_POS,
             screen::SCORE_Y_POS,
-            Side::RIGHT,
+            FontChoice::RIGHT,
         ));
+
+        // Render lives font in the middle of the screen!
+        if self.life_display_timer > 0 {
+            output.push(Drawable::sprite(
+                screen::LIVES_DISPLAY_POSITION.0,
+                screen::LIVES_DISPLAY_POSITION.1,
+                get_sprite(self.lives as u32, FontChoice::LIVES),
+            ));
+        }
 
         if self.lives() < 0 {
             return output;
