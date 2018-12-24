@@ -1,4 +1,4 @@
-import toybox
+import toybox, sys
 from toybox.toybox import Toybox, Input
 import numpy as np
 import argparse
@@ -14,14 +14,15 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print('Starting up: '+args.game)
+    pygame.init()
 
     with Toybox(args.game) as tb:
-        pygame.init()
         w = tb.get_width()
         h = tb.get_height()
 
         pygame.display.set_mode((w, h))
-        screen = pygame.display.get_surface()
+        clock = pygame.time.Clock()
+        FPS = 24
 
         quit = False
         while not quit:
@@ -43,9 +44,9 @@ if __name__ == '__main__':
 
             tb.apply_action(player_input)
             image = tb.get_rgb_frame()
-            screen_pixels = pygame.surfarray.pixels3d(screen)
-            screen_pixels = np.swapaxes(screen_pixels,0,1)
-            screen_pixels[:] = image[:]
-            
-            pygame.display.flip()
+            screen = pygame.display.get_surface()
+            pygame.surfarray.blit_array(screen, np.swapaxes(image,0,1))
+            pygame.display.update()
+            clock.tick(FPS)
     pygame.quit()
+    sys.exit()
