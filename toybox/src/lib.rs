@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate failure;
-
 extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
@@ -16,7 +13,7 @@ pub use toybox_core::Simulation;
 pub use toybox_core::State;
 
 /// This method returns a Box<Simulation> if possible for a given game name.
-pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Error> {
+pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, String> {
     let y: Result<Box<Simulation>, _> = match name.to_lowercase().as_str() {
         #[cfg(feature = "amidar")]
         "amidar" => Ok(Box::new(amidar::Amidar)),
@@ -26,7 +23,7 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, failure::Er
         "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders)),
         #[cfg(feature = "gridworld")]
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
-        _ => Err(format_err!(
+        _ => Err(format!(
             "Cannot construct game: `{}`. Try any of {:?}.",
             name,
             GAME_LIST

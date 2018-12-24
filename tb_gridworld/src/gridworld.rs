@@ -2,7 +2,6 @@ use toybox_core::graphics::{Color, Drawable};
 use toybox_core::Direction;
 use toybox_core::Input;
 
-use failure;
 use serde_json;
 use std::any::Any;
 use std::collections::HashMap;
@@ -192,7 +191,7 @@ impl toybox_core::Simulation for GridWorld {
     fn new_state_from_json(
         &self,
         json_str: &str,
-    ) -> Result<Box<toybox_core::State>, failure::Error> {
+    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: State = serde_json::from_str(json_str)?;
         Ok(Box::new(state))
     }
@@ -201,7 +200,7 @@ impl toybox_core::Simulation for GridWorld {
         &self,
         json_config: &str,
         json_state: &str,
-    ) -> Result<Box<toybox_core::State>, failure::Error> {
+    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         // Not sure what's up with Config for now, so let's just ignore it.
         self.new_state_from_json(json_state)
     }

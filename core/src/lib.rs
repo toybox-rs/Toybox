@@ -1,4 +1,3 @@
-extern crate failure;
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
@@ -46,11 +45,11 @@ pub trait Simulation {
     /// Return a tuple of game size in pixels, e.g., (100,100).
     fn game_size(&self) -> (i32, i32);
     /// Generate a new state from JSON String. Uses the default config.
-    fn new_state_from_json(&self, json: &str) -> Result<Box<State>, failure::Error>;
+    fn new_state_from_json(&self, json: &str) -> Result<Box<State>, serde_json::Error>;
     /// Generate new state and new config from JSON String.
     fn new_state_config_from_json(
         &self,
         json_config: &str,
         json_state: &str,
-    ) -> Result<Box<State>, failure::Error>;
+    ) -> Result<Box<State>, serde_json::Error>;
 }

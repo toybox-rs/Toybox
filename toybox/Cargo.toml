@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["John Foley <jfoley@cs.umass.edu>"]
 
 [dependencies]
-failure = "*"
 png = "*"
 serde = "*"
 serde_derive = "*"

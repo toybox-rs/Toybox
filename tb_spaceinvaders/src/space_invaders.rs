@@ -1,6 +1,5 @@
 use super::destruction;
 use super::font::{draw_score, Side};
-use failure::Error;
 use itertools::Itertools;
 use serde_json;
 use std::any::Any;
@@ -210,7 +209,7 @@ pub fn load_sprite(
     on_symbol: char,
     off_symbol: char,
     _scale: i32,
-) -> Result<SpriteData, Error> {
+) -> Result<SpriteData, String> {
     let off_color = Color::invisible();
     let mut pixels = Vec::new();
     for line in data.lines() {
@@ -221,7 +220,7 @@ pub fn load_sprite(
             } else if ch == off_symbol {
                 pixel_row.push(off_color);
             } else {
-                return Err(format_err!(
+                return Err(format!(
                     "Cannot construct pixel from {}, expected one of (on={}, off={})",
                     ch,
                     on_symbol,
@@ -235,7 +234,7 @@ pub fn load_sprite(
     debug_assert!(pixels.iter().all(|row| row.len() == width));
     Ok(SpriteData::new(pixels, 1))
 }
-pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<SpriteData, Error> {
+pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<SpriteData, String> {
     load_sprite(data, on_color, 'X', '.', scale)
 }
 
@@ -640,7 +639,7 @@ impl toybox_core::Simulation for SpaceInvaders {
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State::new())
     }
-    fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, Error> {
+    fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: State = serde_json::from_str(json_str)?;
         Ok(Box::new(state))
     }
@@ -648,7 +647,7 @@ impl toybox_core::Simulation for SpaceInvaders {
         &self,
         _json_config: &str,
         _json_state: &str,
-    ) -> Result<Box<toybox_core::State>, Error> {
+    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         panic!("No config implemented for SpaceInvaders.")
     }
 }

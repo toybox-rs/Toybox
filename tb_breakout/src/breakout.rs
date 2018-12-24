@@ -6,7 +6,6 @@ use toybox_core::graphics::{Color, Drawable};
 use toybox_core::random;
 use toybox_core::Input;
 
-use failure;
 use serde_json;
 use std::any::Any;
 
@@ -282,7 +281,7 @@ impl toybox_core::Simulation for Breakout {
     fn new_state_from_json(
         &self,
         json_str: &str,
-    ) -> Result<Box<toybox_core::State>, failure::Error> {
+    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         let config: Config = Config::default();
         Ok(Box::new(State {
@@ -295,7 +294,7 @@ impl toybox_core::Simulation for Breakout {
         &self,
         json_config: &str,
         json_state: &str,
-    ) -> Result<Box<toybox_core::State>, failure::Error> {
+    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_state)?;
         let config: Config = serde_json::from_str(json_config)?;
         Ok(Box::new(State { config, state }))

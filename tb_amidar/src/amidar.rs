@@ -1,5 +1,4 @@
 use super::digit_sprites::{draw_score, DIGIT_HEIGHT};
-use failure::Error;
 use serde_json;
 use std::any::Any;
 use std::collections::{HashSet, VecDeque};
@@ -237,13 +236,13 @@ pub enum Tile {
     Painted,
 }
 impl Tile {
-    fn new_from_char(c: char) -> Result<Tile, Error> {
+    fn new_from_char(c: char) -> Result<Tile, String> {
         match c {
             '=' => Ok(Tile::Unpainted),
             'p' => Ok(Tile::Painted),
             'c' => Ok(Tile::ChaseMarker),
             ' ' => Ok(Tile::Empty),
-            _ => Err(format_err!("Cannot construct AmidarTile from '{}'", c)),
+            _ => Err(format!("Cannot construct AmidarTile from '{}'", c)),
         }
     }
     pub fn walkable(self) -> bool {
@@ -473,7 +472,7 @@ impl Board {
     pub fn fast_new() -> Board {
         DEFAULT_BOARD.clone()
     }
-    fn try_new() -> Result<Board, Error> {
+    fn try_new() -> Result<Board, String> {
         let mut tiles = Vec::new();
         for line in AMIDAR_BOARD.lines() {
             // Rust will aggregate errors in collect for us if we give it a type-hint.
@@ -735,7 +734,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn try_new() -> Result<State, Error> {
+    pub fn try_new() -> Result<State, String> {
         let board = Board::fast_new();
 
         let mut enemies = Vec::new();
@@ -830,7 +829,7 @@ impl toybox_core::Simulation for Amidar {
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State::try_new().expect("new_game should succeed."))
     }
-    fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, Error> {
+    fn new_state_from_json(&self, json_str: &str) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         let config: Config = Config::default();
         Ok(Box::new(State {
@@ -842,7 +841,7 @@ impl toybox_core::Simulation for Amidar {
         &self,
         json_config: &str,
         json_state: &str,
-    ) -> Result<Box<toybox_core::State>, Error> {
+    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_state)?;
         let config: Config = serde_json::from_str(json_config)?;
         Ok(Box::new(State {
