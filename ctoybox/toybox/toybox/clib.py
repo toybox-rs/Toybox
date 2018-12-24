@@ -190,8 +190,17 @@ _lib.simulator_alloc.restype = ctypes.POINTER(WrapSimulator)
 _lib.simulator_seed.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_uint]
 _lib.simulator_seed.restype = None
 
+_lib.simulator_is_legal_action.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_int32]
+_lib.simulator_is_legal_action.restype = ctypes.c_bool
+
 _lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.state_alloc.restype = ctypes.POINTER(WrapState)
+
+_lib.state_apply_ale_action.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
+_lib.state_apply_ale_action.restype = ctypes.c_bool
+
+_lib.state_apply_action.argtypes = [ctypes.POINTER(WrapState), ctypes.POINTER(Input)]
+_lib.state_apply_action.restype = None
 
 _lib.simulator_frame_width.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.simulator_frame_width.restype = ctypes.c_int32

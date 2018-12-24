@@ -221,6 +221,18 @@ class Toybox(object):
     def get_width(self):
         return self.rsimulator.get_frame_width()
 
+    def get_legal_action_set(self):
+        MAX_ALE_ACTION = 17
+        # TODO, not hardcode 18?
+        return set([x for x in range(MAX_ALE_ACTION+1) if _lib.simulator_is_legal_action(self.rsimulator, x)])
+
+    def apply_ale_action(self, action_int):      
+        # implement frameskip(k) by sending the action (k+1) times every time we have an action.
+        for _ in range(self.frames_per_action):
+            if not _lib.state_apply_action(self.rstate.get_state(), action_int):
+                raise ValueError("Expected to apply action, but failed: {0}".format(action_int))
+        return self.rstate.render_frame(self.rsimulator, self.grayscale)
+
     def apply_action(self, action_input_obj):
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
