@@ -6,8 +6,28 @@ import os
 
 from atari_py.ale_python_interface import ALEInterface
 
-def main(args):
+def play(args, ale, actions):
   repeat_actions = 4
+  actions_taken = []
+  legal_actions = ale.getLegalActionSet()
+  frame_num = 0
+  while not ale.game_over() and frame_num < args.num_frames:
+    index = frame_num if actions else \
+    (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
+    a = (actions or legal_actions)[index]
+    actions_taken.append(a)
+    ale.act(a)    
+    filename = 'frame%s.png' % str(frame_num).zfill(4)
+    frame_num += 1
+    ale.saveScreenPNG(str.encode(args.output + os.sep + filename))
+  return actions_taken
+  
+def record(actions):
+  with open('actions', 'w') as f:
+    f.write("\n".join([str(a) for a in actions]))
+
+
+def main(args):
   all_games = atari_py.list_games()
 
   if args.game not in all_games:
@@ -15,7 +35,7 @@ def main(args):
     print('%s not found; did you mean:\n%s' % (args.game, '\t'.join(starts_with)))
     exit(0)
 
-  actions = []
+  actions = None
   if args.actions:
     with open(args.actions, 'r') as f:
       actions = [eval(action) for action in f.readlines()]
@@ -27,18 +47,8 @@ def main(args):
   ale.setFloat(b'repeat_action_probability', 0.0)
   ale.loadROM(str.encode(game_path))
   
-  legal_actions = ale.getLegalActionSet()
-
-  frame_num = 0
-
-  while not ale.game_over() and frame_num < args.num_frames:
-    index = frame_num if actions else \
-      (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
-    a = (actions or legal_actions)[index]
-    ale.act(a)    
-    filename = 'frame%s.png' % str(frame_num).zfill(4)
-    frame_num += 1
-    ale.saveScreenPNG(str.encode(args.output + os.sep + filename))
+  actions = play(args, ale, actions)
+  if args.record: record(actions)
   
 
 if __name__ == '__main__':
@@ -59,6 +69,11 @@ if __name__ == '__main__':
   parser.add_argument('--actions', 
     help='Give a list of commands to execute (default is to cycle through the valid actions', 
     default='')
+  parser.add_argument('--record',
+    help='Records actions actually executed and writes to a file called "actions"',
+    type=bool,
+    default=False
+  )
   
   args = parser.parse_args()
   main(args)
