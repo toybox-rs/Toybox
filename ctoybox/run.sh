@@ -30,9 +30,11 @@ for env in $envs; do
 	        for weight in $weights; do
 		    if [ "$weights" -eq "0" ]; then 
 		        uid=$env.$alg.$steps.$seed
+			wflg=""
 		    else 
 		        wname=`python3 -c "print('$weight'.replace('[','').replace(']','').replace(',','').replace('.',''))"`		    
 		        uid=$env.$alg.$steps.$seed.$wname
+			wflg="--weights=$weight"
 		    fi
                     echo "Processing model $uid"
 		    model=$work1/$uid.`date -I`.model
@@ -43,19 +45,18 @@ for env in $envs; do
 
 		    echo "Running on $partition. Command saved to $dest."
 
-		cmd="#!/bin/bash
+		    cmd="#!/bin/bash
 #
 #SBATCH --job-name=$uid
 #SBATCH --output=$uid.out
 #SBATCH -e $uid.err
 #SBATCH --mem=16g
 
-OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$steps --save_path=$model --weights=$weight" 
-	    echo "$cmd"
-	    echo "$cmd" > $dest
-
+OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$steps --save_path=$model $wflg" 
+		    echo "$cmd"
+		    echo "$cmd" > $dest
             
-            sbatch -p $partition --gres=gpu:1 $dest
+		    sbatch -p $partition --gres=gpu:1 $dest
 	        done;
 	    done;
         done;
