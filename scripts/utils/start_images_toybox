@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+
+import argparse
+import toybox
+from toybox.toybox import Toybox, Input
+import os
+
+
+def main(args):
+  repeat_actions = 4
+  all_games = ['breakout', 'amidar', 'space_invaders']
+
+  if args.game not in all_games:
+    starts_with = [g for g in all_games if g.startswith(args.game[0])]
+    print('%s not found; did you mean:\n%s' % (args.game, '\t'.join(starts_with)))
+    exit(0)
+
+  actions = []
+  if args.actions:
+    with open(args.actions, 'r') as f:
+      actions = [eval(action) for action in f.readlines()]
+  print(actions)
+
+  with Toybox(args.game) as tb:
+      tb.set_seed(args.seed)
+      tb.new_game()
+      legal_actions = tb.get_legal_action_set()
+
+      frame_num = 0
+      while not tb.game_over() and frame_num < args.num_frames:
+        index = frame_num if actions else \
+          (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
+        a = (actions or legal_actions)[index]
+        tb.apply_ale_action(a)    
+        filename = 'frame%s.png' % str(frame_num).zfill(4)
+        frame_num += 1
+        tb.save_frame_image(str.encode(args.output + os.sep + filename))
+  
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('game', 
+    help='The name of the Atari game to extract from ALE.')
+  parser.add_argument('--output', 
+    help='The output directory where the images should go (default is the current directory).', 
+    default='.')
+  parser.add_argument('--num_frames', 
+    help='The number of frames we want to collect (default is 10).', 
+    default=10, 
+    type=int)
+  parser.add_argument('--seed', 
+    help='The random seed for the Atari env (default is 1234).', 
+    default=1234, 
+    type=int)
+  parser.add_argument('--actions', 
+    help='Give a list of commands to execute (default is to cycle through the valid actions', 
+    default='')
+  
+  args = parser.parse_args()
+  main(args)

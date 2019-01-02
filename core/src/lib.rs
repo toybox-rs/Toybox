@@ -1,14 +1,15 @@
-extern crate failure;
 extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate png;
 
+pub mod collision;
 pub mod graphics;
 pub mod random;
 
 mod input;
+pub use input::AleAction;
 pub use input::Input;
 
 mod direction;
@@ -44,12 +45,14 @@ pub trait Simulation {
     fn new_game(&mut self) -> Box<State>;
     /// Return a tuple of game size in pixels, e.g., (100,100).
     fn game_size(&self) -> (i32, i32);
+    /// Legal action set:
+    fn legal_action_set(&self) -> Vec<AleAction>;
     /// Generate a new state from JSON String. Uses the default config.
-    fn new_state_from_json(&self, json: &str) -> Result<Box<State>, failure::Error>;
+    fn new_state_from_json(&self, json: &str) -> Result<Box<State>, serde_json::Error>;
     /// Generate new state and new config from JSON String.
     fn new_state_config_from_json(
         &self,
         json_config: &str,
         json_state: &str,
-    ) -> Result<Box<State>, failure::Error>;
+    ) -> Result<Box<State>, serde_json::Error>;
 }

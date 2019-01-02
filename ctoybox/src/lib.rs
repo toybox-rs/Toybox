@@ -2,7 +2,6 @@
 
 extern crate amidar;
 extern crate breakout;
-extern crate failure;
 extern crate libc;
 extern crate toybox;
 extern crate toybox_core;

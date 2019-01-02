@@ -4,21 +4,18 @@ version = "0.1.0"
 authors = ["John Foley <jfoley@cs.umass.edu>"]
 
 [dependencies]
-failure = "*"
-lazy_static = "*"
 png = "*"
-clap = "*"
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
-amidar = {path = "../amidar", version="*", optional=true}
-breakout = {path = "../breakout", version="*", optional = true}
+amidar = {path = "../tb_amidar", version="*", optional=true}
+breakout = {path = "../tb_breakout", version="*", optional = true}
+space_invaders = {path = "../tb_spaceinvaders", version="*", optional = true}
+gridworld = {path = "../tb_gridworld", version = "*", optional = true}
 
 [dependencies.toybox-core]
 path = "../core"
 version="*"
 
 [features]
-default = ["amidar", "breakout", "space_invaders"]
-space_invaders = []
-gridworld = []
+default = ["amidar", "breakout", "space_invaders", "gridworld"]

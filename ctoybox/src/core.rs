@@ -6,8 +6,7 @@ use std::ffi::{CStr, CString};
 use std::mem;
 use toybox;
 use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
-use toybox_core::Input;
-use toybox_core::State;
+use toybox_core::{AleAction, Input, State};
 
 #[no_mangle]
 pub extern "C" fn simulator_alloc(name: *const i8) -> *mut WrapSimulator {
@@ -38,6 +37,20 @@ pub extern "C" fn simulator_seed(ptr: *mut WrapSimulator, seed: u32) {
         &mut *ptr
     };
     simulator.reset_seed(seed);
+}
+
+#[no_mangle]
+pub extern "C" fn simulator_is_legal_action(ptr: *mut WrapSimulator, action: i32) -> bool {
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let actions = simulator.legal_action_set();
+    if let Some(action) = AleAction::from_int(action) {
+        actions.contains(&action)
+    } else {
+        false
+    }
 }
 
 // STATE ALLOC + FREE
@@ -121,6 +134,20 @@ pub extern "C" fn render_current_frame(
 }
 
 #[no_mangle]
+pub extern "C" fn state_apply_ale_action(state_ptr: *mut WrapState, input: i32) -> bool {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+    if let Some(input) = AleAction::from_int(input).map(|a| a.to_input()) {
+        state.update_mut(input);
+        true
+    } else {
+        false
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
@@ -159,6 +186,18 @@ pub extern "C" fn to_json(state_ptr: *mut WrapState) -> *const c_char {
     };
 
     let json: String = state.to_json();
+    let cjson: CString = CString::new(json).expect("crap!");
+    CString::into_raw(cjson)
+}
+
+#[no_mangle]
+pub extern "C" fn config_to_json(state_ptr: *mut WrapState) -> *const c_char {
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!state_ptr.is_null());
+        &mut *state_ptr
+    };
+
+    let json: String = state.config_to_json();
     let cjson: CString = CString::new(json).expect("crap!");
     CString::into_raw(cjson)
 }

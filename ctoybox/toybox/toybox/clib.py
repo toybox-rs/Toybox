@@ -76,6 +76,83 @@ class Input(ctypes.Structure):
         self.button1 = False
         self.button2 = False
 
+    """
+        ALE_ACTION_MEANING = {
+            0 : "NOOP",
+            1 : "FIRE",
+            2 : "UP",
+            3 : "RIGHT",
+            4 : "LEFT",
+            5 : "DOWN",
+            6 : "UPRIGHT",
+            7 : "UPLEFT",
+            8 : "DOWNRIGHT",
+            9 : "DOWNLEFT",
+            10 : "UPFIRE",
+            11 : "RIGHTFIRE",
+            12 : "LEFTFIRE",
+            13 : "DOWNFIRE",
+            14 : "UPRIGHTFIRE",
+            15 : "UPLEFTFIRE",
+            16 : "DOWNRIGHTFIRE",
+            17 : "DOWNLEFTFIRE",
+        }
+    """
+    def set_ale(self, num):
+        if num == 0:
+            pass
+        elif num == 1:
+            self.button1 = True
+        elif num == 2:
+            self.up = True
+        elif num == 3:
+            self.right = True
+        elif num == 4:
+            self.left = True
+        elif num == 5:
+            self.down = True
+        elif num == 6:
+            self.up = True
+            self.right = True
+        elif num == 7:
+            self.up = True
+            self.left = True
+        elif num == 8:
+            self.down = True
+            self.right = True
+        elif num == 9:
+            self.down = True
+            self.left = True
+        elif num == 10:
+            self.up = True
+            self.button1 = True
+        elif num == 11:
+            self.right = True
+            self.button1 = True
+        elif num == 12:
+            self.left = True
+            self.button1 = True
+        elif num == 13:
+            self.down = True
+            self.button1 = True
+        elif num == 14:
+            self.up = True
+            self.right = True
+            self.button1 = True
+        elif num == 15:
+            self.up = True
+            self.left = True
+            self.button1 = True
+        elif num == 16:
+            self.down = True
+            self.right = True
+            self.button1 = True
+        elif num == 17:
+            self.down = True
+            self.left = True
+            self.button1 = True
+
+
     def set_input(self, input_dir, button=NOOP):
         self._set_default()
         input_dir = input_dir.lower()
@@ -113,8 +190,17 @@ _lib.simulator_alloc.restype = ctypes.POINTER(WrapSimulator)
 _lib.simulator_seed.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_uint]
 _lib.simulator_seed.restype = None
 
+_lib.simulator_is_legal_action.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_int32]
+_lib.simulator_is_legal_action.restype = ctypes.c_bool
+
 _lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.state_alloc.restype = ctypes.POINTER(WrapState)
+
+_lib.state_apply_ale_action.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
+_lib.state_apply_ale_action.restype = ctypes.c_bool
+
+_lib.state_apply_action.argtypes = [ctypes.POINTER(WrapState), ctypes.POINTER(Input)]
+_lib.state_apply_action.restype = None
 
 _lib.simulator_frame_width.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.simulator_frame_width.restype = ctypes.c_int32
@@ -130,6 +216,9 @@ _lib.render_current_frame.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c
 
 _lib.to_json.argtypes = [ctypes.POINTER(WrapState)]
 _lib.to_json.restype = ctypes.c_char_p
+
+_lib.config_to_json.argtypes = [ctypes.POINTER(WrapState)]
+_lib.config_to_json.restype = ctypes.c_char_p
 
 _lib.from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.from_json.restype = ctypes.POINTER(WrapState)

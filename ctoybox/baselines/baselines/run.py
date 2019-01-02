@@ -121,7 +121,8 @@ def build_env(args, extra_args):
             env.seed(seed)
         else:
             frame_stack_size = 4
-            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=extra_args['weights']), frame_stack_size)
+            weights = extra_args['weights'] if 'weights' in extra_args else None
+            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=weights), frame_stack_size)
     return env
 
 

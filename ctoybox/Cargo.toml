@@ -8,10 +8,9 @@ name = "ctoybox"
 crate-type = ["cdylib"]
 
 [dependencies]
-failure = "0.1"
 libc = "0.2"
-amidar = {path = "../amidar", version="*"}
-breakout = {path = "../breakout", version="*"}
+amidar = {path = "../tb_amidar", version="*"}
+breakout = {path = "../tb_breakout", version="*"}
 toybox = {path = "../toybox", version="*"}
 
 [dependencies.toybox-core]

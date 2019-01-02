@@ -2,19 +2,19 @@
 
 A set of games designed for causal experimentation with deep RL agents.
 
-## Target Rust Version
-
-For building on older GPU clusters, we target rustc 1.28:
-```bash
-rustup override set 1.28.0
-```
-
 ## Projects
 
 - ``toybox`` - Contains core logic for games.
 - ``ctoybox`` - Contains OpenAI Gym environment bindings.
-- ``human_play`` - Contains a front-end for playing those games as a human. 
 - ``breakout-web-play`` - Contains a web front-end for playing those games as a human.
+
+## Play the games (using pygame)
+
+    cargo build --release
+    cd ctoybox
+    ./start_python human_play.py breakout
+    ./start_python human_play.py amidar
+    ./start_python human_play.py space_invaders
 
 ## Mac Dev Setup Instructions
 * `brew install rustup`
