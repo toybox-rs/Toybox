@@ -1,3 +1,4 @@
+/openai*/*
 __pycache__
 target
 *.png
