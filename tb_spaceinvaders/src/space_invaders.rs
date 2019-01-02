@@ -29,9 +29,8 @@ pub mod screen {
     pub const ENEMY_END_POS: (i32, i32) = (98, 31);
     pub const ENEMIES_PER_ROW: i32 = 6;
     pub const ENEMIES_NUM: i32 = 6;
-    pub const ENEMY_Y_SPACE: i32 = 8;
-    pub const ENEMY_X_SPACE: i32 = 16;
-    pub const ENEMY_DELTA: i32 = 2;
+    pub const ENEMY_SPACE: (i32, i32) = (16, 8);
+    pub const ENEMY_DELTA: (i32, i32) = (2, 10);
     pub const ENEMY_PERIOD: i32 = 32;
 
     pub const NEW_LIFE_TIME: i32 = 128;
@@ -384,6 +383,7 @@ pub struct Enemy {
     death_counter: Option<i32>,
     move_counter: i32,
     move_right: bool,
+    move_down: bool,
     orientation: Orientation,
 }
 
@@ -399,6 +399,7 @@ impl Enemy {
             death_counter: None,
             move_counter: screen::ENEMY_PERIOD,
             move_right: true,
+            move_down: true,
             orientation: Orientation::INIT,
         }
     }
@@ -407,22 +408,34 @@ impl Enemy {
     }
     fn enemy_shift(&mut self) {
         if self.move_counter == 0 {
-            let width = screen::ENEMY_SIZE.0;
-            let delta = screen::ENEMY_DELTA;
-            let pad = screen::ENEMY_X_SPACE;
-            let start = screen::ENEMY_START_POS.0 + self.col * (width + pad);
-            let end = screen::ENEMY_END_POS.0 + self.col * (width + pad);
-            self.move_right = if self.x == start {
-                true
-            } else if self.x == end {
-                false
+            let (width, height) = screen::ENEMY_SIZE;
+            let (deltax, deltay) = screen::ENEMY_DELTA;
+            let (padx, pady) = screen::ENEMY_SPACE;
+            let startx = screen::ENEMY_START_POS.0 + self.col * (width + padx);
+            let starty = screen::ENEMY_START_POS.1 + self.row * (height + pady);
+            let end = screen::ENEMY_END_POS.0 + self.col * (width + padx);
+            // If this is the first move, just move right.
+            // move_right flag is initialized to be true, so we don't need to change it.
+            if self.x == startx && self.y == starty {
+                self.x += deltax;
+            // If we are aligned with the start position on the x-axis, set movement
+            // direction to the right, move down, and toggle the move down flag
+            } else if self.x == startx && self.move_down {
+                self.y += deltay;
+                self.move_right = true;
+                self.move_down = false;
+            // Likewise for the end position
+            } else if self.x == end && self.move_down {
+                self.y += deltay;
+                self.move_right = false;
+                self.move_down = false;
+            // If we aren't at the (x,y) start position and aren't moving down, move laterally.
+            } else if self.move_right {
+                self.x += deltax;
+                self.move_down = true;
             } else {
-                self.move_right
-            };
-            self.x = if self.move_right {
-                self.x + delta
-            } else {
-                self.x - delta
+                self.x -= deltax;
+                self.move_down = true;
             };
             self.orientation = match self.orientation {
                 Orientation::INIT => Orientation::FLIP,
@@ -452,8 +465,8 @@ impl State {
 
         let (x, y) = screen::ENEMY_START_POS;
         let (w, h) = screen::ENEMY_SIZE;
-        let x_offset = w + screen::ENEMY_X_SPACE;
-        let y_offset = h + screen::ENEMY_Y_SPACE;
+        let x_offset = w + screen::ENEMY_SPACE.0;
+        let y_offset = h + screen::ENEMY_SPACE.1;
         for j in 0..screen::ENEMIES_NUM {
             for i in 0..screen::ENEMIES_PER_ROW {
                 let x = x + (i * x_offset);
