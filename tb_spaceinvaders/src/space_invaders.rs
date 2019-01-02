@@ -646,6 +646,25 @@ impl State {
             self.enemy_lasers.remove(laser_idx);
         }
     }
+
+    /// If enemies have moved far enough down to overlap with shields,
+    /// then shields are removed.
+    fn remove_shields(&mut self) {
+        for id in self.active_weapon_enemy_ids() {
+            let enemy = &self.enemies[id as usize];
+            // We only care about the lowest enemies. However, since
+            // we have to loop through all of the enemies to find the lowest
+            // one anyway, we might as well just check here.
+            let lower_bound = enemy.y + screen::ENEMY_SIZE.1;
+            // Not sure if shields disappear at the bounding box intersection,
+            // or at actual pixel overlap (put another way: do partially
+            // destructed shields lead to a delay in their final disappearance?)
+            // Going with the simpler version for now.
+            if lower_bound > screen::SHIELD1_POS.1 {
+                self.shields = Vec::new();
+            }
+        }
+    }
 }
 
 pub struct SpaceInvaders {
@@ -741,6 +760,7 @@ impl toybox_core::State for State {
         self.enemy_animation();
         self.enemy_fire_lasers();
         self.enemy_laser_movement();
+        self.remove_shields();
 
         if self.ship_laser.is_some() {
             let laser_speed = self.ship_laser.as_ref().map(|l| l.speed).unwrap();
