@@ -508,7 +508,11 @@ impl State {
             let laser_rect = laser.rect();
 
             // Check collision with living enemies:
-            for e in self.enemies.iter().filter(|e| e.alive) {
+            for e in self
+                .enemies
+                .iter()
+                .filter(|e| e.alive && e.death_counter.is_none())
+            {
                 let enemy_rect = e.rect();
 
                 // Broad-phase collision: is it in the rectangle?
