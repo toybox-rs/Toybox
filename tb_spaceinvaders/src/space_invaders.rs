@@ -3,6 +3,7 @@ use super::font::{draw_score, get_sprite, FontChoice};
 use itertools::Itertools;
 use serde_json;
 use std::any::Any;
+use std::cmp::{max, min};
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::random;
@@ -32,6 +33,8 @@ pub mod screen {
     pub const ENEMY_SPACE: (i32, i32) = (16, 8);
     pub const ENEMY_DELTA: (i32, i32) = (2, 10);
     pub const ENEMY_PERIOD: i32 = 32;
+
+    pub static ENEMY_SPEEDUPS: &'static [(i32, i32)] = &[(12, 16), (24, 8), (30, 4), (32, 2)];
 
     pub const NEW_LIFE_TIME: i32 = 128;
 
@@ -406,7 +409,7 @@ impl Enemy {
     fn rect(&self) -> Rect {
         Rect::new(self.x, self.y, screen::ENEMY_SIZE.0, screen::ENEMY_SIZE.1)
     }
-    fn enemy_shift(&mut self) {
+    fn enemy_shift(&mut self, num_killed: i32) {
         if self.move_counter == 0 {
             let (width, height) = screen::ENEMY_SIZE;
             let (deltax, deltay) = screen::ENEMY_DELTA;
@@ -431,17 +434,25 @@ impl Enemy {
                 self.move_down = false;
             // If we aren't at the (x,y) start position and aren't moving down, move laterally.
             } else if self.move_right {
-                self.x += deltax;
+                self.x = min(self.x + deltax, end);
                 self.move_down = true;
             } else {
-                self.x -= deltax;
+                self.x = max(self.x - deltax, startx);
                 self.move_down = true;
             };
             self.orientation = match self.orientation {
                 Orientation::INIT => Orientation::FLIP,
                 Orientation::FLIP => Orientation::INIT,
             };
-            self.move_counter = screen::ENEMY_PERIOD;
+            for (num_dead, speedup) in screen::ENEMY_SPEEDUPS {
+                if &num_killed >= num_dead {
+                    self.move_counter = *speedup;
+                }
+            }
+            // If we haven't killed enough enemies to accellerate, reset to the original period.
+            if self.move_counter == 0 {
+                self.move_counter = screen::ENEMY_PERIOD;
+            }
         } else {
             self.move_counter -= 1;
         }
@@ -579,8 +590,12 @@ impl State {
 
     /// Move enemies
     fn enemy_shift(&mut self) {
+        let num_killed = self
+            .enemies
+            .iter()
+            .fold(0, |acc, e| if e.alive { acc } else { acc + 1 });
         for enemy in self.enemies.iter_mut() {
-            enemy.enemy_shift();
+            enemy.enemy_shift(num_killed as i32);
         }
     }
 
