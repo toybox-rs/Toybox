@@ -34,6 +34,8 @@ pub mod screen {
     pub const ENEMY_DELTA: (i32, i32) = (2, 10);
     pub const ENEMY_PERIOD: i32 = 32;
 
+    pub const FLASH_PERIOD: i32 = 8;
+
     pub static ENEMY_SPEEDUPS: &'static [(i32, i32)] = &[(12, 16), (24, 8), (30, 4), (32, 2)];
 
     pub const NEW_LIFE_TIME: i32 = 128;
@@ -41,6 +43,8 @@ pub mod screen {
     pub const DEATH_TIME: i32 = 29;
     pub const DEATH_HIT_1: i32 = 5;
     pub const DEATH_HIT_N: i32 = 8;
+
+    pub const PLAYER_DEATH_TIME: i32 = 115;
 
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE_W: i32 = 2;
@@ -203,12 +207,22 @@ lazy_static! {
     .unwrap()
     .to_fixed()
     .unwrap();
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Orientation {
-    INIT,
-    FLIP,
+    static ref PLAYER_HIT_1: FixedSpriteData = load_sprite_default(
+        include_str!("resources/player_ship_hit_1"),
+        (&screen::SHIP_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
+    static ref PLAYER_HIT_2: FixedSpriteData = load_sprite_default(
+        include_str!("resources/player_ship_hit_2"),
+        (&screen::SHIP_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
 }
 
 pub fn load_sprite(
@@ -246,7 +260,7 @@ pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<Sp
 
 pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
     let row = enemy.row;
-    let orientation = &enemy.orientation;
+    let orientation = &enemy.orientation_init;
     if let Some(dc) = enemy.death_counter {
         for i in 0..4 {
             let bound = screen::DEATH_TIME - (screen::DEATH_HIT_1 + i * screen::DEATH_HIT_N);
@@ -263,18 +277,18 @@ pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
         unreachable!("Something is messed up in your death clock.")
     } else {
         match (row + 1, orientation) {
-            (1, Orientation::INIT) => INVADER_INIT_1.clone(),
-            (2, Orientation::INIT) => INVADER_INIT_2.clone(),
-            (3, Orientation::INIT) => INVADER_INIT_3.clone(),
-            (4, Orientation::INIT) => INVADER_INIT_4.clone(),
-            (5, Orientation::INIT) => INVADER_INIT_5.clone(),
-            (6, Orientation::INIT) => INVADER_INIT_6.clone(),
-            (1, Orientation::FLIP) => INVADER_FLIP_1.clone(),
-            (2, Orientation::FLIP) => INVADER_FLIP_2.clone(),
-            (3, Orientation::FLIP) => INVADER_FLIP_3.clone(),
-            (4, Orientation::FLIP) => INVADER_FLIP_4.clone(),
-            (5, Orientation::FLIP) => INVADER_FLIP_5.clone(),
-            (6, Orientation::FLIP) => INVADER_FLIP_6.clone(),
+            (1, true) => INVADER_INIT_1.clone(),
+            (2, true) => INVADER_INIT_2.clone(),
+            (3, true) => INVADER_INIT_3.clone(),
+            (4, true) => INVADER_INIT_4.clone(),
+            (5, true) => INVADER_INIT_5.clone(),
+            (6, true) => INVADER_INIT_6.clone(),
+            (1, false) => INVADER_FLIP_1.clone(),
+            (2, false) => INVADER_FLIP_2.clone(),
+            (3, false) => INVADER_FLIP_3.clone(),
+            (4, false) => INVADER_FLIP_4.clone(),
+            (5, false) => INVADER_FLIP_5.clone(),
+            (6, false) => INVADER_FLIP_6.clone(),
             _ => unreachable!("Only expecting 6 invader types"),
         }
     }
@@ -298,6 +312,9 @@ pub struct Player {
     /// Speed of movenet.
     pub speed: i32,
     pub color: Color,
+    pub alive: bool,
+    death_counter: Option<i32>,
+    death_hit_1: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -324,6 +341,9 @@ impl Player {
             h,
             speed: 3,
             color: (&screen::SHIP_COLOR).into(),
+            alive: false,
+            death_counter: None,
+            death_hit_1: true,
         }
     }
     fn _rect(&self) -> Rect {
@@ -387,7 +407,7 @@ pub struct Enemy {
     move_counter: i32,
     move_right: bool,
     move_down: bool,
-    orientation: Orientation,
+    orientation_init: bool,
 }
 
 impl Enemy {
@@ -403,7 +423,7 @@ impl Enemy {
             move_counter: screen::ENEMY_PERIOD,
             move_right: true,
             move_down: true,
-            orientation: Orientation::INIT,
+            orientation_init: true,
         }
     }
     fn rect(&self) -> Rect {
@@ -440,10 +460,7 @@ impl Enemy {
                 self.x = max(self.x - deltax, startx);
                 self.move_down = true;
             };
-            self.orientation = match self.orientation {
-                Orientation::INIT => Orientation::FLIP,
-                Orientation::FLIP => Orientation::INIT,
-            };
+            self.orientation_init = !self.orientation_init;
             for (num_dead, speedup) in screen::ENEMY_SPEEDUPS {
                 if &num_killed >= num_dead {
                     self.move_counter = *speedup;
@@ -498,6 +515,53 @@ impl State {
             shields,
             enemies,
             enemy_lasers: Vec::new(),
+        }
+    }
+
+    /// Flash the player ship and display lives
+    fn flash_display_lives(&mut self) {
+        if self.life_display_timer > 0 { 
+            self.life_display_timer -= 1;
+        } else {
+            self.ship.alive = true;
+            self.life_display_timer = screen::NEW_LIFE_TIME;
+        }
+    }
+
+    /// Find the laser, if any, that hits the ship, and start the ship's death timer.
+    fn laser_player_collision(&mut self) {
+        let x = self.ship.x;
+        let y = self.ship.y;
+        for laser in &self.enemy_lasers {
+            let laser_rect = laser.rect();
+            let player_rect = Rect::new(x, y, self.ship.w, self.ship.h);
+            let player_sprite = PLAYER_SPRITE.clone();
+            if laser_rect.intersects(&player_rect) {
+                if laser_rect.collides_visible(x, y, &player_sprite.data) {
+                    self.ship.alive = false;
+                    self.ship.death_counter = Some(screen::PLAYER_DEATH_TIME);
+                }
+            }
+        }
+    }
+
+    /// Decrement the player's death counter and update the sprite image
+    fn player_toggle_death(&mut self) {
+        if let Some(counter) = self.ship.death_counter {
+            if counter > 0 {
+                let counter = counter - 1;
+                if counter % 24 == 0 {
+                    self.ship.death_hit_1 = false;
+                } else if counter % 12 == 0 {
+                    self.ship.death_hit_1 = true;
+                }
+                self.ship.death_counter = Some(counter);
+            } else {
+                self.ship.death_counter = None;
+                self.lives -= 1;
+                // self.ship.alive = true;
+                self.ship.x = screen::SHIP_LIMIT_X1;
+            }
         }
     }
 
@@ -748,39 +812,48 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         // Don't play game yet if displaying lives.
-        if self.life_display_timer > 0 {
-            self.life_display_timer -= 1;
-            return;
+        // if self.life_display_timer > 0 { 
+        //     self.life_display_timer -= 1;
+        //     return;
+        // }
+
+        // self.laser_enemy_collisions();
+
+        if self.ship.alive {
+            // The ship can only move if it is alive.
+            if buttons.left {
+                self.ship.x -= self.ship.speed;
+            } else if buttons.right {
+                self.ship.x += self.ship.speed;
+            }
+
+            if self.ship.x > screen::SHIP_LIMIT_X2 {
+                self.ship.x = screen::SHIP_LIMIT_X2;
+            } else if self.ship.x < screen::SHIP_LIMIT_X1 {
+                self.ship.x = screen::SHIP_LIMIT_X1;
+            }
+
+            // Only shoot a laser if not present and if we aren't in the throes of death:
+            if self.ship_laser.is_none() && buttons.button1 {
+                self.ship_laser = Some(Laser::new(
+                    self.ship.x + self.ship.w / 2,
+                    self.ship.y,
+                    Direction::Up,
+                ));
+            }
+            // Enemies only move if the player is alive
+            self.enemy_shift();
+            // Enemies only fire if the player is alive
+            self.enemy_fire_lasers();
+            self.remove_shields();
+
+            // See if lasers have gone off-screen.
+            self.laser_miss_check();
+        } else if self.ship.death_counter.is_none() {
+            self.flash_display_lives();
         }
 
-        if buttons.left {
-            self.ship.x -= self.ship.speed;
-        } else if buttons.right {
-            self.ship.x += self.ship.speed;
-        }
-
-        if self.ship.x > screen::SHIP_LIMIT_X2 {
-            self.ship.x = screen::SHIP_LIMIT_X2;
-        } else if self.ship.x < screen::SHIP_LIMIT_X1 {
-            self.ship.x = screen::SHIP_LIMIT_X1;
-        }
-
-        // Only shoot a laser if not present:
-        if self.ship_laser.is_none() && buttons.button1 {
-            self.ship_laser = Some(Laser::new(
-                self.ship.x + self.ship.w / 2,
-                self.ship.y,
-                Direction::Up,
-            ));
-        }
-
-        self.laser_enemy_collisions();
-        self.enemy_shift();
-        self.enemy_animation();
-        self.enemy_fire_lasers();
-        self.enemy_laser_movement();
-        self.remove_shields();
-
+        // Player's laser continues moving during death.
         if self.ship_laser.is_some() {
             let laser_speed = self.ship_laser.as_ref().map(|l| l.speed).unwrap();
 
@@ -801,9 +874,10 @@ impl toybox_core::State for State {
                 self.laser_enemy_collisions();
             }
         }
-
-        // See if lasers have gone off-screen.
-        self.laser_miss_check();
+        self.enemy_animation();
+        self.enemy_laser_movement();
+        self.laser_player_collision();
+        self.player_toggle_death();
     }
 
     fn draw(&self) -> Vec<Drawable> {
@@ -853,23 +927,52 @@ impl toybox_core::State for State {
         ));
 
         // Render lives font in the middle of the screen!
-        if self.life_display_timer > 0 {
-            output.push(Drawable::sprite(
-                screen::LIVES_DISPLAY_POSITION.0,
-                screen::LIVES_DISPLAY_POSITION.1,
-                get_sprite(self.lives as u32, FontChoice::LIVES),
-            ));
-        }
+        // if self.life_display_timer > 0 {
+        //     output.push(Drawable::sprite(
+        //         screen::LIVES_DISPLAY_POSITION.0,
+        //         screen::LIVES_DISPLAY_POSITION.1,
+        //         get_sprite(self.lives as u32, FontChoice::LIVES),
+        //     ));
+        // }
 
         if self.lives() < 0 {
             return output;
         }
 
-        output.push(Drawable::sprite(
-            self.ship.x,
-            self.ship.y,
-            PLAYER_SPRITE.clone(),
-        ));
+        if self.ship.alive {
+            output.push(Drawable::sprite(
+                self.ship.x,
+                self.ship.y,
+                PLAYER_SPRITE.clone(),
+            ));
+        } else if self.ship.death_counter.is_none() {
+            // TODO(etosch): flash the player and display the number of remaining lives.
+            
+            output.push(Drawable::sprite(
+                screen::LIVES_DISPLAY_POSITION.0,
+                screen::LIVES_DISPLAY_POSITION.1,
+                get_sprite(self.lives as u32, FontChoice::LIVES),
+            ));
+            if (self.life_display_timer / screen::FLASH_PERIOD) % 2 == 1 {
+                output.push(Drawable::sprite(
+                    self.ship.x,
+                    self.ship.y,
+                    PLAYER_SPRITE.clone(),
+                ));
+            }
+        } else if self.ship.death_hit_1 {
+            output.push(Drawable::sprite(
+                self.ship.x,
+                self.ship.y,
+                PLAYER_HIT_1.clone(),
+            ));
+        } else {
+            output.push(Drawable::sprite(
+                self.ship.x,
+                self.ship.y,
+                PLAYER_HIT_2.clone(),
+            ));
+        }
 
         for shield in &self.shields {
             output.push(Drawable::DestructibleSprite(shield.clone()));
