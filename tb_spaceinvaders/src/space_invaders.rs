@@ -520,7 +520,7 @@ impl State {
 
     /// Flash the player ship and display lives
     fn flash_display_lives(&mut self) {
-        if self.life_display_timer > 0 { 
+        if self.life_display_timer > 0 {
             self.life_display_timer -= 1;
         } else {
             self.ship.alive = true;
@@ -812,7 +812,7 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         // Don't play game yet if displaying lives.
-        // if self.life_display_timer > 0 { 
+        // if self.life_display_timer > 0 {
         //     self.life_display_timer -= 1;
         //     return;
         // }
@@ -926,15 +926,6 @@ impl toybox_core::State for State {
             FontChoice::RIGHT,
         ));
 
-        // Render lives font in the middle of the screen!
-        // if self.life_display_timer > 0 {
-        //     output.push(Drawable::sprite(
-        //         screen::LIVES_DISPLAY_POSITION.0,
-        //         screen::LIVES_DISPLAY_POSITION.1,
-        //         get_sprite(self.lives as u32, FontChoice::LIVES),
-        //     ));
-        // }
-
         if self.lives() < 0 {
             return output;
         }
@@ -947,7 +938,7 @@ impl toybox_core::State for State {
             ));
         } else if self.ship.death_counter.is_none() {
             // TODO(etosch): flash the player and display the number of remaining lives.
-            
+
             output.push(Drawable::sprite(
                 screen::LIVES_DISPLAY_POSITION.0,
                 screen::LIVES_DISPLAY_POSITION.1,
