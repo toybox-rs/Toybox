@@ -667,6 +667,21 @@ impl State {
         }
     }
 
+    fn closest_enemy_id(&self) -> u32 {
+        let playerx = &self.ship.x;
+        let mut dist = screen::GAME_SIZE.0;
+        let mut closest_id = 0;
+        for eid in self.active_weapon_enemy_ids() {
+            let e = &self.enemies[eid as usize];
+            let edist = (e.x - playerx).abs();
+            if edist < dist {
+                dist = edist;
+                closest_id = eid;
+            }
+        }
+        closest_id
+    }
+
     fn enemy_fire_lasers(&mut self) {
         // Don't fire too many lasers.
         if self.enemy_lasers.len() > 1 {
@@ -679,13 +694,20 @@ impl State {
             self.enemy_shot_delay = 50;
 
             // Everybody shoots for now...
-            for eid in self.active_weapon_enemy_ids() {
-                let enemy = &mut self.enemies[eid as usize];
-                let start = enemy.rect();
+            // for eid in self.active_weapon_enemy_ids() {
+            //     let enemy = &mut self.enemies[eid as usize];
+            //     let start = enemy.rect();
 
-                let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
-                self.enemy_lasers.push(shot);
-            }
+            //     let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
+            //     self.enemy_lasers.push(shot);
+            // }
+
+
+            // Get active enemy closest to the player
+            let shooter = &self.enemies[self.closest_enemy_id() as usize];
+            let start = shooter.rect();
+            let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
+            self.enemy_lasers.push(shot);
         }
     }
 
