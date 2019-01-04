@@ -4,8 +4,11 @@ target
 images
 .env
 .vscode
+.eggs
 *.err
 *.out
 *.sbatch
 install_rust.sh
 ctoybox/run_cmd_*
+venv
+openai-old
