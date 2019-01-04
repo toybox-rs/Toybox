@@ -46,7 +46,13 @@ pub mod screen {
 
     pub const PLAYER_DEATH_TIME: i32 = 115;
 
-    pub const UFO_SIZE: (i32, i32) = (21, 13);
+    // Mothership
+    pub const UFO_SIZE: (i32, i32) = (14, 7);
+    pub const UFO_PERIOD: i32 = 1500;
+    pub const UFO_START_POS: (i32, i32) = (-2, 12);
+    pub const UFO_DELTA: i32 = 2;
+    pub const UFO_BONUS: i32 = 100;
+
     pub const LASER_SIZE_W: i32 = 2;
     pub const LASER_SIZE_H1: i32 = 11;
     pub const LASER_SIZE_H2: i32 = 8;
@@ -223,6 +229,31 @@ lazy_static! {
     .unwrap()
     .to_fixed()
     .unwrap();
+    static ref UFO_MOTHERSHIP_SPRITE: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/mothership"), 
+        (&screen::UFO_COLOR).into(),
+        1
+        ).unwrap().to_fixed().unwrap();
+    static ref UFO_HIT_1: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_1"),
+                (&screen::UFO_COLOR).into(),
+        1
+        ).unwrap().to_fixed().unwrap();
+    static ref UFO_HIT_2: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_2"),
+                (&screen::UFO_COLOR).into(),
+        1
+        ).unwrap().to_fixed().unwrap();
+    static ref UFO_HIT_3: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_3"),
+                (&screen::UFO_COLOR).into(),
+        1
+        ).unwrap().to_fixed().unwrap();
+    static ref UFO_HIT_4: FixedSpriteData = load_sprite_default(
+        include_str!("resources/space_invaders/invader_hit_4"),
+                (&screen::UFO_COLOR).into(),
+        1
+        ).unwrap().to_fixed().unwrap();
 }
 
 pub fn load_sprite(
@@ -291,6 +322,45 @@ pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
             (6, false) => INVADER_FLIP_6.clone(),
             _ => unreachable!("Only expecting 6 invader types"),
         }
+    }
+}
+
+fn get_player_sprite(ship: &Player, life_display_timer: i32) -> Option<FixedSpriteData> {
+    if ship.alive {
+        Some(PLAYER_SPRITE.clone())
+    } else if ship.death_counter.is_none() {
+        // Between lives. Flash time.
+        if (life_display_timer / screen::FLASH_PERIOD) % 2 == 1 {
+            Some(PLAYER_SPRITE.clone())
+        } else {
+            None
+        }
+    } else if ship.death_hit_1 {
+        Some(PLAYER_HIT_1.clone())
+    } else {
+        Some(PLAYER_HIT_2.clone())
+    }
+}
+
+
+fn get_ufo_sprite(ufo: &Ufo) -> Option<FixedSpriteData> {
+    // For now, just assume the same period as the enemy sprites.
+    if let Some(dc) = ufo.death_counter {
+        for i in 0..4 {
+            let bound = screen::DEATH_TIME - (screen::DEATH_HIT_1 + i * screen::DEATH_HIT_N);
+            if dc > bound {
+                match i + 1 {
+                    1 => return Some(UFO_HIT_1.clone()),
+                    2 => return Some(UFO_HIT_2.clone()),
+                    3 => return Some(UFO_HIT_3.clone()),
+                    4 => return Some(UFO_HIT_4.clone()),
+                    _ => unreachable!("There are only 4 animations."),
+                }
+            }
+        }
+        None
+    } else {
+        Some(UFO_MOTHERSHIP_SPRITE.clone())
     }
 }
 
@@ -393,6 +463,43 @@ pub struct State {
     pub enemy_shot_delay: i32,
     /// Enemy lasers are actors as well.
     pub enemy_lasers: Vec<Laser>,
+    
+    /// Mothership
+    pub ufo: Ufo,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Ufo {
+    pub x: i32, 
+    pub y: i32, 
+    appearance_counter: Option<i32>,
+    death_counter: Option<i32>,
+}
+
+impl Ufo {
+    fn new() -> Ufo {
+        Ufo {
+            x: screen::UFO_START_POS.0,
+            y: screen::UFO_START_POS.1,
+            appearance_counter: Some(screen::UFO_PERIOD),
+            death_counter: None,
+        }
+    }
+    fn rect(&self) -> Rect {
+        Rect::new(self.x, self.y, screen::UFO_SIZE.0, screen::UFO_SIZE.1)
+    }
+    fn start_death_counter(&mut self) {
+        self.death_counter = Some(screen::DEATH_TIME);
+    }
+    fn shift_ship(&mut self) {
+        self.x += screen::UFO_DELTA;
+    }
+    fn reset_mothership(&mut self) {
+        self.x = screen::UFO_START_POS.0;
+        self.y = screen::UFO_START_POS.1;
+        self.appearance_counter = Some(screen::UFO_PERIOD);
+        self.death_counter = None;
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -515,6 +622,7 @@ impl State {
             shields,
             enemies,
             enemy_lasers: Vec::new(),
+            ufo: Ufo::new(),
         }
     }
 
@@ -597,6 +705,64 @@ impl State {
             self.ship_laser = None;
             if enemy.death_counter.is_none() {
                 enemy.death_counter = Some(screen::DEATH_TIME)
+            }
+        }
+    }
+
+    // If the player's laser has hit the UFO, start its death timer.
+    fn laser_ufo_collision(&mut self) {
+        // If the UFO has not yet appeared, it can't be hit.
+        if self.ufo.appearance_counter.is_some() { return }
+        // If the UFO is currently dying, it can't be hit.
+        if self.ufo.death_counter.is_some() { return }
+
+        let ufo = &mut self.ufo;
+        if let Some(ref mut laser) = self.ship_laser {
+            let laser_rect = laser.rect();
+            let ufo_rect = ufo.rect();
+            if laser_rect.intersects(&ufo_rect) {
+                if let Some(sprite) = get_ufo_sprite(&ufo){
+                    if laser_rect.collides_visible(ufo.x, ufo.y, &sprite.data) {
+                        ufo.start_death_counter();
+                        self.score += screen::UFO_BONUS;
+                    }
+                } else {
+                    unreachable!("We should have exited earlier if the death counter is 0 and sprite is None.");
+                }
+            }
+        }
+        //
+        if ufo.death_counter.is_some() {
+            self.ship_laser = None;
+        }
+
+    }
+
+
+
+    /// Handle counters for ufo appearance, collision, etc.    
+    fn laser_ufo_movement_animation(&mut self) {
+        if let Some(counter) = self.ufo.appearance_counter {
+            // UFO has not already appeared
+            self.ufo.appearance_counter = if counter == 0 {
+                None
+            } else {
+                Some(counter - 1)
+            }
+        } else if let Some(counter) = self.ufo.death_counter {
+            // UFO has appeared and has been hit.
+            if counter == 0 {
+                self.ufo = Ufo::new();
+            } else {
+                self.ufo.death_counter = Some(counter - 1);
+            }
+        } else {
+            // UFO has appeared but has not been hit
+            if self.ufo.x >= screen::GAME_SIZE.0 {
+                // The UFO is off the screen. Reset.
+                self.ufo.reset_mothership();
+            } else {
+                self.ufo.shift_ship();
             }
         }
     }
@@ -898,6 +1064,8 @@ impl toybox_core::State for State {
         self.enemy_animation();
         self.enemy_laser_movement();
         self.laser_player_collision();
+        self.laser_ufo_movement_animation();
+        self.laser_ufo_collision();
         self.player_toggle_death();
     }
 
@@ -933,54 +1101,47 @@ impl toybox_core::State for State {
             screen::GAME_DOT_SIZE.0,
             screen::GAME_DOT_SIZE.1,
         ));
-        // draw score
-        output.extend(draw_score(
-            self.score,
-            screen::SCORE_LEFT_X_POS,
-            screen::SCORE_Y_POS,
-            FontChoice::LEFT,
-        ));
-        output.extend(draw_score(
-            0,
-            screen::SCORE_RIGHT_X_POS,
-            screen::SCORE_Y_POS,
-            FontChoice::RIGHT,
-        ));
+        // draw score or mothership
+        if self.ufo.appearance_counter.is_none() {
+            if let Some(ufo_sprite) = get_ufo_sprite(&self.ufo) {
+                output.push(Drawable::sprite(
+                    self.ufo.x,
+                    self.ufo.y,
+                    ufo_sprite
+                    )); 
+            }
+        } else {
+            output.extend(draw_score(
+                self.score,
+                screen::SCORE_LEFT_X_POS,
+                screen::SCORE_Y_POS,
+                FontChoice::LEFT,
+            ));
+            output.extend(draw_score(
+                0,
+                screen::SCORE_RIGHT_X_POS,
+                screen::SCORE_Y_POS,
+                FontChoice::RIGHT,
+            ));
+        }
 
         if self.lives() < 0 {
             return output;
         }
 
-        if self.ship.alive {
+        if let Some(player_sprite) = get_player_sprite(&self.ship, self.life_display_timer) {
             output.push(Drawable::sprite(
                 self.ship.x,
                 self.ship.y,
-                PLAYER_SPRITE.clone(),
-            ));
-        } else if self.ship.death_counter.is_none() {
+                player_sprite.clone()));
+        }
+        
+        // In between lives.
+        if !self.ship.alive && self.ship.death_counter.is_none() {
             output.push(Drawable::sprite(
                 screen::LIVES_DISPLAY_POSITION.0,
                 screen::LIVES_DISPLAY_POSITION.1,
                 get_sprite(self.lives as u32, FontChoice::LIVES),
-            ));
-            if (self.life_display_timer / screen::FLASH_PERIOD) % 2 == 1 {
-                output.push(Drawable::sprite(
-                    self.ship.x,
-                    self.ship.y,
-                    PLAYER_SPRITE.clone(),
-                ));
-            }
-        } else if self.ship.death_hit_1 {
-            output.push(Drawable::sprite(
-                self.ship.x,
-                self.ship.y,
-                PLAYER_HIT_1.clone(),
-            ));
-        } else {
-            output.push(Drawable::sprite(
-                self.ship.x,
-                self.ship.y,
-                PLAYER_HIT_2.clone(),
             ));
         }
 
