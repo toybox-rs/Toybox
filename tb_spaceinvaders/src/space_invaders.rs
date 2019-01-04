@@ -37,6 +37,7 @@ pub mod screen {
     pub const FLASH_PERIOD: i32 = 8;
 
     pub static ENEMY_SPEEDUPS: &'static [(i32, i32)] = &[(12, 16), (24, 8), (30, 4), (32, 2)];
+    pub static ENEMY_POINTS: &'static [i32] = &[30, 30, 20, 20, 10, 10];
 
     pub const NEW_LIFE_TIME: i32 = 128;
 
@@ -510,6 +511,7 @@ pub struct Enemy {
     col: i32,
     id: u32,
     alive: bool,
+    points: i32,
     death_counter: Option<i32>,
     move_counter: i32,
     move_right: bool,
@@ -526,6 +528,7 @@ impl Enemy {
             col,
             id,
             alive: true,
+            points: screen::ENEMY_POINTS[row as usize],
             death_counter: None,
             move_counter: screen::ENEMY_PERIOD,
             move_right: true,
@@ -587,15 +590,39 @@ impl State {
     fn new(rand: random::Gen) -> State {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
-        let mut shields = Vec::new();
-        let mut enemies = Vec::new();
+        let mut state = State {
+            rand,
+            life_display_timer: screen::NEW_LIFE_TIME,
+            lives: 3,
+            score: 0,
+            ship: Player::new(player_start_x, player_start_y),
+            ship_laser: None,
+            enemy_shot_delay: 50,
+            shields: Vec::new(),
+            enemies: Vec::new(),
+            enemy_lasers: Vec::new(),
+            ufo: Ufo::new(),
+        };
 
+        state.reset_board();
+        state
+    }
+
+    fn reset_board(&mut self) {
+        self.shields.clear();
+        self.enemies.clear();
+        self.life_display_timer = screen::NEW_LIFE_TIME;
+        self.ship.x = screen::SHIP_LIMIT_X1;
+        self.enemy_lasers.clear();
+        self.ship_laser = None;
+        self.ufo = Ufo::new();
+        
         for &(x, y) in &[
             screen::SHIELD1_POS,
             screen::SHIELD2_POS,
             screen::SHIELD3_POS,
         ] {
-            shields.push(SHIELD_SPRITE.translate(x, y))
+            self.shields.push(SHIELD_SPRITE.translate(x, y))
         }
 
         let (x, y) = screen::ENEMY_START_POS;
@@ -606,23 +633,9 @@ impl State {
             for i in 0..screen::ENEMIES_PER_ROW {
                 let x = x + (i * x_offset);
                 let y = y + (j * y_offset);
-                let id = enemies.len() as u32;
-                enemies.push(Enemy::new(x, y, j, i, id));
+                let id = self.enemies.len() as u32;
+                self.enemies.push(Enemy::new(x, y, j, i, id));
             }
-        }
-
-        State {
-            rand,
-            life_display_timer: screen::NEW_LIFE_TIME,
-            lives: 3,
-            score: 0,
-            ship: Player::new(player_start_x, player_start_y),
-            ship_laser: None,
-            enemy_shot_delay: 50,
-            shields,
-            enemies,
-            enemy_lasers: Vec::new(),
-            ufo: Ufo::new(),
         }
     }
 
@@ -775,7 +788,7 @@ impl State {
                 if dc == 0 {
                     enemy.death_counter = None;
                     enemy.alive = false;
-                    self.score += 10;
+                    self.score += enemy.points;
                 } else {
                     enemy.death_counter = Some(dc);
                 }
@@ -935,6 +948,18 @@ impl State {
             }
         }
     }
+    fn has_lost(&self) -> bool {
+        self.enemies.iter().any( 
+            |e| e.alive && e.rect().y2() >= screen::SKY_TO_GROUND
+        )
+    }
+    fn reset_condition(&self) -> bool {
+        let dead = self.lives < 0;
+        let won = self.enemies.iter().all(|e| !e.alive);
+        let lost = self.has_lost();
+        dead || won || lost
+    }
+
 }
 
 pub struct SpaceInvaders {
@@ -998,14 +1023,10 @@ impl toybox_core::State for State {
         self.score
     }
     fn update_mut(&mut self, buttons: Input) {
-        // Don't play game yet if displaying lives.
-        // if self.life_display_timer > 0 {
-        //     self.life_display_timer -= 1;
-        //     return;
-        // }
-
-        // self.laser_enemy_collisions();
-
+        if self.reset_condition() {
+            self.reset_board();
+            return;
+        }
         if self.ship.alive {
             // The ship can only move if it is alive.
             if buttons.left {
