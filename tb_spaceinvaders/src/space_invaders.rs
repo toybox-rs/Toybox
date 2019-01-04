@@ -3,6 +3,7 @@ use super::font::{draw_score, get_sprite, FontChoice};
 use itertools::Itertools;
 use serde_json;
 use std::any::Any;
+use std::cmp::{max, min};
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::random;
@@ -29,16 +30,21 @@ pub mod screen {
     pub const ENEMY_END_POS: (i32, i32) = (98, 31);
     pub const ENEMIES_PER_ROW: i32 = 6;
     pub const ENEMIES_NUM: i32 = 6;
-    pub const ENEMY_Y_SPACE: i32 = 8;
-    pub const ENEMY_X_SPACE: i32 = 16;
-    pub const ENEMY_DELTA: i32 = 2;
+    pub const ENEMY_SPACE: (i32, i32) = (16, 8);
+    pub const ENEMY_DELTA: (i32, i32) = (2, 10);
     pub const ENEMY_PERIOD: i32 = 32;
+
+    pub const FLASH_PERIOD: i32 = 8;
+
+    pub static ENEMY_SPEEDUPS: &'static [(i32, i32)] = &[(12, 16), (24, 8), (30, 4), (32, 2)];
 
     pub const NEW_LIFE_TIME: i32 = 128;
 
     pub const DEATH_TIME: i32 = 29;
     pub const DEATH_HIT_1: i32 = 5;
     pub const DEATH_HIT_N: i32 = 8;
+
+    pub const PLAYER_DEATH_TIME: i32 = 115;
 
     pub const UFO_SIZE: (i32, i32) = (21, 13);
     pub const LASER_SIZE_W: i32 = 2;
@@ -201,12 +207,22 @@ lazy_static! {
     .unwrap()
     .to_fixed()
     .unwrap();
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum Orientation {
-    INIT,
-    FLIP,
+    static ref PLAYER_HIT_1: FixedSpriteData = load_sprite_default(
+        include_str!("resources/player_ship_hit_1"),
+        (&screen::SHIP_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
+    static ref PLAYER_HIT_2: FixedSpriteData = load_sprite_default(
+        include_str!("resources/player_ship_hit_2"),
+        (&screen::SHIP_COLOR).into(),
+        1
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
 }
 
 pub fn load_sprite(
@@ -244,7 +260,7 @@ pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<Sp
 
 pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
     let row = enemy.row;
-    let orientation = &enemy.orientation;
+    let orientation = &enemy.orientation_init;
     if let Some(dc) = enemy.death_counter {
         for i in 0..4 {
             let bound = screen::DEATH_TIME - (screen::DEATH_HIT_1 + i * screen::DEATH_HIT_N);
@@ -261,18 +277,18 @@ pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
         unreachable!("Something is messed up in your death clock.")
     } else {
         match (row + 1, orientation) {
-            (1, Orientation::INIT) => INVADER_INIT_1.clone(),
-            (2, Orientation::INIT) => INVADER_INIT_2.clone(),
-            (3, Orientation::INIT) => INVADER_INIT_3.clone(),
-            (4, Orientation::INIT) => INVADER_INIT_4.clone(),
-            (5, Orientation::INIT) => INVADER_INIT_5.clone(),
-            (6, Orientation::INIT) => INVADER_INIT_6.clone(),
-            (1, Orientation::FLIP) => INVADER_FLIP_1.clone(),
-            (2, Orientation::FLIP) => INVADER_FLIP_2.clone(),
-            (3, Orientation::FLIP) => INVADER_FLIP_3.clone(),
-            (4, Orientation::FLIP) => INVADER_FLIP_4.clone(),
-            (5, Orientation::FLIP) => INVADER_FLIP_5.clone(),
-            (6, Orientation::FLIP) => INVADER_FLIP_6.clone(),
+            (1, true) => INVADER_INIT_1.clone(),
+            (2, true) => INVADER_INIT_2.clone(),
+            (3, true) => INVADER_INIT_3.clone(),
+            (4, true) => INVADER_INIT_4.clone(),
+            (5, true) => INVADER_INIT_5.clone(),
+            (6, true) => INVADER_INIT_6.clone(),
+            (1, false) => INVADER_FLIP_1.clone(),
+            (2, false) => INVADER_FLIP_2.clone(),
+            (3, false) => INVADER_FLIP_3.clone(),
+            (4, false) => INVADER_FLIP_4.clone(),
+            (5, false) => INVADER_FLIP_5.clone(),
+            (6, false) => INVADER_FLIP_6.clone(),
             _ => unreachable!("Only expecting 6 invader types"),
         }
     }
@@ -296,6 +312,9 @@ pub struct Player {
     /// Speed of movenet.
     pub speed: i32,
     pub color: Color,
+    pub alive: bool,
+    death_counter: Option<i32>,
+    death_hit_1: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -322,6 +341,9 @@ impl Player {
             h,
             speed: 3,
             color: (&screen::SHIP_COLOR).into(),
+            alive: false,
+            death_counter: None,
+            death_hit_1: true,
         }
     }
     fn _rect(&self) -> Rect {
@@ -384,7 +406,8 @@ pub struct Enemy {
     death_counter: Option<i32>,
     move_counter: i32,
     move_right: bool,
-    orientation: Orientation,
+    move_down: bool,
+    orientation_init: bool,
 }
 
 impl Enemy {
@@ -399,36 +422,54 @@ impl Enemy {
             death_counter: None,
             move_counter: screen::ENEMY_PERIOD,
             move_right: true,
-            orientation: Orientation::INIT,
+            move_down: true,
+            orientation_init: true,
         }
     }
     fn rect(&self) -> Rect {
         Rect::new(self.x, self.y, screen::ENEMY_SIZE.0, screen::ENEMY_SIZE.1)
     }
-    fn enemy_shift(&mut self) {
+    fn enemy_shift(&mut self, num_killed: i32) {
         if self.move_counter == 0 {
-            let width = screen::ENEMY_SIZE.0;
-            let delta = screen::ENEMY_DELTA;
-            let pad = screen::ENEMY_X_SPACE;
-            let start = screen::ENEMY_START_POS.0 + self.col * (width + pad);
-            let end = screen::ENEMY_END_POS.0 + self.col * (width + pad);
-            self.move_right = if self.x == start {
-                true
-            } else if self.x == end {
-                false
+            let (width, height) = screen::ENEMY_SIZE;
+            let (deltax, deltay) = screen::ENEMY_DELTA;
+            let (padx, pady) = screen::ENEMY_SPACE;
+            let startx = screen::ENEMY_START_POS.0 + self.col * (width + padx);
+            let starty = screen::ENEMY_START_POS.1 + self.row * (height + pady);
+            let end = screen::ENEMY_END_POS.0 + self.col * (width + padx);
+            // If this is the first move, just move right.
+            // move_right flag is initialized to be true, so we don't need to change it.
+            if self.x == startx && self.y == starty {
+                self.x += deltax;
+            // If we are aligned with the start position on the x-axis, set movement
+            // direction to the right, move down, and toggle the move down flag
+            } else if self.x == startx && self.move_down {
+                self.y += deltay;
+                self.move_right = true;
+                self.move_down = false;
+            // Likewise for the end position
+            } else if self.x == end && self.move_down {
+                self.y += deltay;
+                self.move_right = false;
+                self.move_down = false;
+            // If we aren't at the (x,y) start position and aren't moving down, move laterally.
+            } else if self.move_right {
+                self.x = min(self.x + deltax, end);
+                self.move_down = true;
             } else {
-                self.move_right
+                self.x = max(self.x - deltax, startx);
+                self.move_down = true;
             };
-            self.x = if self.move_right {
-                self.x + delta
-            } else {
-                self.x - delta
-            };
-            self.orientation = match self.orientation {
-                Orientation::INIT => Orientation::FLIP,
-                Orientation::FLIP => Orientation::INIT,
-            };
-            self.move_counter = screen::ENEMY_PERIOD;
+            self.orientation_init = !self.orientation_init;
+            for (num_dead, speedup) in screen::ENEMY_SPEEDUPS {
+                if &num_killed >= num_dead {
+                    self.move_counter = *speedup;
+                }
+            }
+            // If we haven't killed enough enemies to accellerate, reset to the original period.
+            if self.move_counter == 0 {
+                self.move_counter = screen::ENEMY_PERIOD;
+            }
         } else {
             self.move_counter -= 1;
         }
@@ -452,8 +493,8 @@ impl State {
 
         let (x, y) = screen::ENEMY_START_POS;
         let (w, h) = screen::ENEMY_SIZE;
-        let x_offset = w + screen::ENEMY_X_SPACE;
-        let y_offset = h + screen::ENEMY_Y_SPACE;
+        let x_offset = w + screen::ENEMY_SPACE.0;
+        let y_offset = h + screen::ENEMY_SPACE.1;
         for j in 0..screen::ENEMIES_NUM {
             for i in 0..screen::ENEMIES_PER_ROW {
                 let x = x + (i * x_offset);
@@ -477,6 +518,53 @@ impl State {
         }
     }
 
+    /// Flash the player ship and display lives
+    fn flash_display_lives(&mut self) {
+        if self.life_display_timer > 0 { 
+            self.life_display_timer -= 1;
+        } else {
+            self.ship.alive = true;
+            self.life_display_timer = screen::NEW_LIFE_TIME;
+        }
+    }
+
+    /// Find the laser, if any, that hits the ship, and start the ship's death timer.
+    fn laser_player_collision(&mut self) {
+        let x = self.ship.x;
+        let y = self.ship.y;
+        for laser in &self.enemy_lasers {
+            let laser_rect = laser.rect();
+            let player_rect = Rect::new(x, y, self.ship.w, self.ship.h);
+            let player_sprite = PLAYER_SPRITE.clone();
+            if laser_rect.intersects(&player_rect) {
+                if laser_rect.collides_visible(x, y, &player_sprite.data) {
+                    self.ship.alive = false;
+                    self.ship.death_counter = Some(screen::PLAYER_DEATH_TIME);
+                }
+            }
+        }
+    }
+
+    /// Decrement the player's death counter and update the sprite image
+    fn player_toggle_death(&mut self) {
+        if let Some(counter) = self.ship.death_counter {
+            if counter > 0 {
+                let counter = counter - 1;
+                if counter % 24 == 0 {
+                    self.ship.death_hit_1 = false;
+                } else if counter % 12 == 0 {
+                    self.ship.death_hit_1 = true;
+                }
+                self.ship.death_counter = Some(counter);
+            } else {
+                self.ship.death_counter = None;
+                self.lives -= 1;
+                // self.ship.alive = true;
+                self.ship.x = screen::SHIP_LIMIT_X1;
+            }
+        }
+    }
+
     /// Find the enemy, if any, hit by the ship_laser, and start its death timer.
     fn laser_enemy_collisions(&mut self) {
         let mut hit = None;
@@ -484,7 +572,11 @@ impl State {
             let laser_rect = laser.rect();
 
             // Check collision with living enemies:
-            for e in self.enemies.iter().filter(|e| e.alive) {
+            for e in self
+                .enemies
+                .iter()
+                .filter(|e| e.alive && e.death_counter.is_none())
+            {
                 let enemy_rect = e.rect();
 
                 // Broad-phase collision: is it in the rectangle?
@@ -566,9 +658,28 @@ impl State {
 
     /// Move enemies
     fn enemy_shift(&mut self) {
+        let num_killed = self
+            .enemies
+            .iter()
+            .fold(0, |acc, e| if e.alive { acc } else { acc + 1 });
         for enemy in self.enemies.iter_mut() {
-            enemy.enemy_shift();
+            enemy.enemy_shift(num_killed as i32);
         }
+    }
+
+    fn closest_enemy_id(&self) -> u32 {
+        let playerx = &self.ship.x;
+        let mut dist = screen::GAME_SIZE.0;
+        let mut closest_id = 0;
+        for eid in self.active_weapon_enemy_ids() {
+            let e = &self.enemies[eid as usize];
+            let edist = (e.x - playerx).abs();
+            if edist < dist {
+                dist = edist;
+                closest_id = eid;
+            }
+        }
+        closest_id
     }
 
     fn enemy_fire_lasers(&mut self) {
@@ -583,13 +694,20 @@ impl State {
             self.enemy_shot_delay = 50;
 
             // Everybody shoots for now...
-            for eid in self.active_weapon_enemy_ids() {
-                let enemy = &mut self.enemies[eid as usize];
-                let start = enemy.rect();
+            // for eid in self.active_weapon_enemy_ids() {
+            //     let enemy = &mut self.enemies[eid as usize];
+            //     let start = enemy.rect();
 
-                let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
-                self.enemy_lasers.push(shot);
-            }
+            //     let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
+            //     self.enemy_lasers.push(shot);
+            // }
+
+
+            // Get active enemy closest to the player
+            let shooter = &self.enemies[self.closest_enemy_id() as usize];
+            let start = shooter.rect();
+            let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
+            self.enemy_lasers.push(shot);
         }
     }
 
@@ -631,6 +749,25 @@ impl State {
         }
         for laser_idx in delete_lasers.into_iter().rev() {
             self.enemy_lasers.remove(laser_idx);
+        }
+    }
+
+    /// If enemies have moved far enough down to overlap with shields,
+    /// then shields are removed.
+    fn remove_shields(&mut self) {
+        for id in self.active_weapon_enemy_ids() {
+            let enemy = &self.enemies[id as usize];
+            // We only care about the lowest enemies. However, since
+            // we have to loop through all of the enemies to find the lowest
+            // one anyway, we might as well just check here.
+            let lower_bound = enemy.y + screen::ENEMY_SIZE.1;
+            // Not sure if shields disappear at the bounding box intersection,
+            // or at actual pixel overlap (put another way: do partially
+            // destructed shields lead to a delay in their final disappearance?)
+            // Going with the simpler version for now.
+            if lower_bound > screen::SHIELD1_POS.1 {
+                self.shields = Vec::new();
+            }
         }
     }
 }
@@ -697,38 +834,48 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         // Don't play game yet if displaying lives.
-        if self.life_display_timer > 0 {
-            self.life_display_timer -= 1;
-            return;
+        // if self.life_display_timer > 0 { 
+        //     self.life_display_timer -= 1;
+        //     return;
+        // }
+
+        // self.laser_enemy_collisions();
+
+        if self.ship.alive {
+            // The ship can only move if it is alive.
+            if buttons.left {
+                self.ship.x -= self.ship.speed;
+            } else if buttons.right {
+                self.ship.x += self.ship.speed;
+            }
+
+            if self.ship.x > screen::SHIP_LIMIT_X2 {
+                self.ship.x = screen::SHIP_LIMIT_X2;
+            } else if self.ship.x < screen::SHIP_LIMIT_X1 {
+                self.ship.x = screen::SHIP_LIMIT_X1;
+            }
+
+            // Only shoot a laser if not present and if we aren't in the throes of death:
+            if self.ship_laser.is_none() && buttons.button1 {
+                self.ship_laser = Some(Laser::new(
+                    self.ship.x + self.ship.w / 2,
+                    self.ship.y,
+                    Direction::Up,
+                ));
+            }
+            // Enemies only move if the player is alive
+            self.enemy_shift();
+            // Enemies only fire if the player is alive
+            self.enemy_fire_lasers();
+            self.remove_shields();
+
+            // See if lasers have gone off-screen.
+            self.laser_miss_check();
+        } else if self.ship.death_counter.is_none() {
+            self.flash_display_lives();
         }
 
-        if buttons.left {
-            self.ship.x -= self.ship.speed;
-        } else if buttons.right {
-            self.ship.x += self.ship.speed;
-        }
-
-        if self.ship.x > screen::SHIP_LIMIT_X2 {
-            self.ship.x = screen::SHIP_LIMIT_X2;
-        } else if self.ship.x < screen::SHIP_LIMIT_X1 {
-            self.ship.x = screen::SHIP_LIMIT_X1;
-        }
-
-        // Only shoot a laser if not present:
-        if self.ship_laser.is_none() && buttons.button1 {
-            self.ship_laser = Some(Laser::new(
-                self.ship.x + self.ship.w / 2,
-                self.ship.y,
-                Direction::Up,
-            ));
-        }
-
-        self.laser_enemy_collisions();
-        self.enemy_shift();
-        self.enemy_animation();
-        self.enemy_fire_lasers();
-        self.enemy_laser_movement();
-
+        // Player's laser continues moving during death.
         if self.ship_laser.is_some() {
             let laser_speed = self.ship_laser.as_ref().map(|l| l.speed).unwrap();
 
@@ -749,9 +896,10 @@ impl toybox_core::State for State {
                 self.laser_enemy_collisions();
             }
         }
-
-        // See if lasers have gone off-screen.
-        self.laser_miss_check();
+        self.enemy_animation();
+        self.enemy_laser_movement();
+        self.laser_player_collision();
+        self.player_toggle_death();
     }
 
     fn draw(&self) -> Vec<Drawable> {
@@ -800,24 +948,42 @@ impl toybox_core::State for State {
             FontChoice::RIGHT,
         ));
 
-        // Render lives font in the middle of the screen!
-        if self.life_display_timer > 0 {
+        if self.lives() < 0 {
+            return output;
+        }
+
+        if self.ship.alive {
+            output.push(Drawable::sprite(
+                self.ship.x,
+                self.ship.y,
+                PLAYER_SPRITE.clone(),
+            ));
+        } else if self.ship.death_counter.is_none() {            
             output.push(Drawable::sprite(
                 screen::LIVES_DISPLAY_POSITION.0,
                 screen::LIVES_DISPLAY_POSITION.1,
                 get_sprite(self.lives as u32, FontChoice::LIVES),
             ));
+            if (self.life_display_timer / screen::FLASH_PERIOD) % 2 == 1 {
+                output.push(Drawable::sprite(
+                    self.ship.x,
+                    self.ship.y,
+                    PLAYER_SPRITE.clone(),
+                ));
+            }
+        } else if self.ship.death_hit_1 {
+            output.push(Drawable::sprite(
+                self.ship.x,
+                self.ship.y,
+                PLAYER_HIT_1.clone(),
+            ));
+        } else {
+            output.push(Drawable::sprite(
+                self.ship.x,
+                self.ship.y,
+                PLAYER_HIT_2.clone(),
+            ));
         }
-
-        if self.lives() < 0 {
-            return output;
-        }
-
-        output.push(Drawable::sprite(
-            self.ship.x,
-            self.ship.y,
-            PLAYER_SPRITE.clone(),
-        ));
 
         for shield in &self.shields {
             output.push(Drawable::DestructibleSprite(shield.clone()));
