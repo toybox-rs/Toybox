@@ -49,7 +49,7 @@ pub mod screen {
 
     // Mothership
     pub const UFO_SIZE: (i32, i32) = (14, 7);
-    pub const UFO_PERIOD: i32 = 1500;
+    pub const UFO_PERIOD: i32 = 500;
     pub const UFO_START_POS: (i32, i32) = (-2, 12);
     pub const UFO_DELTA: i32 = 2;
     pub const UFO_BONUS: i32 = 100;
@@ -493,7 +493,11 @@ impl Ufo {
         self.death_counter = Some(screen::DEATH_TIME);
     }
     fn shift_ship(&mut self) {
-        self.x += screen::UFO_DELTA;
+        if self.x >= screen::GAME_SIZE.0 - screen::UFO_SIZE.0 {
+            self.reset_mothership();
+        } else {
+            self.x += screen::UFO_DELTA;
+        }
     }
     fn reset_mothership(&mut self) {
         self.x = screen::UFO_START_POS.0;
@@ -770,13 +774,7 @@ impl State {
                 self.ufo.death_counter = Some(counter - 1);
             }
         } else {
-            // UFO has appeared but has not been hit
-            if self.ufo.x >= screen::GAME_SIZE.0 {
-                // The UFO is off the screen. Reset.
-                self.ufo.reset_mothership();
-            } else {
-                self.ufo.shift_ship();
-            }
+            self.ufo.shift_ship();
         }
     }
 
@@ -868,19 +866,7 @@ impl State {
         }
         self.enemy_shot_delay -= 1;
         if self.enemy_shot_delay <= 0 {
-            // TODO: better delay? Less predictable?
-            // Random state?
             self.enemy_shot_delay = 50;
-
-            // Everybody shoots for now...
-            // for eid in self.active_weapon_enemy_ids() {
-            //     let enemy = &mut self.enemies[eid as usize];
-            //     let start = enemy.rect();
-
-            //     let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
-            //     self.enemy_lasers.push(shot);
-            // }
-
             // Get active enemy closest to the player
             let shooter = &self.enemies[self.closest_enemy_id() as usize];
             let start = shooter.rect();
@@ -1057,8 +1043,14 @@ impl toybox_core::State for State {
 
             // See if lasers have gone off-screen.
             self.laser_miss_check();
+
+            // Only check and update the UFO if the player is alive
+            self.laser_ufo_movement_animation();
+            self.laser_ufo_collision();
+
         } else if self.ship.death_counter.is_none() {
             self.flash_display_lives();
+            self.ufo.reset_mothership();
         }
 
         // Player's laser continues moving during death.
@@ -1085,8 +1077,6 @@ impl toybox_core::State for State {
         self.enemy_animation();
         self.enemy_laser_movement();
         self.laser_player_collision();
-        self.laser_ufo_movement_animation();
-        self.laser_ufo_collision();
         self.player_toggle_death();
     }
 
