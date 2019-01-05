@@ -17,4 +17,10 @@ register(
     nondeterministic=False
 )
 
+register(
+    id='SpaceInvadersToyboxNoFrameskip-v4',
+    entry_point='toybox.envs.atari:SpaceInvadersEnv',
+    nondeterministic=False
+)
+
 print("Loaded Toybox environments.")

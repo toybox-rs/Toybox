@@ -1,4 +1,5 @@
 from toybox.toybox import NOOP, UP, RIGHT, LEFT, DOWN, BUTTON1
+from toybox.clib import Input
 
 NOOP_STR = NOOP.upper() 
 FIRE_STR = "FIRE"
