@@ -1,5 +1,6 @@
 use super::destruction;
 use super::font::{draw_score, get_sprite, FontChoice};
+use firing_ai::{enemy_fire_lasers, FiringAI};
 use itertools::Itertools;
 use serde_json;
 use std::any::Any;
@@ -230,30 +231,45 @@ lazy_static! {
     .to_fixed()
     .unwrap();
     static ref UFO_MOTHERSHIP_SPRITE: FixedSpriteData = load_sprite_default(
-        include_str!("resources/space_invaders/mothership"), 
+        include_str!("resources/space_invaders/mothership"),
         (&screen::UFO_COLOR).into(),
         1
-        ).unwrap().to_fixed().unwrap();
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
     static ref UFO_HIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_1"),
-                (&screen::UFO_COLOR).into(),
+        (&screen::UFO_COLOR).into(),
         1
-        ).unwrap().to_fixed().unwrap();
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
     static ref UFO_HIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_2"),
-                (&screen::UFO_COLOR).into(),
+        (&screen::UFO_COLOR).into(),
         1
-        ).unwrap().to_fixed().unwrap();
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
     static ref UFO_HIT_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_3"),
-                (&screen::UFO_COLOR).into(),
+        (&screen::UFO_COLOR).into(),
         1
-        ).unwrap().to_fixed().unwrap();
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
     static ref UFO_HIT_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_4"),
-                (&screen::UFO_COLOR).into(),
+        (&screen::UFO_COLOR).into(),
         1
-        ).unwrap().to_fixed().unwrap();
+    )
+    .unwrap()
+    .to_fixed()
+    .unwrap();
 }
 
 pub fn load_sprite(
@@ -342,7 +358,6 @@ fn get_player_sprite(ship: &Player, life_display_timer: i32) -> Option<FixedSpri
     }
 }
 
-
 fn get_ufo_sprite(ufo: &Ufo) -> Option<FixedSpriteData> {
     // For now, just assume the same period as the enemy sprites.
     if let Some(dc) = ufo.death_counter {
@@ -374,23 +389,19 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum EnemyProtocol {
-    DefaultProtocol,
-    CustomProtocol,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     row_scores: Vec<i32>,
     start_lives: i32,
-    enemy_protocol: EnemyProtocol,
+    pub enemy_protocol: FiringAI,
+    pub jitter: f64,
 }
 impl Default for Config {
     fn default() -> Self {
         Config {
-            row_scores : screen::ENEMY_POINTS.iter().cloned().collect(),
-            start_lives : screen::START_LIVES,
-            enemy_protocol : EnemyProtocol::DefaultProtocol,
+            row_scores: screen::ENEMY_POINTS.iter().cloned().collect(),
+            start_lives: screen::START_LIVES,
+            enemy_protocol: FiringAI::TargetPlayer,
+            jitter: 0.5,
         }
     }
 }
@@ -485,15 +496,15 @@ pub struct StateCore {
     pub enemy_shot_delay: i32,
     /// Enemy lasers are actors as well.
     pub enemy_lasers: Vec<Laser>,
-    
+
     /// Mothership
     pub ufo: Ufo,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Ufo {
-    pub x: i32, 
-    pub y: i32, 
+    pub x: i32,
+    pub y: i32,
     appearance_counter: Option<i32>,
     death_counter: Option<i32>,
 }
@@ -641,7 +652,7 @@ impl StateCore {
         self.enemy_lasers.clear();
         self.ship_laser = None;
         self.ufo = Ufo::new();
-        
+
         for &(x, y) in &[
             screen::SHIELD1_POS,
             screen::SHIELD2_POS,
@@ -750,16 +761,20 @@ impl StateCore {
     // If the player's laser has hit the UFO, start its death timer.
     fn laser_ufo_collision(&mut self) {
         // If the UFO has not yet appeared, it can't be hit.
-        if self.ufo.appearance_counter.is_some() { return }
+        if self.ufo.appearance_counter.is_some() {
+            return;
+        }
         // If the UFO is currently dying, it can't be hit.
-        if self.ufo.death_counter.is_some() { return }
+        if self.ufo.death_counter.is_some() {
+            return;
+        }
 
         let ufo = &mut self.ufo;
         if let Some(ref mut laser) = self.ship_laser {
             let laser_rect = laser.rect();
             let ufo_rect = ufo.rect();
             if laser_rect.intersects(&ufo_rect) {
-                if let Some(sprite) = get_ufo_sprite(&ufo){
+                if let Some(sprite) = get_ufo_sprite(&ufo) {
                     if laser_rect.collides_visible(ufo.x, ufo.y, &sprite.data) {
                         ufo.start_death_counter();
                         self.score += screen::UFO_BONUS;
@@ -773,10 +788,7 @@ impl StateCore {
         if ufo.death_counter.is_some() {
             self.ship_laser = None;
         }
-
     }
-
-
 
     /// Handle counters for ufo appearance, collision, etc.    
     fn laser_ufo_movement_animation(&mut self) {
@@ -865,7 +877,7 @@ impl StateCore {
         }
     }
 
-    fn closest_enemy_id(&self) -> u32 {
+    pub fn closest_enemy_id(&self) -> u32 {
         let playerx = &self.ship.x;
         let mut dist = screen::GAME_SIZE.0;
         let mut closest_id = 0;
@@ -880,7 +892,7 @@ impl StateCore {
         closest_id
     }
 
-    fn enemy_fire_lasers_default(&mut self) {
+    fn enemy_fire_lasers(&mut self, config: Config) {
         // Don't fire too many lasers.
         if self.enemy_lasers.len() > 1 {
             return;
@@ -888,21 +900,17 @@ impl StateCore {
         self.enemy_shot_delay -= 1;
         if self.enemy_shot_delay <= 0 {
             self.enemy_shot_delay = 50;
-            // Get active enemy closest to the player
-            let shooter = &self.enemies[self.closest_enemy_id() as usize];
+            let shooter_index = enemy_fire_lasers(self, config);
+            let shooter = &self.enemies[shooter_index as usize];
             let start = shooter.rect();
             let shot = Laser::new(start.center_x(), start.center_y(), Direction::Down);
             self.enemy_lasers.push(shot);
         }
     }
 
-    fn enemy_fire_lasers(&mut self) {
-        self.enemy_fire_lasers_default()
-    }
-
     /// Find all enemies that are at the "bottom" of their column and can therefore fire weapons.
     /// Return ids in case you want to mutably or immutably borrow them.
-    fn active_weapon_enemy_ids(&self) -> Vec<u32> {
+    pub fn active_weapon_enemy_ids(&self) -> Vec<u32> {
         let mut out = Vec::new();
 
         let alive: Vec<&Enemy> = self.enemies.iter().filter(|e| e.alive).collect();
@@ -960,9 +968,9 @@ impl StateCore {
         }
     }
     fn has_lost(&self) -> bool {
-        self.enemies.iter().any( 
-            |e| e.alive && e.rect().y2() >= screen::SKY_TO_GROUND
-        )
+        self.enemies
+            .iter()
+            .any(|e| e.alive && e.rect().y2() >= screen::SKY_TO_GROUND)
     }
     fn reset_condition(&self) -> bool {
         let dead = self.lives < 0;
@@ -970,12 +978,11 @@ impl StateCore {
         let lost = self.has_lost();
         dead || won || lost
     }
-
 }
 
 pub struct State {
     pub config: Config,
-    pub state: StateCore
+    pub state: StateCore,
 }
 
 pub struct SpaceInvaders {
@@ -1003,7 +1010,7 @@ impl toybox_core::Simulation for SpaceInvaders {
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State {
             config: self.config.clone(),
-            state: StateCore::new(random::Gen::new_child(&mut self.rand))
+            state: StateCore::new(random::Gen::new_child(&mut self.rand)),
         })
     }
     /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/SpaceInvaders.cpp#L85)
@@ -1025,7 +1032,7 @@ impl toybox_core::Simulation for SpaceInvaders {
         let config: Config = Config::default();
         Ok(Box::new(State {
             state,
-            config: config.clone()
+            config: config.clone(),
         }))
     }
     fn new_state_config_from_json(
@@ -1079,7 +1086,7 @@ impl toybox_core::State for State {
             // Enemies only move if the player is alive
             self.state.enemy_shift();
             // Enemies only fire if the player is alive
-            self.state.enemy_fire_lasers();
+            self.state.enemy_fire_lasers(self.config.clone());
             self.state.remove_shields();
 
             // See if lasers have gone off-screen.
@@ -1088,7 +1095,6 @@ impl toybox_core::State for State {
             // Only check and update the UFO if the player is alive
             self.state.laser_ufo_movement_animation();
             self.state.laser_ufo_collision();
-
         } else if self.state.ship.death_counter.is_none() {
             self.state.flash_display_lives();
             self.state.ufo.reset_mothership();
@@ -1159,8 +1165,8 @@ impl toybox_core::State for State {
                 output.push(Drawable::sprite(
                     self.state.ufo.x,
                     self.state.ufo.y,
-                    ufo_sprite
-                    )); 
+                    ufo_sprite,
+                ));
             }
         } else {
             output.extend(draw_score(
@@ -1181,13 +1187,16 @@ impl toybox_core::State for State {
             return output;
         }
 
-        if let Some(player_sprite) = get_player_sprite(&self.state.ship, self.state.life_display_timer) {
+        if let Some(player_sprite) =
+            get_player_sprite(&self.state.ship, self.state.life_display_timer)
+        {
             output.push(Drawable::sprite(
                 self.state.ship.x,
                 self.state.ship.y,
-                player_sprite.clone()));
+                player_sprite.clone(),
+            ));
         }
-        
+
         // In between lives.
         if !self.state.ship.alive && self.state.ship.death_counter.is_none() {
             output.push(Drawable::sprite(

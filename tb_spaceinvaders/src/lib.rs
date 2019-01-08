@@ -6,9 +6,11 @@ extern crate toybox_core;
 extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
+extern crate rand;
 
 mod destruction;
 mod font;
+mod firing_ai;
 mod space_invaders;
 
 pub use space_invaders::screen;
