@@ -1,17 +1,16 @@
-/// A collection of the possible firing protocols
-
-use space_invaders::{StateCore, Config};
 use rand::Rng;
+/// A collection of the possible firing protocols
+use space_invaders::{Config, StateCore};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FiringAI {
     TargetPlayer,
 }
 
-// Note: using the RNG makes us mutable.    
+// Note: using the RNG makes us mutable.
 fn target_player(state: &mut StateCore, config: Config) -> u32 {
     let p = config.jitter;
-    let r : f64 = state.rand.gen();
+    let r: f64 = state.rand.gen();
     assert!(r >= 0. && r < 1.);
     if r < p {
         let active_ids = state.active_weapon_enemy_ids();

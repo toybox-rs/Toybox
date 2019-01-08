@@ -9,8 +9,8 @@ extern crate lazy_static;
 extern crate rand;
 
 mod destruction;
-mod font;
 mod firing_ai;
+mod font;
 mod space_invaders;
 
 pub use space_invaders::screen;

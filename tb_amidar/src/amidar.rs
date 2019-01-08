@@ -262,15 +262,18 @@ impl Tile {
 pub enum MovementAI {
     Player,
     EnemyLookupAI { next: u32, default_route_index: u32 },
+    EnemyPerimeterAI {},
 }
 
 impl MovementAI {
+    /// Resetting the mob starting point after player death.
     fn reset(&mut self) {
         match self {
             &mut MovementAI::Player => {}
             &mut MovementAI::EnemyLookupAI { ref mut next, .. } => {
                 *next = 0;
             }
+            &mut MovementAI::EnemyPerimeterAI { .. } => {}
         }
     }
     fn choose_next_tile(
@@ -308,6 +311,21 @@ impl MovementAI {
                 let path = &DEFAULT_ENEMY_ROUTES[default_route_index as usize];
                 *next = (*next + 1) % (path.len() as u32);
                 Some(board.lookup_position(path[*next as usize]))
+            }
+            &mut MovementAI::EnemyPerimeterAI { .. } => {
+                let perimeter = board.get_perimeter(position.tx, position.ty);
+                let mut tilepoint = None;
+                for dir in perimeter {
+                    let go = match dir {
+                        Direction::Up => Direction::Right,
+                        Direction::Down => Direction::Left,
+                        Direction::Right => Direction::Down,
+                        Direction::Left => Direction::Up,
+                    };
+                    let tp = board.can_move(position.tx, position.ty, go);
+                    tilepoint = tilepoint.or(tp)
+                }
+                tilepoint
             }
         }
     }
@@ -358,6 +376,7 @@ impl Mob {
             } => board
                 .lookup_position(DEFAULT_ENEMY_ROUTES[default_route_index as usize][0])
                 .to_world(),
+            MovementAI::EnemyPerimeterAI { .. } => TilePoint::new(0, 0).to_world(),
         };
         self.history.clear();
     }
@@ -504,6 +523,38 @@ impl Board {
         let last_y = (self.height as i32) - 1;
         let last_x = (self.width as i32) - 1;
         (tx == 0 || tx == last_x) && (ty == 0 || ty == last_y)
+    }
+
+    fn get_perimeter(&self, tx: i32, ty: i32) -> Vec<Direction> {
+        let mut retval = Vec::new();
+
+        let last_y = (self.height as i32) - 1;
+        let last_x = (self.width as i32) - 1;
+
+        if ty == 0 {
+            retval.push(Direction::Up)
+        } else if ty == last_y {
+            retval.push(Direction::Down)
+        }
+
+        if tx == 0 {
+            retval.push(Direction::Left)
+        } else if tx == last_x {
+            retval.push(Direction::Right)
+        }
+        assert!(retval.len() < 3);
+        retval
+    }
+
+    fn can_move(&self, tx: i32, ty: i32, dir: Direction) -> Option<TilePoint> {
+        let (dx, dy) = dir.delta();
+        let tp = TilePoint::new(tx + dx, ty + dy);
+        let tile = self.get_tile(&tp);
+        if tile.walkable() {
+            Some(tp)
+        } else {
+            None
+        }
     }
 
     fn init_junctions(&mut self) {
