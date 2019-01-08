@@ -1,0 +1,14 @@
+[package]
+name = "gridworld"
+version = "0.1.0"
+authors = ["John Foley <jfoley@cs.umass.edu>"]
+
+[dependencies]
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+lazy_static = "*"
+
+[dependencies.toybox-core]
+version = "*"
+path = "../core"

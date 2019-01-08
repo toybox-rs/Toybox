@@ -4,15 +4,22 @@ import toybox.envs as envs
 import toybox.interventions as interventions
 import toybox.sample_tests as sample_tests
 
+# Updated to use v4 to be analogous with the ALE versioning
 register(
-    id='BreakoutToyboxNoFrameskip-v0',
+    id='BreakoutToyboxNoFrameskip-v4',
     entry_point='toybox.envs.atari:BreakoutEnv',
+    nondeterministic=True
+)
+
+register(
+    id='AmidarToyboxNoFrameskip-v4',
+    entry_point='toybox.envs.atari:AmidarEnv',
     nondeterministic=False
 )
 
 register(
-    id='AmidarToyboxNoFrameskip-v0',
-    entry_point='toybox.envs.atari:AmidarEnv',
+    id='SpaceInvadersToyboxNoFrameskip-v4',
+    entry_point='toybox.envs.atari:SpaceInvadersEnv',
     nondeterministic=False
 )
 

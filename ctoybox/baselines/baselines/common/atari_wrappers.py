@@ -5,11 +5,45 @@ from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
 import numpy as np
 import os
 os.environ.setdefault('PATH', '')
-from collections import deque
+from collections import deque, Counter
 import gym
 from gym import spaces
+from gym.wrappers import TimeLimit
+from gym.envs.atari import AtariEnv
 import cv2
 cv2.ocl.setUseOpenCL(False)
+
+
+# Hot patch atari env so we can get the score
+# This is exactly the same, except we put the result of act into the info
+def hotpatch_step(self, a):
+    reward = 0.0
+    action = self._action_set[a]
+    # Since reward appears to be incremental, dynamically add an instance variable to track.
+    # So there's a __getattribute__ function, but no __hasattribute__ function? Bold, Python.
+    try:
+        self.score = self.score
+    except AttributeError:
+        self.score = 0.0
+
+    if isinstance(self.frameskip, int):
+        num_steps = self.frameskip
+    else:
+        num_steps = self.np_random.randint(self.frameskip[0], self.frameskip[1])
+    
+    for _ in range(num_steps):
+        reward += self.ale.act(action)
+    ob = self._get_obs()
+    done = self.ale.game_over()
+    # Update score
+
+    score = self.score
+    self.score = 0.0 if done else self.score + reward
+    # Return score as part of info
+    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
+
+AtariEnv.step = hotpatch_step
+
 
 # Get innermost gym.Env (skip all Wrapper)
 def get_turtle(env):
@@ -30,6 +64,46 @@ def get_turtle(env):
         else:
             raise ValueError("Can't unwrap", env)
 
+# module variables have faster lookup than class or instance vars.
+SE_samples = Counter()
+
+class SampleEnvs(gym.Wrapper):
+
+    def __init__(self, envs, weights):
+        """Alternates between input environments"""
+        assert(sum(weights) == 1.0)
+        env = np.random.choice(envs, 1)[0]
+        turtle = get_turtle(env)
+        print('Starting env:', turtle)
+        gym.Wrapper.__init__(self, env)
+        self.envs = envs
+        self.weights = weights
+        SE_samples[turtle] += 1
+        print('SampleEnvs map', SE_samples)
+
+    def __del__(self):
+        print('Samples encountered:\n', SE_samples)
+
+    def reset(self, **kwargs):
+        # Takes optional arg for new weights
+        if 'weights' in kwargs:
+            self.weights = kwargs['weights']
+        
+        env = np.random.choice(self.envs, p=self.weights)
+        print('resetting to env:', env)
+        self.env = env
+        gym.Wrapper.__init__(self, env)
+        self.env.reset(**kwargs)
+        SE_samples[get_turtle(env)] += 1 
+        obs, _, _, _ = self.env.step(0)
+        return obs
+
+    def step(self, action):
+        res = self.env.step(action)
+        info = res[-1]
+        info['samples'] = SE_samples
+        return res
+
 
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
@@ -38,7 +112,6 @@ class NoopResetEnv(gym.Wrapper):
         """
         gym.Wrapper.__init__(self, env)
         self.noop_max = noop_max
-        print("Noop max:", self.noop_max)
         self.override_num_noops = None
         self.noop_action = 0
         assert env.unwrapped.get_action_meanings()[0] == 'NOOP'
@@ -87,7 +160,6 @@ class EpisodicLifeEnv(gym.Wrapper):
         Done by DeepMind for the DQN and co. since it helps value estimation.
         """
         gym.Wrapper.__init__(self, env)
-        print('triggered')
         self.lives = 0
         self.was_real_done  = True
 
@@ -242,11 +314,33 @@ class LazyFrames(object):
     def __getitem__(self, i):
         return self._force()[i]
 
-def make_atari(env_id):
-    env = gym.make(env_id)
+def get_complement(env_id):
+    if 'Toybox' in env_id:
+        return env_id.replace('Toybox', '')
+    else:
+        game_name, suffix = env_id.split('No')
+        return game_name + 'ToyboxNo' + suffix
+
+def make_wrapper(env_id):
+    if 'Toybox' in env_id:
+        env = TimeLimit(gym.make(env_id))
+    else:
+        env= gym.make(env_id)
     assert 'NoFrameskip' in env.spec.id
     env = NoopResetEnv(env, noop_max=30)
+    # TODO: skip was previously set to 4. This makes debugging hard. Setting it to 0 
+    # causes the MaxAndSkipEnv to not step at all, so we need to set it to at least 1.
+    # We can see how badly this impacts our training later.
     env = MaxAndSkipEnv(env, skip=4)
+    return env
+
+
+def make_atari(env_id, sample_weights):
+    env = make_wrapper(env_id)
+    if sample_weights:
+        env1 = env
+        env2 = make_wrapper(get_complement(env_id))
+        return SampleEnvs([env1, env2], sample_weights)
     return env
 
 def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):

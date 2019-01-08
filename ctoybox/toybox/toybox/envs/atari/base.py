@@ -3,6 +3,8 @@ from gym import Env, error, spaces, utils
 from gym.spaces import np_random
 from gym.utils import seeding
 from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
+from gym.envs.atari import AtariEnv
+from gym import utils
 
 import numpy as np
 
@@ -28,10 +30,10 @@ class MockALE():
         self.toybox.grayscale = grayscale
 
 
-class ToyboxBaseEnv(Env, ABC):
+class ToyboxBaseEnv(AtariEnv, ABC):
     metadata = {'render.modes': ['human']}
     
-    def __init__(self, toybox, grayscale=True, alpha=False, actions=None):
+    def __init__(self, toybox, game, frameskip=(2, 5), repeat_action_probability=0., grayscale=True, alpha=False, actions=None):
         assert(toybox.rstate)
         self.toybox = toybox
         self.score = self.toybox.get_score()
@@ -40,6 +42,7 @@ class ToyboxBaseEnv(Env, ABC):
         # Required for compatability with OpenAI Gym's Atari wrappers
         self.np_random = np_random
         self.ale = MockALE(toybox)
+        utils.EzPickle.__init__(self, game, 'human', frameskip, repeat_action_probability)
 
         assert(actions is not None)
         self._action_set = actions
@@ -103,10 +106,10 @@ class ToyboxBaseEnv(Env, ABC):
         assert(type(self._action_set)== list)
     
         # Convert the input action (string or int) into the ctypes struct.
-        action = self._action_to_input(\
-            self._action_set[int(action_index)])
-        action.button1 = True
-        frame = self.toybox.apply_action(action)
+        # action = self._action_to_input(\
+        #     self._action_set[int(action_index)])
+        # action.button1 = True
+        self.toybox.apply_ale_action(action_index)
         obs = self._get_obs()
         
         

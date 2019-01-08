@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+
+import argparse
+import atari_py
+import os
+
+from atari_py.ale_python_interface import ALEInterface
+
+def play(args, ale, actions):
+  repeat_actions = 4
+  actions_taken = []
+  legal_actions = ale.getLegalActionSet()
+  frame_num = 0
+  while not ale.game_over() and frame_num < args.num_frames:
+    index = frame_num if actions else \
+    (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
+    a = (actions or legal_actions)[index]
+    actions_taken.append(a)
+    ale.act(a)    
+    filename = 'frame%s.png' % str(frame_num).zfill(4)
+    frame_num += 1
+    ale.saveScreenPNG(str.encode(args.output + os.sep + filename))
+  return actions_taken
+  
+def record(actions):
+  with open('actions', 'w') as f:
+    f.write("\n".join([str(a) for a in actions]))
+
+
+def main(args):
+  all_games = atari_py.list_games()
+
+  if args.game not in all_games:
+    starts_with = [g for g in all_games if g.startswith(args.game[0])]
+    print('%s not found; did you mean:\n%s' % (args.game, '\t'.join(starts_with)))
+    exit(0)
+
+  actions = None
+  if args.actions:
+    with open(args.actions, 'r') as f:
+      actions = [eval(action) for action in f.readlines()]
+
+  game_path = atari_py.get_game_path(args.game)
+
+  ale = ALEInterface()
+  ale.setInt(b'random_seed', args.seed)
+  ale.setFloat(b'repeat_action_probability', 0.0)
+  ale.loadROM(str.encode(game_path))
+  
+  actions = play(args, ale, actions)
+  if args.record: record(actions)
+  
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('game', 
+    help='The name of the Atari game to extract from ALE.')
+  parser.add_argument('--output', 
+    help='The output directory where the images should go (default is the current directory).', 
+    default='.')
+  parser.add_argument('--num_frames', 
+    help='The number of frames we want to collect (default is 10).', 
+    default=10, 
+    type=int)
+  parser.add_argument('--seed', 
+    help='The random seed for the Atari env (default is 1234).', 
+    default=1234, 
+    type=int)
+  parser.add_argument('--actions', 
+    help='Give a list of commands to execute (default is to cycle through the valid actions', 
+    default='')
+  parser.add_argument('--record',
+    help='Records actions actually executed and writes to a file called "actions"',
+    type=bool,
+    default=False
+  )
+  
+  args = parser.parse_args()
+  main(args)

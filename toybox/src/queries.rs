@@ -2,6 +2,7 @@
 // These can all be implemented over json, but exporting some fast
 // ones from Rust will be helpful.
 
+#[cfg(feature = "amidar")]
 pub mod amidar {
     use super::super::amidar::State;
     pub fn num_tiles_unpainted(state: &State) -> i32 {
@@ -51,14 +52,12 @@ pub mod amidar {
     }
 }
 
+#[cfg(feature = "amidar")]
 #[cfg(test)]
 mod amidar_q_tests {
     use super::super::amidar;
-    use super::super::Input;
-    use super::super::State as TState;
     use super::amidar as q;
-    use super::*;
-    use Simulation;
+    use toybox_core::{Input, Simulation, State};
 
     #[test]
     fn test_q_num_tiles_unpainted() {
@@ -90,6 +89,7 @@ mod amidar_q_tests {
     }
 }
 
+#[cfg(feature = "breakout")]
 pub mod breakout {
     use super::super::breakout::{screen, State};
 
@@ -113,7 +113,8 @@ pub mod breakout {
                 .map(|row| {
                     let i = row + offset * down;
                     !bricks[i as usize].alive
-                }).all(|c| c);
+                })
+                .all(|c| c);
             if all_dead {
                 retval.push(offset);
                 assert!(retval.len() <= (across as usize));
@@ -134,12 +135,12 @@ pub mod breakout {
     }
 }
 
+#[cfg(feature = "breakout")]
 #[cfg(test)]
 mod breakout_q_tests {
     use super::super::breakout;
     use super::breakout as q;
-    use super::*;
-    use Simulation;
+    use toybox_core::Simulation;
 
     #[test]
     fn test_q_breakout_bricks_remaining() {
@@ -179,7 +180,8 @@ mod breakout_q_tests {
                 .map(|row| {
                     let i = row + offset * down;
                     bricks[i as usize].position.x as i32
-                }).collect();
+                })
+                .collect();
             for i in (1..down) {
                 assert_eq!(xs[(i - 1) as usize], xs[i as usize]);
             }

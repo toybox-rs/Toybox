@@ -5,9 +5,10 @@ from toybox.toybox import Toybox, Input
 
 class BreakoutEnv(ToyboxBaseEnv):
 
-    def __init__(self, grayscale=True, alpha=False): 
+    def __init__(self, frameskip=(2, 5), repeat_action_probability=0., grayscale=True, alpha=False): 
         self._breakout_action_strs = [NOOP_STR, FIRE_STR,  RIGHT_STR, LEFT_STR]
         super().__init__(Toybox('breakout', grayscale), 
+            frameskip, repeat_action_probability,
             grayscale=grayscale, 
             alpha=alpha, 
             actions=[ACTION_LOOKUP[s] for s in self._breakout_action_strs])

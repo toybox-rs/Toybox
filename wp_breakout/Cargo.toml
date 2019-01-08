@@ -1,0 +1,19 @@
+[package]
+name = "toybox_wp_breakout"
+version = "0.1.0"
+authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
+
+[lib]
+name = "toybox_wp_breakout"
+crate-type = ["cdylib"]
+
+[dependencies]
+cfg-if = "0.1.2"
+wasm-bindgen = "0.2"
+breakout = {path = "../tb_breakout", version="*"}
+toybox = {path = "../toybox", version="*"}
+
+[dependencies.toybox-core]
+version = "*"
+path = "../core"
+

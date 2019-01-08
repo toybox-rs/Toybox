@@ -21,37 +21,7 @@ from importlib import import_module
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common import atari_wrappers, retro_wrappers
 
-
-# Hot patch atari env so we can get the score
-# This is exactly the same, except we put the result of act into the info
-from gym.envs.atari import AtariEnv
-def hotpatch_step(self, a):
-    reward = 0.0
-    action = self._action_set[a]
-    # Since reward appears to be incremental, dynamically add an instance variable to track.
-    # So there's a __getattribute__ function, but no __hasattribute__ function? Bold, Python.
-    try:
-        self.score = self.score
-    except AttributeError:
-        self.score = 0.0
-
-    if isinstance(self.frameskip, int):
-        num_steps = self.frameskip
-    else:
-        num_steps = self.np_random.randint(self.frameskip[0], self.frameskip[1])
-    
-    for _ in range(num_steps):
-        reward += self.ale.act(action)
-    ob = self._get_obs()
-    done = self.ale.game_over()
-    # Update score
-
-    score = self.score
-    self.score = 0.0 if done else self.score + reward
-    # Return score as part of info
-    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
-
-AtariEnv.step = hotpatch_step
+from baselines.common.atari_wrappers import SampleEnvs
 
 try:
     from mpi4py import MPI
@@ -97,10 +67,14 @@ def train(args, extra_args):
     seed = args.seed
 
     learn = get_learn_function(args.alg)
+    
     alg_kwargs = get_learn_function_defaults(args.alg, env_type)
     alg_kwargs.update(extra_args)
+    if 'weights' in alg_kwargs:
+        del alg_kwargs['weights']
 
-    env = build_env(args)
+    env = build_env(args, extra_args)
+
 
     if args.network:
         alg_kwargs['network'] = args.network
@@ -120,7 +94,7 @@ def train(args, extra_args):
     return model, env
 
 
-def build_env(args):
+def build_env(args, extra_args):
     ncpu = multiprocessing.cpu_count()
     if sys.platform == 'darwin': ncpu //= 2
     nenv = args.num_env or ncpu
@@ -147,8 +121,8 @@ def build_env(args):
             env.seed(seed)
         else:
             frame_stack_size = 4
-            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed), frame_stack_size)
-
+            weights = extra_args['weights'] if 'weights' in extra_args else None
+            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=weights), frame_stack_size)
     return env
 
 
@@ -232,7 +206,7 @@ def main():
 
     if args.play:
         logger.log("Running trained model")
-        env = build_env(args)
+        env = build_env(args, extra_args)
         obs = env.reset()
         turtle = atari_wrappers.get_turtle(env)
         scores = []
@@ -246,8 +220,8 @@ def main():
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             #done = done and (num_lives == 1 or turtle.ale.game_over())
-            env.render()
-            time.sleep(1.0/60.0)
+            #env.render()
+            #time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
             #done = done.any() if isinstance(done, np.ndarray) else done
 

@@ -1,0 +1,5 @@
+tensorflow
+gym[atari]
+tensorboard
+pygame
+
