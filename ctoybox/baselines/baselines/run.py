@@ -108,12 +108,12 @@ def build_env(args, extra_args):
         if alg == 'acer':
             env = make_vec_env(env_id, env_type, nenv, seed)
         elif alg == 'deepq':
-            env = atari_wrappers.make_atari(env_id)
+            env = atari_wrappers.make_atari(env_id, None)
             env.seed(seed)
             env = bench.Monitor(env, logger.get_dir())
             env = atari_wrappers.wrap_deepmind(env, frame_stack=True, scale=True)
         elif alg == 'trpo_mpi':
-            env = atari_wrappers.make_atari(env_id)
+            env = atari_wrappers.make_atari(env_id, None)
             env.seed(seed)
             env = bench.Monitor(env, logger.get_dir() and osp.join(logger.get_dir(), str(rank)))
             env = atari_wrappers.wrap_deepmind(env)
