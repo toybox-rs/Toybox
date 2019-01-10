@@ -73,6 +73,7 @@ pub struct Config {
     chase_score_bonus: i32,
     jump_time: i32,
     box_bonus: i32,
+    enemies: Vec<MovementAI>,
 }
 
 impl Config {
@@ -104,6 +105,12 @@ impl Default for Config {
             jump_time: 2 * 30 + 15, // 2.5 seconds
             render_images: true,
             box_bonus: 50,
+            enemies: (0..DEFAULT_ENEMY_ROUTES.len())
+                .map(|idx| MovementAI::EnemyLookupAI {
+                    next: 0,
+                    default_route_index: idx as u32,
+                })
+                .collect(),
         }
     }
 }
@@ -258,18 +265,43 @@ impl Tile {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub enum MovementAI {
     Player,
-    EnemyLookupAI { next: u32, default_route_index: u32 },
+    EnemyLookupAI {
+        next: u32,
+        default_route_index: u32,
+    },
+    EnemyPerimeterAI {
+        start: TilePoint,
+    },
+    EnemyAmidarMvmt {
+        vert: Direction,
+        horiz: Direction,
+        start_vert: Direction,
+        start_horiz: Direction,
+        start: TilePoint,
+    },
 }
 
 impl MovementAI {
+    /// Resetting the mob AI state after player death.
     fn reset(&mut self) {
         match self {
             &mut MovementAI::Player => {}
             &mut MovementAI::EnemyLookupAI { ref mut next, .. } => {
                 *next = 0;
+            }
+            &mut MovementAI::EnemyPerimeterAI { .. } => {}
+            &mut MovementAI::EnemyAmidarMvmt {
+                ref mut vert,
+                start_vert,
+                ref mut horiz,
+                start_horiz,
+                ..
+            } => {
+                *vert = start_vert;
+                *horiz = start_horiz;
             }
         }
     }
@@ -308,6 +340,51 @@ impl MovementAI {
                 let path = &DEFAULT_ENEMY_ROUTES[default_route_index as usize];
                 *next = (*next + 1) % (path.len() as u32);
                 Some(board.lookup_position(path[*next as usize]))
+            }
+            &mut MovementAI::EnemyPerimeterAI { .. } => {
+                let perimeter = board.get_perimeter(position);
+                let mut tilepoint = None;
+                for dir in perimeter {
+                    let go = match dir {
+                        Direction::Up => Direction::Right,
+                        Direction::Down => Direction::Left,
+                        Direction::Right => Direction::Down,
+                        Direction::Left => Direction::Up,
+                    };
+                    let tp = board.can_move(position, go);
+                    tilepoint = tilepoint.or(tp)
+                }
+                tilepoint
+            }
+            &mut MovementAI::EnemyAmidarMvmt {
+                ref mut vert,
+                ref mut horiz,
+                ..
+            } => {
+                let maybe_vert: Option<TilePoint> = board.can_move(position, *vert);
+                let perimeter: Vec<Direction> = board.get_perimeter(position);
+                let maybe_horiz = board.can_move(position, *horiz);
+                if perimeter.contains(vert) {
+                    *vert = vert.opposite();
+                }
+                if maybe_vert.is_some() {
+                    // Check to see if we are on the left or right sides
+                    if perimeter.contains(&Direction::Left) || perimeter.contains(&Direction::Right)
+                    {
+                        // Then try to move horizontally first.
+                        if maybe_horiz.is_some() {
+                            return maybe_horiz;
+                        }
+                    }
+                    return maybe_vert;
+                }
+                if maybe_horiz.is_some() {
+                    return maybe_horiz;
+                } else {
+                    // Flip horiz
+                    *horiz = horiz.opposite();
+                    return board.can_move(position, *horiz);
+                }
             }
         }
     }
@@ -358,6 +435,8 @@ impl Mob {
             } => board
                 .lookup_position(DEFAULT_ENEMY_ROUTES[default_route_index as usize][0])
                 .to_world(),
+            MovementAI::EnemyPerimeterAI { .. } => TilePoint::new(0, 0).to_world(),
+            MovementAI::EnemyAmidarMvmt { ref start, .. } => start.clone().to_world(),
         };
         self.history.clear();
     }
@@ -504,6 +583,42 @@ impl Board {
         let last_y = (self.height as i32) - 1;
         let last_x = (self.width as i32) - 1;
         (tx == 0 || tx == last_x) && (ty == 0 || ty == last_y)
+    }
+
+    fn get_perimeter(&self, position: &TilePoint) -> Vec<Direction> {
+        let tx = position.tx;
+        let ty = position.ty;
+        let mut retval = Vec::new();
+
+        let last_y = (self.height as i32) - 1;
+        let last_x = (self.width as i32) - 1;
+
+        if ty == 0 {
+            retval.push(Direction::Up)
+        } else if ty == last_y {
+            retval.push(Direction::Down)
+        }
+
+        if tx == 0 {
+            retval.push(Direction::Left)
+        } else if tx == last_x {
+            retval.push(Direction::Right)
+        }
+        assert!(retval.len() < 3);
+        retval
+    }
+
+    fn can_move(&self, position: &TilePoint, dir: Direction) -> Option<TilePoint> {
+        let tx = position.tx;
+        let ty = position.ty;
+        let (dx, dy) = dir.delta();
+        let tp = TilePoint::new(tx + dx, ty + dy);
+        let tile = self.get_tile(&tp);
+        if tile.walkable() {
+            Some(tp)
+        } else {
+            None
+        }
     }
 
     fn init_junctions(&mut self) {
@@ -691,13 +806,11 @@ impl Board {
             true
         }
     }
-    pub fn make_enemy(&self, default_route_index: u32) -> Mob {
-        let first = DEFAULT_ENEMY_ROUTES[default_route_index as usize][0];
-        let ai = MovementAI::EnemyLookupAI {
-            next: 0,
-            default_route_index,
-        };
-        Mob::new(ai, self.lookup_position(first).to_world())
+    pub fn make_enemy(&self, ai: MovementAI) -> Mob {
+        let fake = TilePoint::new(0, 0);
+        let mut m = Mob::new(ai, fake.to_world());
+        m.reset(&fake, self);
+        m
     }
     pub fn lookup_position(&self, position: u32) -> TilePoint {
         let x = position % self.width;
@@ -735,15 +848,15 @@ pub struct State {
 impl State {
     pub fn try_new() -> Result<State, String> {
         let board = Board::fast_new();
+        let config = Config::default();
 
-        let mut enemies = Vec::new();
-        for (enemy_index, _) in DEFAULT_ENEMY_ROUTES.iter().enumerate() {
-            enemies.push(board.make_enemy(enemy_index as u32))
-        }
+        let enemies = config
+            .enemies
+            .iter()
+            .map(|ai| board.make_enemy(ai.clone()))
+            .collect();
         let player_start = TilePoint::new(31, 15);
         let player = Mob::new_player(player_start.to_world());
-
-        let config = Config::default();
 
         let mut state = State {
             config: config.clone(),
