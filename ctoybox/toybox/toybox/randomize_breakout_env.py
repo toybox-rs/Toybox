@@ -1,6 +1,8 @@
 import random
 import math
 
+import toybox
+#from toybox import Toybox
 from toybox.toybox import Toybox
 #from toybox.envs.atari.base import ToyboxBaseEnv
 #from toybox.envs.atari.amidar import AmidarEnv
@@ -64,7 +66,7 @@ def select_paddle_state(tb, state_json):
 	# paddle size
 
 	return state_json 
-	
+
 
 def set_score(tb, state_json): 
 	game_score = 0
