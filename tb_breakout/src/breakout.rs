@@ -9,6 +9,8 @@ use toybox_core::{AleAction, Input};
 use serde_json;
 use std::any::Any;
 
+use rand::RngCore;
+
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
     pub const FRAME_OFFSET: i32 = 13;

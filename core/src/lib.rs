@@ -17,6 +17,8 @@ pub use direction::Direction;
 
 use std::any::Any;
 
+extern crate rand_core;
+
 /// This trait models a single frame state for a Simulation.
 pub trait State {
     /// For dynamic casts.
