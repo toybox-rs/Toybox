@@ -1,4 +1,4 @@
-algs="acer acktr a2c ppo2 deepq"
+algs="deepq acer acktr a2c ppo2"
 work1=/mnt/nfs/work1/jensen/etosch/issta
 logs=$work1/logs
 
@@ -7,7 +7,7 @@ mkdir -p $logs
 partition="titanx-long"
 
 
-envs="BreakoutNoFrameskip-v4 AmidarNoFrameskip-v4 SpaceInvadersNoFrameskip-v4"
+envs="AmidarToyboxNoFrameskip-v4 SpaceInvadersToyboxNoFrameskip-v4"
 timesteps="1e7 5e7"
 weights=0
 seeds=`cat training_seeds`
@@ -55,7 +55,6 @@ for env in $envs; do
 OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$steps --save_path=$model $wflg" 
 		    echo "$cmd"
 		    echo "$cmd" > $dest
-            
 		    sbatch -p $partition --gres=gpu:1 $dest
 	        done;
 	    done;
