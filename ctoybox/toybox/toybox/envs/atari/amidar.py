@@ -14,7 +14,7 @@ class AmidarEnv(ToyboxBaseEnv):
         ]
         self. _amidar_action_ids = [ACTION_LOOKUP[s] for s in self._amidar_action_strs]
 
-        super().__init__(Toybox('amidar', grayscale), 'amidar',
+        super().__init__(Toybox('amidar', grayscale),
             frameskip, repeat_action_probability,
             grayscale=grayscale,
             alpha=alpha,
