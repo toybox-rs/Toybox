@@ -1170,7 +1170,7 @@ impl toybox_core::State for State {
             }
         } else {
             output.extend(draw_score(
-                self.state.score,
+                self.state.score % 10000, 
                 screen::SCORE_LEFT_X_POS,
                 screen::SCORE_Y_POS,
                 FontChoice::LEFT,
