@@ -6,8 +6,7 @@ import sys
 
 class AmidarEnv(ToyboxBaseEnv):
 
-    
-    def __init__(self, grayscale=True, alpha=False):
+    def __init__(self, frameskip=(2, 5), repeat_action_probability=0., grayscale=True, alpha=False):
         self._amidar_action_strs = [
             NOOP_STR, FIRE_STR, LEFT_STR, RIGHT_STR, UP_STR, DOWN_STR,
             UPFIRE_STR, DOWNFIRE_STR, LEFTFIRE_STR, RIGHTFIRE_STR
