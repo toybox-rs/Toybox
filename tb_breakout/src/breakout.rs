@@ -9,7 +9,7 @@ use toybox_core::{AleAction, Input};
 use serde_json;
 use std::any::Any;
 
-// use rand::RngCore;
+use rand::RngCore;
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
@@ -316,7 +316,7 @@ impl toybox_core::Simulation for Breakout {
 impl State {
     fn start_ball(&mut self) {
         let options = &self.config.ball_start_positions;
-        let index = (self.state.rand._next_u32() as usize) % options.len();
+        let index = (self.state.rand.next_u32() as usize) % options.len();
 
         self.state.ball.position.x = options[index].x;
         self.state.ball.position.y = options[index].y;
