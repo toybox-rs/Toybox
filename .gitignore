@@ -11,4 +11,6 @@ images
 install_rust.sh
 ctoybox/run_cmd_*
 venv
-openai-old
+openai-old.DS_Store
+Cargo.lock
+.DS_Store
