@@ -1051,7 +1051,8 @@ impl toybox_core::State for State {
         self
     }
     fn lives(&self) -> i32 {
-        self.state.lives
+        // If we have removed all enemies, set lives to 0 and end.
+        if self.state.enemies.iter().all(|e : &Enemy| !e.alive) { 0 } else { self.state.lives }
     }
     fn score(&self) -> i32 {
         self.state.score

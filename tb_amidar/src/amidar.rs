@@ -988,7 +988,8 @@ impl toybox_core::State for State {
         self
     }
     fn lives(&self) -> i32 {
-        self.state.lives
+        // If everything is painted, game is over. Set lives to 0.
+        if self.state.board.boxes.iter().all(|b: &GridBox| b.painted) { 0 } else { self.state.lives }
     }
     fn score(&self) -> i32 {
         self.state.score
