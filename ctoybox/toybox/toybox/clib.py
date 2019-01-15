@@ -14,9 +14,13 @@ lib_so = 'libctoybox.so'
 
 
 if platform == 'Darwin':
-    _lib_prefix = os.environ[lib_env_var] if lib_env_var in os.environ else '.'
+    _lib_prefix = os.environ[lib_env_var] if lib_env_var in os.environ else '..'
     _lib_path_debug   = os.path.sep.join([_lib_prefix, 'target', 'debug', lib_dylib])
     _lib_path_release = os.path.sep.join([_lib_prefix, 'target', 'release', lib_dylib])
+    print('Looking for toybox lib in\n\t%s\nor\n\t%s' % (
+        _lib_path_debug,
+        _lib_path_release
+    ))
 
     _lib_ts_release = os.stat(_lib_path_release).st_birthtime \
         if os.path.exists(_lib_path_release) else 0

@@ -2,6 +2,7 @@
 #pip3 install -q -r REQUIREMENTS.txt --user
 export PYTHONPATH=${PWD}/baselines:${PWD}/toybox:${PYTHONPATH}:${HOME}/toybox/ctoybox/baselines:${HOME}/toybox/ctoybox/toybox
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/../target/release:${HOME}/toybox/target/release:${HOME}/dev/toybox/target/release
+export LIBCTOYBOX=${PWD}/..:${HOME}/toybox:${HOME}/dev/toybox
 echo "PYTHONPATH $PYTHONPATH"
 echo "LD_LIBRARY_PATH $LD_LIBRARY_PATH"
 echo "LIBCTOYBOX $LIBCTOYBOX"
