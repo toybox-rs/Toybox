@@ -218,3 +218,28 @@ pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mu
     let state = Box::new(WrapState { state });
     Box::into_raw(state)
 }
+
+
+#[no_mangle]
+pub extern "C" fn from_config_json(ptr: *mut WrapSimulator, config_json_str: *const i8, state_json_str: *const i8) -> *mut WrapState {
+    let state_json_str: &CStr = unsafe { CStr::from_ptr(state_json_str) };
+    let state_json_str: &str = state_json_str
+        .to_str()
+        .expect("Could not convert your state string to UTF-8!");
+
+    let config_json_str: &CStr = unsafe { CStr::from_ptr(config_json_str) };
+    let config_json_str: &str = config_json_str
+        .to_str()
+        .expect("Could not convert your config string to UTF-8!");
+
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let state = simulator
+        .new_state_config_from_json(config_json_str, state_json_str)
+        .expect("Could not parse some JSON!");
+        
+    let state = Box::new(WrapState { state });
+    Box::into_raw(state)
+}

@@ -1289,4 +1289,10 @@ mod tests {
     fn test_load_png() {
         let img = &images::PLAYER_L1;
     }
+
+    #[test]
+    fn what_json_do_we_want() {
+        let data = MovementAI::EnemyPerimeterAI { start: TilePoint::new(0,0) };
+        println!("{}", serde_json::to_string_pretty(&data).unwrap());
+    }
 }

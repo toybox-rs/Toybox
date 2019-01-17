@@ -9,6 +9,13 @@ import json
 
 from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
 
+def json_str(js):
+    if type(js) is dict:
+        js = json.dumps(js)
+    elif type(js) is not str:
+        raise ValueError('Unknown json type: %s (only str and dict supported)' % type(js))
+    return js
+
 class Simulator(object):
     def __init__(self, game_name):
         sim = _lib.simulator_alloc(game_name.encode('utf-8'))
@@ -48,12 +55,15 @@ class Simulator(object):
         return State(self)
 
     def from_json(self, js):
-        if type(js) is dict:
-            js = json.dumps(js)
-        elif type(js) is not str:
-            raise ValueError('Unknown json type: %s (only str and dict supported)' % type(js))
-        state = _lib.from_json(self.get_simulator(), js.encode('utf-8'))
+        state = _lib.from_json(self.get_simulator(), json_str(js).encode('utf-8'))
         return State(self, state=state)
+
+    def from_config_json(self, config_js, state_js):
+        state = _lib.from_config_json(self.get_simulator(), 
+                    json_str(config_js).encode('utf-8'),
+                    json_str(state_js).encode('utf-8'))
+        return State(self, state=state)
+
 
 class State(object):
     def __init__(self, sim, state=None):
@@ -277,6 +287,11 @@ class Toybox(object):
         old_state = self.rstate
         del old_state
         self.rstate = self.from_json(js)
+
+    def write_config_json(self, config_js, state_js):
+        old_state = self.rstate
+        del old_state
+        self.rstate = self.rsimulator.from_config_json(config_js, state_js)
 
     def predicate_met(self, pred): 
         return False
