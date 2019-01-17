@@ -230,9 +230,6 @@ _lib.simulator_to_json.restype = ctypes.c_char_p
 _lib.simulator_from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.simulator_from_json.restype = ctypes.POINTER(WrapSimulator)
 
-_lib.from_config_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p, ctypes.c_char_p]
-_lib.from_config_json.restype = ctypes.POINTER(WrapState)
-
 _lib.breakout_brick_live_by_index.argtypes = [ctypes.POINTER(WrapState), ctypes.c_size_t]
 _lib.breakout_brick_live_by_index.restype = ctypes.c_bool
 
