@@ -65,8 +65,8 @@ class Simulator(object):
 
     def from_json(self, config_js):
         old_sim = self.__sim
+        self.__sim = _lib.simulator_from_json(self.get_simulator(), json_str(config_js).encode('utf-8'))
         del old_sim
-        self.sim = _lib.simulator_from_json(self.get_simulator(), json_str(config_js).encode('utf-8'))
 
 
 class State(object):
