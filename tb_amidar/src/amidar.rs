@@ -5,6 +5,9 @@ use std::collections::{HashSet, VecDeque};
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
 use toybox_core::{AleAction, Direction, Input};
+use toybox_core::random;
+
+use rand::Rng;
 
 // Window constants:
 pub mod screen {
@@ -60,6 +63,7 @@ pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_ene
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amidar {
+    pub rand: random::Gen,
     bg_color: Color,
     player_color: Color,
     unpainted_color: Color,
@@ -92,6 +96,7 @@ impl Amidar {
 impl Default for Amidar {
     fn default() -> Self {
         Amidar {
+            rand: random::Gen::new_from_seed(13),
             bg_color: Color::black(),
             player_color: Color::rgb(255, 255, 153),
             unpainted_color: Color::rgb(148, 0, 211),
@@ -282,6 +287,11 @@ pub enum MovementAI {
         start_horiz: Direction,
         start: TilePoint,
     },
+    EnemyRandomMvmt {
+        start: TilePoint,
+        start_dir: Direction,
+        dir: Direction
+    }
 }
 
 impl MovementAI {
@@ -303,6 +313,13 @@ impl MovementAI {
                 *vert = start_vert;
                 *horiz = start_horiz;
             }
+            &mut MovementAI::EnemyRandomMvmt {
+                ref mut dir,
+                start_dir, 
+                ..
+            } => {
+                *dir = start_dir;
+            }
         }
     }
     fn choose_next_tile(
@@ -310,7 +327,9 @@ impl MovementAI {
         position: &TilePoint,
         buttons: Input,
         board: &Board,
+        rng: &mut Gen,
     ) -> Option<TilePoint> {
+        let board = state.board;
         match self {
             &mut MovementAI::Player => {
                 let mut input: Option<Direction> = None;
@@ -386,6 +405,26 @@ impl MovementAI {
                     return board.can_move(position, *horiz);
                 }
             }
+            &mut MovementAI::EnemyRandomMvmt { ref dir, .. } => {
+                if board.is_junction(position) {
+                    let r: f64 = rng.gen();
+                    let directions = &[Direction::Up, Direction::Down, Direction::Left, Direction::Right];
+                    let eligible : Vec<Option<TilePoint>> = directions
+                        .iter()
+                        .map(|d| board.can_move(position, *d))
+                        .filter(|d| d.is_some())
+                        .collect();
+                    let p = 1.0 / (eligible.len() as f64);
+                    for i in 0..eligible.len() {
+                        if p * ((i + 1) as f64) < r {
+                            *dir = directions[i];
+                            return eligible[i]
+                        }
+                        return eligible[eligible.len() - 1]
+                    }
+                }
+                board.can_move(position, dir)
+            }
         }
     }
 }
@@ -441,7 +480,7 @@ impl Mob {
         self.history.clear();
     }
 
-    pub fn update(&mut self, buttons: Input, board: &mut Board) -> Option<BoardUpdate> {
+    pub fn update(&mut self, buttons: Input, board: &mut Board, rng: &mut Gen) -> Option<BoardUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -478,7 +517,7 @@ impl Mob {
         if self.step.is_none() {
             self.step = self
                 .ai
-                .choose_next_tile(&self.position.to_tile(), buttons, board)
+                .choose_next_tile(&self.position.to_tile(), buttons, board, rng)
         }
 
         // Manage history:
@@ -619,6 +658,14 @@ impl Board {
         } else {
             None
         }
+    }
+
+    fn is_junction(&self, tile: &TilePoint) -> bool {
+       if let Some(num) = self.tile_id(tile) {
+           self.junctions.contains(&num)
+       } else {
+           false
+       }
     }
 
     fn init_junctions(&mut self) {
@@ -829,6 +876,7 @@ impl Board {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StateCore {
+    pub rand: random::Gen,
     pub score: i32,
     pub lives: i32,
     pub jumps: i32,
@@ -861,6 +909,7 @@ impl State {
         let mut state = State {
             config: config.clone(),
             state: StateCore {
+                rand: random::Gen::new_child(&mut config.rand),
                 lives: config.start_lives,
                 score: 0,
                 chase_timer: 0,
@@ -927,7 +976,9 @@ impl toybox_core::Simulation for Amidar {
     fn as_any(&self) -> &Any {
         self
     }
-    fn reset_seed(&mut self, _seed: u32) {}
+    fn reset_seed(&mut self, seed: u32) {
+        self.rand.reset_seed(seed)
+    }
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }

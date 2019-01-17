@@ -5,6 +5,7 @@ extern crate toybox_core;
 extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
+extern crate rand;
 
 pub mod amidar;
 mod digit_sprites;
