@@ -7,6 +7,7 @@ use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
 use toybox_core::random;
 use toybox_core::{AleAction, Direction, Input};
 
+use rand::seq::SliceRandom;
 use rand::Rng;
 
 // Window constants:
@@ -327,9 +328,8 @@ impl MovementAI {
         position: &TilePoint,
         buttons: Input,
         board: &Board,
-        rng: &mut Gen,
+        rng: &mut random::Gen,
     ) -> Option<TilePoint> {
-        let board = state.board;
         match self {
             &mut MovementAI::Player => {
                 let mut input: Option<Direction> = None;
@@ -405,30 +405,23 @@ impl MovementAI {
                     return board.can_move(position, *horiz);
                 }
             }
-            &mut MovementAI::EnemyRandomMvmt { ref dir, .. } => {
+            &mut MovementAI::EnemyRandomMvmt { ref mut dir, .. } => {
                 if board.is_junction(position) {
-                    let r: f64 = rng.gen();
                     let directions = &[
                         Direction::Up,
                         Direction::Down,
                         Direction::Left,
                         Direction::Right,
                     ];
-                    let eligible: Vec<Option<TilePoint>> = directions
+                    let eligible: Vec<TilePoint> = directions
                         .iter()
                         .map(|d| board.can_move(position, *d))
                         .filter(|d| d.is_some())
+                        .map(|d| d.unwrap())
                         .collect();
-                    let p = 1.0 / (eligible.len() as f64);
-                    for i in 0..eligible.len() {
-                        if p * ((i + 1) as f64) < r {
-                            *dir = directions[i];
-                            return eligible[i];
-                        }
-                        return eligible[eligible.len() - 1];
-                    }
+                    return eligible.choose(rng).cloned();
                 }
-                board.can_move(position, dir)
+                board.can_move(position, *dir)
             }
         }
     }
@@ -481,6 +474,7 @@ impl Mob {
                 .to_world(),
             MovementAI::EnemyPerimeterAI { .. } => TilePoint::new(0, 0).to_world(),
             MovementAI::EnemyAmidarMvmt { ref start, .. } => start.clone().to_world(),
+            MovementAI::EnemyRandomMvmt { ref start, .. } => start.clone().to_world(),
         };
         self.history.clear();
     }
@@ -489,7 +483,7 @@ impl Mob {
         &mut self,
         buttons: Input,
         board: &mut Board,
-        rng: &mut Gen,
+        rng: &mut random::Gen,
     ) -> Option<BoardUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
@@ -906,7 +900,7 @@ pub struct State {
 impl State {
     pub fn try_new(config: &Amidar) -> Result<State, String> {
         let board = Board::fast_new();
-        let config = config.clone();
+        let mut config = config.clone();
 
         let enemies = config
             .enemies
@@ -916,20 +910,22 @@ impl State {
         let player_start = TilePoint::new(31, 15);
         let player = Mob::new_player(player_start.to_world());
 
+        let core = StateCore {
+            rand: random::Gen::new_child(&mut config.rand),
+            lives: config.start_lives,
+            score: 0,
+            chase_timer: 0,
+            jumps: config.start_jumps,
+            jump_timer: 0,
+            player,
+            player_start,
+            enemies,
+            board,
+        };
+
         let mut state = State {
-            config: config.clone(),
-            state: StateCore {
-                rand: random::Gen::new_child(&mut config.rand),
-                lives: config.start_lives,
-                score: 0,
-                chase_timer: 0,
-                jumps: config.start_jumps,
-                jump_timer: 0,
-                player,
-                player_start,
-                enemies,
-                board,
-            },
+            config,
+            state: core,
         };
         state.reset();
         Ok(state)
@@ -1051,7 +1047,11 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         let pre_update_score: i32 = self.score();
-        if let Some(score_change) = self.state.player.update(buttons, &mut self.state.board) {
+        if let Some(score_change) =
+            self.state
+                .player
+                .update(buttons, &mut self.state.board, &mut self.state.rand)
+        {
             self.state.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
             self.state.score += score_change.vertical.signum();
@@ -1085,7 +1085,11 @@ impl toybox_core::State for State {
 
         // move enemies:
         for e in self.state.enemies.iter_mut() {
-            e.update(Input::default(), &mut self.state.board);
+            e.update(
+                Input::default(),
+                &mut self.state.board,
+                &mut self.state.rand,
+            );
         }
 
         // check-collisions again (so we can't run through enemies):
