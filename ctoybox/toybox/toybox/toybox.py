@@ -17,8 +17,9 @@ def json_str(js):
     return js
 
 class Simulator(object):
-    def __init__(self, game_name):
-        sim = _lib.simulator_alloc(game_name.encode('utf-8'))
+    def __init__(self, game_name, sim=None):
+        if sim is None:
+            sim = _lib.simulator_alloc(game_name.encode('utf-8'))
         # sim should be a pointer
         #self.__sim = ctypes.pointer(ctypes.c_int(sim))
         self.game_name = game_name
@@ -54,15 +55,18 @@ class Simulator(object):
     def new_game(self):
         return State(self)
 
-    def from_json(self, js):
+    def state_from_json(self, js):
         state = _lib.from_json(self.get_simulator(), json_str(js).encode('utf-8'))
         return State(self, state=state)
 
-    def from_config_json(self, config_js, state_js):
-        state = _lib.from_config_json(self.get_simulator(), 
-                    json_str(config_js).encode('utf-8'),
-                    json_str(state_js).encode('utf-8'))
-        return State(self, state=state)
+    def to_json(self):
+        json_str = _lib.simulator_to_json(self.get_simulator()).decode('utf-8')
+        return json.loads(str(json_str))
+
+    def from_json(self, config_js):
+        old_sim = self.__sim
+        del old_sim
+        self.sim = _lib.simulator_from_json(self.get_simulator(), json_str(config_js).encode('utf-8'))
 
 
 class State(object):
@@ -205,10 +209,6 @@ class State(object):
         json_str = _lib.to_json(self.__state).decode('utf-8')
         return json.loads(str(json_str))
 
-    def config_to_json(self):
-        json_str = _lib.config_to_json(self.__state).decode('utf-8')
-        return json.loads(str(json_str))
-
 class Toybox(object):
     def __init__(self, game_name, grayscale=True, frameskip=0):
         self.game_name = game_name
@@ -276,22 +276,23 @@ class Toybox(object):
 
     def to_json(self):
         return self.rstate.to_json()
-
-    def config_to_json(self):
-        return self.rstate.config_to_json()
-
+    
     def from_json(self, js):
         return self.rsimulator.from_json(js)
+
+    def config_to_json(self):
+        return self.rsimulator.to_json()
 
     def write_json(self, js):
         old_state = self.rstate
         del old_state
         self.rstate = self.from_json(js)
 
-    def write_config_json(self, config_js, state_js):
-        old_state = self.rstate
-        del old_state
-        self.rstate = self.rsimulator.from_config_json(config_js, state_js)
+    def write_config_json(self, config_js):
+        # from_json replaces simulator!
+        self.rsimulator.from_json(config_js)
+        # new_game replaces state!
+        self.new_game()
 
     def predicate_met(self, pred): 
         return False

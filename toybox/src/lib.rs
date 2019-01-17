@@ -16,7 +16,7 @@ pub use toybox_core::State;
 pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, String> {
     let y: Result<Box<Simulation>, _> = match name.to_lowercase().as_str() {
         #[cfg(feature = "amidar")]
-        "amidar" => Ok(Box::new(amidar::Amidar)),
+        "amidar" => Ok(Box::new(amidar::Amidar::default())),
         #[cfg(feature = "breakout")]
         "breakout" => Ok(Box::new(breakout::Breakout::default())),
         #[cfg(feature = "space_invaders")]

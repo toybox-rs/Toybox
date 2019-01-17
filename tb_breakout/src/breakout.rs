@@ -82,7 +82,8 @@ impl StartBall {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub struct Breakout {
+    pub rand: random::Gen,
     bg_color: Color,
     frame_color: Color,
     paddle_color: Color,
@@ -96,7 +97,7 @@ pub struct Config {
     ball_start_positions: Vec<StartBall>,
     paddle_discrete_segments: Option<i32>,
 }
-impl Config {
+impl Breakout {
     fn unique_colors(&self) -> Vec<&Color> {
         let mut output: Vec<&Color> = Vec::new();
         output.extend(self.row_colors.iter());
@@ -110,13 +111,14 @@ impl Config {
         Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into())
     }
 }
-impl Default for Config {
+impl Default for Breakout {
     fn default() -> Self {
         let (w, h) = screen::GAME_SIZE;
         let w = w as f64;
         let y = h as f64 / 2.0;
 
-        Config {
+        Breakout {
+            rand: random::Gen::new_from_seed(13),
             bg_color: Color::black(),
             frame_color: (&screen::FRAME_COLOR).into(),
             paddle_color: (&screen::PADDLE_COLOR).into(),
@@ -198,21 +200,8 @@ pub struct StateCore {
 }
 
 pub struct State {
-    pub config: Config,
+    pub config: Breakout,
     pub state: StateCore,
-}
-
-pub struct Breakout {
-    pub config: Config,
-    pub rand: random::Gen,
-}
-impl Default for Breakout {
-    fn default() -> Self {
-        Breakout {
-            config: Config::default(),
-            rand: random::Gen::new_from_seed(13),
-        }
-    }
 }
 
 impl toybox_core::Simulation for Breakout {
@@ -245,15 +234,15 @@ impl toybox_core::Simulation for Breakout {
             screen::BOARD_LEFT_X.into(),
             (screen::BOARD_TOP_Y + screen::ROOF_SPACING).into(),
         );
-        let num_bricks_deep = self.config.row_colors.len();
+        let num_bricks_deep = self.row_colors.len();
         let bsize = Vec2D::new(screen::BRICK_WIDTH.into(), screen::BRICK_HEIGHT.into());
         let xs = bsize.x;
         let ys = bsize.y;
         for x in 0..screen::BRICKS_ACROSS {
             let x = f64::from(x);
             for y in 0..num_bricks_deep {
-                let color_tuple = self.config.row_colors[y];
-                let score = self.config.row_scores[y];
+                let color_tuple = self.row_colors[y];
+                let score = self.row_scores[y];
                 let bpos = Vec2D::new(x * xs, (y as f64) * ys).translate(&offset);
                 // Reverse depth:
                 let depth = num_bricks_deep - y - 1;
@@ -268,14 +257,14 @@ impl toybox_core::Simulation for Breakout {
         }
 
         let mut state = State {
-            config: self.config.clone(),
+            config: self.clone(),
             state: StateCore {
-                lives: self.config.start_lives,
+                lives: self.start_lives,
                 // offscreen, and dead
                 ball: Body2D::new_pos(-100.0, -100.0),
                 is_dead: true,
                 // paddle starts in middle
-                paddle: self.config.start_paddle(),
+                paddle: self.start_paddle(),
                 points: 0,
                 ball_radius: 2.0,
                 paddle_width: screen::PADDLE_START_SIZE.0.into(),
@@ -295,21 +284,19 @@ impl toybox_core::Simulation for Breakout {
         json_str: &str,
     ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
-        let config: Config = Config::default();
         Ok(Box::new(State {
-            config: config.clone(),
+            config: self.clone(),
             state,
         }))
     }
 
-    fn new_state_config_from_json(
-        &self,
-        json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        let state: StateCore = serde_json::from_str(json_state)?;
-        let config: Config = serde_json::from_str(json_config)?;
-        Ok(Box::new(State { config, state }))
+    fn from_json(&self, json_str: &str) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: Breakout = serde_json::from_str(json_str)?;
+        Ok(Box::new(config))
+    }
+
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Breakout should be JSON-serializable!")
     }
 }
 
@@ -626,10 +613,6 @@ impl toybox_core::State for State {
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
-
-    fn config_to_json(&self) -> String {
-        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
-    }
 }
 
 #[cfg(test)]
@@ -639,7 +622,7 @@ mod tests {
 
     #[test]
     fn test_colors_unique_in_gray() {
-        let config = Config::default();
+        let config = Breakout::default();
         let num_colors = config.unique_colors().len();
         let uniq_grays: HashSet<u8> = config
             .unique_colors()

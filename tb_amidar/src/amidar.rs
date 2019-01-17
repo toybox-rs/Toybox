@@ -59,7 +59,7 @@ pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub struct Amidar {
     bg_color: Color,
     player_color: Color,
     unpainted_color: Color,
@@ -76,7 +76,7 @@ pub struct Config {
     enemies: Vec<MovementAI>,
 }
 
-impl Config {
+impl Amidar {
     pub fn colors(&self) -> Vec<&Color> {
         vec![
             &self.bg_color,
@@ -89,9 +89,9 @@ impl Config {
     }
 }
 
-impl Default for Config {
+impl Default for Amidar {
     fn default() -> Self {
-        Config {
+        Amidar {
             bg_color: Color::black(),
             player_color: Color::rgb(255, 255, 153),
             unpainted_color: Color::rgb(148, 0, 211),
@@ -841,14 +841,14 @@ pub struct StateCore {
 }
 
 pub struct State {
-    pub config: Config,
+    pub config: Amidar,
     pub state: StateCore,
 }
 
 impl State {
-    pub fn try_new() -> Result<State, String> {
+    pub fn try_new(config: &Amidar) -> Result<State, String> {
         let board = Board::fast_new();
-        let config = Config::default();
+        let config = config.clone();
 
         let enemies = config
             .enemies
@@ -923,13 +923,6 @@ enum EnemyPlayerState {
     EnemyCatch(usize),
 }
 
-#[derive(Clone)]
-pub struct Amidar;
-impl Default for Amidar {
-    fn default() -> Self {
-        Amidar.clone()
-    }
-}
 impl toybox_core::Simulation for Amidar {
     fn as_any(&self) -> &Any {
         self
@@ -939,9 +932,11 @@ impl toybox_core::Simulation for Amidar {
         screen::GAME_SIZE
     }
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::try_new().expect("new_game should succeed."))
+        Box::new(State::try_new(self).expect("new_game should succeed."))
     }
-
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Amidar should be JSON serializable!")
+    }
     /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/Amidar.cpp#L80)
     fn legal_action_set(&self) -> Vec<AleAction> {
         vec![
@@ -963,23 +958,18 @@ impl toybox_core::Simulation for Amidar {
         json_str: &str,
     ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
-        let config: Config = Config::default();
         Ok(Box::new(State {
-            config: config.clone(),
+            config: self.clone(),
             state: state,
         }))
     }
-    fn new_state_config_from_json(
+
+    fn from_json(
         &self,
         json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        let state: StateCore = serde_json::from_str(json_state)?;
-        let config: Config = serde_json::from_str(json_config)?;
-        Ok(Box::new(State {
-            config: config,
-            state: state,
-        }))
+    ) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: Amidar = serde_json::from_str(json_config)?;
+        Ok(Box::new(config))
     }
 }
 
@@ -1225,10 +1215,6 @@ impl toybox_core::State for State {
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
-
-    fn config_to_json(&self) -> String {
-        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
-    }
 }
 
 #[cfg(test)]
@@ -1237,7 +1223,7 @@ mod tests {
 
     #[test]
     fn test_colors_unique_in_gray() {
-        let config = Config::default();
+        let config = Amidar::default();
         let num_colors = config.colors().len();
         let uniq_grays: HashSet<u8> = config
             .colors()
@@ -1292,7 +1278,9 @@ mod tests {
 
     #[test]
     fn what_json_do_we_want() {
-        let data = MovementAI::EnemyPerimeterAI { start: TilePoint::new(0,0) };
+        let data = MovementAI::EnemyPerimeterAI {
+            start: TilePoint::new(0, 0),
+        };
         println!("{}", serde_json::to_string_pretty(&data).unwrap());
     }
 }

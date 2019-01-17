@@ -53,7 +53,7 @@ impl TileConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub struct GridWorld {
     pub game_size: (i32, i32),
     pub grid: Vec<String>,
     pub tiles: HashMap<char, TileConfig>,
@@ -62,7 +62,7 @@ pub struct Config {
     pub player_start: (i32, i32),
 }
 
-impl Default for Config {
+impl Default for GridWorld {
     fn default() -> Self {
         let mut tiles = HashMap::new();
         tiles.insert('1', TileConfig::wall());
@@ -82,7 +82,7 @@ impl Default for Config {
 
         let width = grid[0].len() as i32;
         let height = grid.len() as i32;
-        Config {
+        GridWorld {
             game_size: (width, height),
             player_color: Color::rgb(255, 0, 0),
             player_start: (2, 4),
@@ -109,7 +109,7 @@ impl State {
         let width = self.grid[0].len() as i32;
         (width, height)
     }
-    fn from_config(config: &Config) -> State {
+    fn from_config(config: &GridWorld) -> State {
         let mut tiles = Vec::new();
         let mut grid = Vec::new();
 
@@ -163,24 +163,13 @@ impl State {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct GridWorld {
-    config: Config,
-}
-impl Default for GridWorld {
-    fn default() -> Self {
-        GridWorld {
-            config: Config::default(),
-        }
-    }
-}
 impl toybox_core::Simulation for GridWorld {
     fn as_any(&self) -> &Any {
         self
     }
     fn reset_seed(&mut self, seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
-        self.config.game_size
+        self.game_size
     }
 
     fn legal_action_set(&self) -> Vec<AleAction> {
@@ -194,7 +183,7 @@ impl toybox_core::Simulation for GridWorld {
     }
 
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::from_config(&self.config))
+        Box::new(State::from_config(&self))
     }
 
     fn new_state_from_json(
@@ -205,13 +194,13 @@ impl toybox_core::Simulation for GridWorld {
         Ok(Box::new(state))
     }
 
-    fn new_state_config_from_json(
-        &self,
-        json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        // Not sure what's up with Config for now, so let's just ignore it.
-        self.new_state_from_json(json_state)
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("GridWorld should be JSON-serializable!")
+    }
+
+    fn from_json(&self, json_str: &str) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: GridWorld = serde_json::from_str(json_str)?;
+        Ok(Box::new(config))
     }
 }
 
@@ -268,9 +257,5 @@ impl toybox_core::State for State {
     }
     fn to_json(&self) -> String {
         serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
-    }
-
-    fn config_to_json(&self) -> String {
-        panic!("No config on the state of GridWorld");
     }
 }

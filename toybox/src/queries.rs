@@ -61,7 +61,7 @@ mod amidar_q_tests {
 
     #[test]
     fn test_q_num_tiles_unpainted() {
-        let mut state = amidar::State::try_new().unwrap();
+        let mut state = amidar::State::try_new(&amidar::Amidar::default()).unwrap();
 
         let (px, py) = q::player_tile(&state);
         let first = q::num_tiles_unpainted(&state);
@@ -77,6 +77,7 @@ mod amidar_q_tests {
                 break;
             }
         }
+
         let (nx, ny) = q::player_tile(&state);
         if py == ny {
             panic!("Player can't move upward!")

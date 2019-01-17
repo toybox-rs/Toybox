@@ -389,15 +389,17 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub struct SpaceInvaders {
+    pub rand: random::Gen,
     row_scores: Vec<i32>,
     start_lives: i32,
     pub enemy_protocol: FiringAI,
     pub jitter: f64,
 }
-impl Default for Config {
+impl Default for SpaceInvaders {
     fn default() -> Self {
-        Config {
+        SpaceInvaders {
+            rand: random::Gen::new_from_seed(17),
             row_scores: screen::ENEMY_POINTS.iter().cloned().collect(),
             start_lives: screen::START_LIVES,
             enemy_protocol: FiringAI::TargetPlayer,
@@ -892,7 +894,7 @@ impl StateCore {
         closest_id
     }
 
-    fn enemy_fire_lasers(&mut self, config: Config) {
+    fn enemy_fire_lasers(&mut self, config: &SpaceInvaders) {
         // Don't fire too many lasers.
         if self.enemy_lasers.len() > 1 {
             return;
@@ -981,22 +983,10 @@ impl StateCore {
 }
 
 pub struct State {
-    pub config: Config,
+    pub config: SpaceInvaders,
     pub state: StateCore,
 }
 
-pub struct SpaceInvaders {
-    pub config: Config,
-    pub rand: random::Gen,
-}
-impl Default for SpaceInvaders {
-    fn default() -> Self {
-        SpaceInvaders {
-            config: Config::default(),
-            rand: random::Gen::new_from_seed(17),
-        }
-    }
-}
 impl toybox_core::Simulation for SpaceInvaders {
     fn as_any(&self) -> &Any {
         self
@@ -1009,7 +999,7 @@ impl toybox_core::Simulation for SpaceInvaders {
     }
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State {
-            config: self.config.clone(),
+            config: self.clone(),
             state: StateCore::new(random::Gen::new_child(&mut self.rand)),
         })
     }
@@ -1029,20 +1019,19 @@ impl toybox_core::Simulation for SpaceInvaders {
         json_str: &str,
     ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
-        let config: Config = Config::default();
         Ok(Box::new(State {
             state,
-            config: config.clone(),
+            config: self.clone(),
         }))
     }
-    fn new_state_config_from_json(
-        &self,
-        json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        let state: StateCore = serde_json::from_str(json_state)?;
-        let config: Config = serde_json::from_str(json_config)?;
-        Ok(Box::new(State { config, state }))
+
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("SpaceInvaders should be JSON-serializable!")
+    }
+
+    fn from_json(&self, json_str: &str) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: SpaceInvaders = serde_json::from_str(json_str)?;
+        Ok(Box::new(config))
     }
 }
 
@@ -1091,7 +1080,7 @@ impl toybox_core::State for State {
             // Enemies only move if the player is alive
             self.state.enemy_shift();
             // Enemies only fire if the player is alive
-            self.state.enemy_fire_lasers(self.config.clone());
+            self.state.enemy_fire_lasers(&self.config);
             self.state.remove_shields();
 
             // See if lasers have gone off-screen.
@@ -1252,10 +1241,6 @@ impl toybox_core::State for State {
 
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
-    }
-
-    fn config_to_json(&self) -> String {
-        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
     }
 }
 
