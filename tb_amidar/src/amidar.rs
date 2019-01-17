@@ -4,8 +4,8 @@ use std::any::Any;
 use std::collections::{HashSet, VecDeque};
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
-use toybox_core::{AleAction, Direction, Input};
 use toybox_core::random;
+use toybox_core::{AleAction, Direction, Input};
 
 use rand::Rng;
 
@@ -290,8 +290,8 @@ pub enum MovementAI {
     EnemyRandomMvmt {
         start: TilePoint,
         start_dir: Direction,
-        dir: Direction
-    }
+        dir: Direction,
+    },
 }
 
 impl MovementAI {
@@ -315,7 +315,7 @@ impl MovementAI {
             }
             &mut MovementAI::EnemyRandomMvmt {
                 ref mut dir,
-                start_dir, 
+                start_dir,
                 ..
             } => {
                 *dir = start_dir;
@@ -408,8 +408,13 @@ impl MovementAI {
             &mut MovementAI::EnemyRandomMvmt { ref dir, .. } => {
                 if board.is_junction(position) {
                     let r: f64 = rng.gen();
-                    let directions = &[Direction::Up, Direction::Down, Direction::Left, Direction::Right];
-                    let eligible : Vec<Option<TilePoint>> = directions
+                    let directions = &[
+                        Direction::Up,
+                        Direction::Down,
+                        Direction::Left,
+                        Direction::Right,
+                    ];
+                    let eligible: Vec<Option<TilePoint>> = directions
                         .iter()
                         .map(|d| board.can_move(position, *d))
                         .filter(|d| d.is_some())
@@ -418,9 +423,9 @@ impl MovementAI {
                     for i in 0..eligible.len() {
                         if p * ((i + 1) as f64) < r {
                             *dir = directions[i];
-                            return eligible[i]
+                            return eligible[i];
                         }
-                        return eligible[eligible.len() - 1]
+                        return eligible[eligible.len() - 1];
                     }
                 }
                 board.can_move(position, dir)
@@ -480,7 +485,12 @@ impl Mob {
         self.history.clear();
     }
 
-    pub fn update(&mut self, buttons: Input, board: &mut Board, rng: &mut Gen) -> Option<BoardUpdate> {
+    pub fn update(
+        &mut self,
+        buttons: Input,
+        board: &mut Board,
+        rng: &mut Gen,
+    ) -> Option<BoardUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -661,11 +671,11 @@ impl Board {
     }
 
     fn is_junction(&self, tile: &TilePoint) -> bool {
-       if let Some(num) = self.tile_id(tile) {
-           self.junctions.contains(&num)
-       } else {
-           false
-       }
+        if let Some(num) = self.tile_id(tile) {
+            self.junctions.contains(&num)
+        } else {
+            false
+        }
     }
 
     fn init_junctions(&mut self) {
