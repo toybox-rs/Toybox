@@ -206,7 +206,7 @@ class State(object):
         return np.reshape(frame, (h,w,1))
 
     def to_json(self):
-        json_str = _lib.to_json(self.__state).decode('utf-8')
+        json_str = _lib.state_to_json(self.__state).decode('utf-8')
         return json.loads(str(json_str))
 
 class Toybox(object):
