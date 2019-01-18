@@ -246,9 +246,11 @@ def main():
 
     # Give the ball only one life.
     start_state['lives'] = 1
+
+    ball = start_state['balls'][0]
     # Use center ball position.
-    start_state['ball']['position']['x'] = 120.0
-    start_state['ball']['position']['y'] = 80.0
+    ball['position']['x'] = 120.0
+    ball['position']['y'] = 80.0
 
     #for angle in [90,90,270,270]:
     for angle in range(0,360,5):
@@ -258,8 +260,8 @@ def main():
         if abs(velocity_y) < 0.0001:
             print('Skip angle=', angle, 'velocity_y=', velocity_y)
             continue
-        start_state['ball']['velocity']['y'] = velocity_y
-        start_state['ball']['velocity']['x'] = velocity_x
+        ball['velocity']['y'] = velocity_y
+        ball['velocity']['x'] = velocity_x
 
         # indicate we're starting a new angle
         print(angle, velocity_x, velocity_y)

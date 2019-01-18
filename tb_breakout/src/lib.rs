@@ -5,6 +5,7 @@ extern crate toybox_core;
 extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
+extern crate ordered_float;
 extern crate rand;
 
 mod body2d;
