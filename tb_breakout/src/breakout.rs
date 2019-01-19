@@ -99,6 +99,7 @@ pub struct Breakout {
     paddle_discrete_segments: Option<i32>,
 }
 impl Breakout {
+    #[cfg(test)]
     fn unique_colors(&self) -> Vec<&Color> {
         let mut output: Vec<&Color> = Vec::new();
         output.extend(self.row_colors.iter());
@@ -108,7 +109,7 @@ impl Breakout {
         output
     }
     fn start_paddle(&self) -> Body2D {
-        let (w, h) = screen::GAME_SIZE;
+        let (w, _h) = screen::GAME_SIZE;
         Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into())
     }
 }
@@ -148,6 +149,10 @@ impl Default for Breakout {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[repr(C)]
 pub struct Brick {
+    // Logical y-coordinates of this brick; used for analysis.
+    pub row: i32,
+    // Logical x-coordinates of this brick; used for analysis.
+    pub col: i32,
     /// Brick position describes the upper-left of the brick.
     pub position: Vec2D,
     /// Brick size is the width and height of the brick.
@@ -160,17 +165,39 @@ pub struct Brick {
     pub color: Color,
     /// How deep is this brick? Will trigger speedup?
     pub depth: u32,
+    /// Destructible: if false, never let this brick die.
+    pub destructible: bool,
 }
 
 impl Brick {
-    pub fn new(position: Vec2D, size: Vec2D, points: i32, color: Color, depth: u32) -> Brick {
+    pub fn new(
+        row: i32,
+        col: i32,
+        position: Vec2D,
+        size: Vec2D,
+        points: i32,
+        color: Color,
+        depth: u32,
+    ) -> Brick {
         Brick {
+            row,
+            col,
             position,
             size,
             points,
-            alive: true,
             color,
             depth,
+            alive: true,
+            destructible: true,
+        }
+    }
+
+    /// Now that we have non-breakable bricks, we can use this everywhere to tell if a brick is completed or not.
+    pub fn completed(&self) -> bool {
+        if self.destructible {
+            !self.alive
+        } else {
+            true
         }
     }
 
@@ -239,15 +266,17 @@ impl toybox_core::Simulation for Breakout {
         let bsize = Vec2D::new(screen::BRICK_WIDTH.into(), screen::BRICK_HEIGHT.into());
         let xs = bsize.x;
         let ys = bsize.y;
-        for x in 0..screen::BRICKS_ACROSS {
-            let x = f64::from(x);
-            for y in 0..num_bricks_deep {
-                let color_tuple = self.row_colors[y];
-                let score = self.row_scores[y];
-                let bpos = Vec2D::new(x * xs, (y as f64) * ys).translate(&offset);
+        for xi in 0..screen::BRICKS_ACROSS {
+            let x = f64::from(xi);
+            for yi in 0..num_bricks_deep {
+                let color_tuple = self.row_colors[yi];
+                let score = self.row_scores[yi];
+                let bpos = Vec2D::new(x * xs, (yi as f64) * ys).translate(&offset);
                 // Reverse depth:
-                let depth = num_bricks_deep - y - 1;
+                let depth = num_bricks_deep - yi - 1;
                 bricks.push(Brick::new(
+                    yi as i32,
+                    xi,
                     bpos,
                     bsize.clone(),
                     score,
@@ -460,8 +489,10 @@ impl State {
                     ball.velocity.y *= -1.0;
                 }
                 if hit {
-                    brick.alive = false;
-                    self.state.points += brick.points;
+                    if brick.destructible {
+                        brick.alive = false;
+                        self.state.points += brick.points;
+                    }
                     if brick.depth >= self.config.ball_speed_row_depth {
                         // Potentially speed up the ball. This will be a no-op if it's already fast.
                         let theta = ball.velocity.angle();
@@ -544,7 +575,7 @@ impl toybox_core::State for State {
             }
         }
 
-        let reset_level = self.state.bricks.iter().all(|b| !b.alive);
+        let reset_level = self.state.bricks.iter().all(|b| b.completed());
         if reset_level && self.state.reset {
             for b in self.state.bricks.iter_mut() {
                 b.alive = true;
