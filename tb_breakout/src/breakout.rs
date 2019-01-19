@@ -549,6 +549,9 @@ impl toybox_core::State for State {
             for b in self.state.bricks.iter_mut() {
                 b.alive = true;
             }
+            // Delete old ball(s).
+            self.state.balls.clear();
+            // New ball.
             self.start_ball();
             self.state.reset = false;
         }
