@@ -6,8 +6,6 @@ from toybox.envs.atari.breakout import BreakoutEnv
 import time
 import sys
 import csv
-import matplotlib as mpl
-import matplotlib.cm as cm
 import multiprocessing
 import os.path as osp
 import gym
@@ -197,20 +195,6 @@ def get_learn_function_defaults(alg, env_type):
         kwargs = {}
     return kwargs
 
-# from https://stackoverflow.com/questions/40948069/color-range-python
-def convert_to_rgb(minimum, maximum, value):
-    norm = mpl.colors.Normalize(vmin=minimum, vmax=maximum)
-    cmap = cm.hot
-
-    m = cm.ScalarMappable(norm=norm, cmap=cmap)
-    print(m.to_rgba(value))
-
-    norm = (value - minimum)/(maximum - minimum)
-    (r, g, b) = colorsys.hsv_to_rgb(norm, 1.0, 1.0)
-    R, G, B = int(255 * r), int(255 * g), int(255 * b)
-
-    return R, G, B
-
 def parse_cmdline_kwargs(args):
     '''
     convert a list of '='-spaced command-line arguments to a dictionary, evaluating python objects when possible
@@ -249,7 +233,7 @@ def main():
     if not isinstance(turtle, ToyboxBaseEnv): 
             raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
 
-    n_trials = 30
+    n_trials = 1
     max_steps = 5e6
     record_period = 10
     # get initial config
@@ -267,12 +251,14 @@ def main():
 
             while n_steps < max_steps and not done:
                 action = model.step(obs)[0]
+                num_lives = turtle.ale.lives()
                 obs, _, done, info = env.step(action)
-                # env.render()
-                # time.sleep(1/30.0)
+                #env.render()
+                #time.sleep(1/30.0)
+                done = done and num_lives == 1
                 score = info[0]['score']
                 if n_steps % record_period == 0:
-                    d = ('AmidarToybox', trial, n_steps, prot, score)
+                    d = (extra_args['load_path'], trial, n_steps, prot, score)
                     print("{}\t{}\t{}\t{}\t{}".format(*d))
                     dat.append(d)
                 n_steps += 1
@@ -332,9 +318,9 @@ def main():
 
 
 
-    with open('amidar_protocol.tsv', 'w') as fp:
+    with open('amidar_protocol_{}.tsv'.format(extra_args['load_path']), 'w') as fp:
         for row in dat:
-            fp.write("{}\t{}\t{}\t{}\t{}".format(*row))
+            fp.write("{}\t{}\t{}\t{}\t{}\n".format(*row))
 
     env.close()
 
