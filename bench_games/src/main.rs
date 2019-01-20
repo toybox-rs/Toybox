@@ -2,7 +2,6 @@ extern crate toybox;
 extern crate toybox_core;
 
 use toybox::graphics::ImageBuffer;
-use toybox_core::AleAction;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
