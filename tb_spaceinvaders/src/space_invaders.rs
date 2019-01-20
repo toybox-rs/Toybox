@@ -1123,13 +1123,7 @@ impl toybox_core::State for State {
 
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        output.push(Drawable::rect(
-            Color::black(),
-            0,
-            0,
-            screen::GAME_SIZE.0,
-            screen::GAME_SIZE.1,
-        ));
+        output.push(Drawable::Clear(Color::black()));
         // draw ground:
         output.push(Drawable::rect(
             (&screen::GROUND_COLOR).into(),

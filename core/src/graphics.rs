@@ -193,6 +193,7 @@ impl SpriteData {
 
 #[derive(Clone)]
 pub enum Drawable {
+    Clear(Color),
     Rectangle {
         color: Color,
         x: i32,
@@ -254,6 +255,12 @@ impl GrayscaleBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
+                &Drawable::Clear(color) => {
+                    let fill = color.grayscale_byte();
+                    for x in self.data.iter_mut() {
+                        *x = fill;
+                    }
+                }
                 &Drawable::Rectangle { color, x, y, w, h } => {
                     let fill = color.grayscale_byte();
                     for yi in y..(y + h) {
@@ -361,6 +368,14 @@ impl ImageBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
+                &Drawable::Clear(color) => {
+                    for pixel in self.data.chunks_exact_mut(4) {
+                        pixel[0] = color.r;
+                        pixel[1] = color.g;
+                        pixel[2] = color.b;
+                        pixel[3] = color.a;
+                    }
+                }
                 &Drawable::Rectangle { color, x, y, w, h } => {
                     for yi in y..(y + h) {
                         for xi in x..(x + w) {
