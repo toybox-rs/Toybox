@@ -1,6 +1,7 @@
 extern crate toybox;
 extern crate toybox_core;
 
+use toybox::graphics::ImageBuffer;
 use toybox_core::AleAction;
 
 fn main() {
@@ -16,14 +17,20 @@ fn main() {
     let actions = sim.legal_action_set();
     println!("actions: {:?}", actions);
     let mut scores = Vec::new();
+    let mut byte_sum: usize = 0;
     for i in 0..n_steps {
-        //let action = actions[i % actions.len()];
-        let action = AleAction::DOWN;
+        let action = actions[i % actions.len()];
         state.update_mut(action.to_input());
         if state.lives() <= 0 {
             scores.push(state.score());
             state = sim.new_game();
         }
+        let (w, h) = sim.game_size();
+        let mut img = ImageBuffer::alloc(w, h);
+        img.render(&state.draw());
+
+        // use the images so rust doesn't optimize it out.
+        byte_sum += img.data[0] as usize;
     }
     scores.push(state.score());
     let mut total = 0.0;
@@ -31,4 +38,5 @@ fn main() {
         total += *s as f64;
     }
     println!("Average Episode Score: {}", total / scores.len() as f64);
+    println!("Byte Sum: {}", byte_sum);
 }
