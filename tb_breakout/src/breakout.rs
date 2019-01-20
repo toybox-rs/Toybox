@@ -1,6 +1,7 @@
 use super::body2d::Body2D;
 use super::font::{draw_lives, draw_score, DIGIT_WIDTH};
 use super::vec2d::Vec2D;
+use ordered_float::NotNan;
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable};
 use toybox_core::random;
@@ -189,7 +190,7 @@ pub struct StateCore {
     pub is_dead: bool,
     pub points: i32,
     /// ball position describes the center of the ball.
-    pub ball: Body2D,
+    pub balls: Vec<Body2D>,
     pub ball_radius: f64,
     /// paddle position describes the center of the paddle.
     pub paddle: Body2D,
@@ -260,8 +261,8 @@ impl toybox_core::Simulation for Breakout {
             config: self.clone(),
             state: StateCore {
                 lives: self.start_lives,
-                // offscreen, and dead
-                ball: Body2D::new_pos(-100.0, -100.0),
+                // empty to start
+                balls: Vec::new(),
                 is_dead: true,
                 // paddle starts in middle
                 paddle: self.start_paddle(),
@@ -305,12 +306,12 @@ impl State {
         let options = &self.config.ball_start_positions;
         let index = (self.state.rand.next_u32() as usize) % options.len();
 
-        self.state.ball.position.x = options[index].x;
-        self.state.ball.position.y = options[index].y;
-        self.state.ball.velocity = Vec2D::from_polar(
+        let mut ball = Body2D::new_pos(options[index].x, options[index].y);
+        ball.velocity = Vec2D::from_polar(
             self.config.ball_speed_slow,
             options[index].angle_degrees.to_radians(),
         );
+        self.state.balls.push(ball);
     }
     fn update_paddle_movement(&mut self, buttons: Input) {
         let left = buttons.left;
@@ -336,117 +337,150 @@ impl State {
         }
     }
     fn check_bounce_paddle(&mut self) {
-        // check paddle:
-        let paddle_ball_same_x = (self.state.ball.position.x - self.state.paddle.position.x).abs()
-            < self.state.ball_radius + self.state.paddle_width / 2.0;
-        let paddle_ball_same_y = (self.state.paddle.position.y - self.state.ball.position.y).abs()
-            < self.state.ball_radius;
-        if paddle_ball_same_x && paddle_ball_same_y {
-            // get x location of ball hit relative to paddle
-            let ball_hit_x = self.state.ball.position.x
-                - (self.state.paddle.position.x - (self.state.paddle_width / 2.0));
-            // get normalized location of ball hit along paddle
-            let mut paddle_normalized_relative_intersect_x =
-                1.0 - ball_hit_x / self.state.paddle_width;
+        let radius = self.state.ball_radius;
 
-            // If we have discrete segments, discretize that.
-            if let Some(segments) = self.config.paddle_discrete_segments {
-                // Multiply to get an integer segment id.
-                let segment_id =
-                    (paddle_normalized_relative_intersect_x * segments as f64).floor() as i32;
-                // Center within segments.
-                let shift = 1.0 / (2.0 * segments as f64);
-                // Divide to go back to a number from 0..1.0
-                let relative = (segment_id as f64) / (segments as f64) + shift;
-                // Overwrite continuous value.
-                paddle_normalized_relative_intersect_x = relative;
+        for ball in self.state.balls.iter_mut() {
+            // Only check balls going downwards.
+            if ball.velocity.y <= 0.0 {
+                continue;
             }
 
-            // convert this normalized parameter to the degree of the bounce angle
-            let bounce_angle = paddle_normalized_relative_intersect_x * screen::BALL_ANGLE_RANGE
-                + screen::BALL_ANGLE_MIN;
+            // check paddle:
+            let paddle_ball_same_x = (ball.position.x - self.state.paddle.position.x).abs()
+                < radius + self.state.paddle_width / 2.0;
+            let paddle_ball_same_y =
+                (self.state.paddle.position.y - ball.position.y).abs() < radius;
 
-            self.state.ball.velocity = Vec2D::from_polar(
-                self.state.ball.velocity.magnitude(),
-                bounce_angle.to_radians(),
-            );
-            // calculations use non-graphics polar orientation
-            // to quickly fix, we reflect over the x-axis
-            self.state.ball.velocity.y *= -1.0;
+            if paddle_ball_same_x && paddle_ball_same_y {
+                // get x location of ball hit relative to paddle
+                let ball_hit_x = ball.position.x
+                    - (self.state.paddle.position.x - (self.state.paddle_width / 2.0));
+                // get normalized location of ball hit along paddle
+                let mut paddle_normalized_relative_intersect_x =
+                    1.0 - ball_hit_x / self.state.paddle_width;
+
+                // If we have discrete segments, discretize that.
+                if let Some(segments) = self.config.paddle_discrete_segments {
+                    // Multiply to get an integer segment id.
+                    let segment_id =
+                        (paddle_normalized_relative_intersect_x * segments as f64).floor() as i32;
+                    // Center within segments.
+                    let shift = 1.0 / (2.0 * segments as f64);
+                    // Divide to go back to a number from 0..1.0
+                    let relative = (segment_id as f64) / (segments as f64) + shift;
+                    // Overwrite continuous value.
+                    paddle_normalized_relative_intersect_x = relative;
+                }
+
+                // convert this normalized parameter to the degree of the bounce angle
+                let bounce_angle = paddle_normalized_relative_intersect_x
+                    * screen::BALL_ANGLE_RANGE
+                    + screen::BALL_ANGLE_MIN;
+
+                ball.velocity =
+                    Vec2D::from_polar(ball.velocity.magnitude(), bounce_angle.to_radians());
+                // calculations use non-graphics polar orientation
+                // to quickly fix, we reflect over the x-axis
+                ball.velocity.y *= -1.0;
+            }
         }
     }
+
+    fn check_ball_death(&mut self) -> bool {
+        let radius = self.state.ball_radius;
+
+        let mut died = Vec::new();
+        for (i, ball) in self.state.balls.iter_mut().enumerate() {
+            // Only those balls downward:
+            if ball.velocity.y < 0.0 {
+                continue;
+            }
+            if ball.position.y + radius > screen::BOARD_BOTTOM_Y.into() {
+                died.push(i);
+            }
+        }
+        for index in died.iter().rev() {
+            self.state.balls.remove(*index);
+        }
+
+        // Death when no more balls!
+        self.state.balls.is_empty()
+    }
+
     fn update_time_slice(&mut self, time_step: f64) {
         // Update positions.
 
-        self.state.ball.integrate_mut(time_step);
+        for ball in self.state.balls.iter_mut() {
+            ball.integrate_mut(time_step);
+        }
         self.state.paddle.integrate_mut(time_step);
 
         self.keep_paddle_on_screen();
+        self.check_bounce_paddle();
 
-        // Handle collisions:
-        if self.state.ball.velocity.y > 0.0 {
-            self.check_bounce_paddle();
-
-            // check lose?
-            if self.state.ball.position.y + self.state.ball_radius > screen::BOARD_BOTTOM_Y.into() {
-                if !self.state.is_dead {
-                    self.state.lives -= 1;
-                    self.state.paddle_width = screen::PADDLE_START_SIZE.0.into();
-                }
-                self.state.is_dead = true;
-                return;
+        // check lose?
+        if self.check_ball_death() && !self.state.is_dead {
+            if !self.state.is_dead {
+                self.state.lives -= 1;
+                self.state.paddle_width = screen::PADDLE_START_SIZE.0.into();
             }
-        } else {
-            // bounce ceiling?
-            if self.state.ball.position.y - self.state.ball_radius < screen::BOARD_TOP_Y.into() {
-                self.state.ball.velocity.y *= -1.0;
-                self.state.paddle_width = screen::PADDLE_SMALL_SIZE.0.into();
-            }
+            self.state.is_dead = true;
+            return;
         }
 
-        // check living bricks:
-        let ball_bounce_y = Vec2D::new(
-            self.state.ball.position.x,
-            self.state.ball.position.y
-                + self.state.ball.velocity.y.signum() * self.state.ball_radius,
-        );
-        let ball_bounce_x = Vec2D::new(
-            self.state.ball.position.x
-                + self.state.ball.velocity.x.signum() * self.state.ball_radius,
-            self.state.ball.position.y,
-        );
+        for ball in self.state.balls.iter_mut() {
+            let radius = self.state.ball_radius;
 
-        for brick in self.state.bricks.iter_mut().filter(|b| b.alive) {
-            let mut hit = false;
-            if brick.contains(&ball_bounce_x) {
-                hit = true;
-                self.state.ball.velocity.x *= -1.0;
-            } else if brick.contains(&ball_bounce_y) {
-                hit = true;
-                self.state.ball.velocity.y *= -1.0;
-            }
-            if hit {
-                brick.alive = false;
-                self.state.points += brick.points;
-                if brick.depth >= self.config.ball_speed_row_depth {
-                    // Potentially speed up the ball. This will be a no-op if it's already fast.
-                    let theta = self.state.ball.velocity.angle();
-                    self.state.ball.velocity =
-                        Vec2D::from_polar(self.config.ball_speed_fast, theta);
+            // Handle collisions:
+            if ball.velocity.y < 0.0 {
+                // bounce ceiling?
+                if ball.position.y - radius < screen::BOARD_TOP_Y.into() {
+                    ball.velocity.y *= -1.0;
+                    self.state.paddle_width = screen::PADDLE_SMALL_SIZE.0.into();
                 }
-                break;
             }
-        }
 
-        // bounce right wall?
-        if self.state.ball.velocity.x > 0.0 {
-            if self.state.ball.position.x + self.state.ball_radius > screen::BOARD_RIGHT_X.into() {
-                self.state.ball.velocity.x *= -1.0;
+            // check living bricks:
+            let ball_bounce_y = Vec2D::new(
+                ball.position.x,
+                ball.position.y + ball.velocity.y.signum() * radius,
+            );
+            let ball_bounce_x = Vec2D::new(
+                ball.position.x + ball.velocity.x.signum() * radius,
+                ball.position.y,
+            );
+
+            for brick in self.state.bricks.iter_mut().filter(|b| b.alive) {
+                let mut hit = false;
+                if brick.contains(&ball_bounce_x) {
+                    hit = true;
+                    ball.velocity.x *= -1.0;
+                } else if brick.contains(&ball_bounce_y) {
+                    hit = true;
+                    ball.velocity.y *= -1.0;
+                }
+                if hit {
+                    brick.alive = false;
+                    self.state.points += brick.points;
+                    if brick.depth >= self.config.ball_speed_row_depth {
+                        // Potentially speed up the ball. This will be a no-op if it's already fast.
+                        let theta = ball.velocity.angle();
+                        ball.velocity = Vec2D::from_polar(self.config.ball_speed_fast, theta);
+                    }
+                    break;
+                }
             }
-        } else {
-            // bounce left wall?
-            if self.state.ball.position.x - self.state.ball_radius < screen::BOARD_LEFT_X.into() {
-                self.state.ball.velocity.x *= -1.0;
+
+            // bounce right wall?
+            if ball.velocity.x > 0.0 {
+                if ball.position.x + radius > screen::BOARD_RIGHT_X.into() {
+                    ball.velocity.x *= -1.0;
+                }
+            } else {
+                // bounce left wall?
+                if ball.position.x - radius < screen::BOARD_LEFT_X.into() {
+                    ball.velocity.x *= -1.0;
+                }
             }
         }
     }
@@ -468,16 +502,27 @@ impl toybox_core::State for State {
         self.update_paddle_movement(buttons);
 
         if self.state.is_dead {
-            if buttons.button1 || buttons.button2 {
+            if buttons.button1 {
                 self.start_ball();
                 self.state.is_dead = false;
             }
         }
 
+        if buttons.button2 {
+            self.start_ball();
+        }
+
         let distance_limit = self.state.ball_radius as i32;
         let total_time = 1.0;
         let distance_limit = distance_limit as f64; // m
-        let speed = self.state.ball.velocity.magnitude(); // m/s
+        let speed: f64 = self
+            .state
+            .balls
+            .iter()
+            .map(|ball| NotNan::new(ball.velocity.magnitude()).expect("NaN velocity magnitude!"))
+            .max()
+            .map(|nn| nn.into_inner())
+            .unwrap_or(distance_limit); // m/s
 
         // if your speed is 30, and your radius is 5, we want to do about 6 steps.
         let time_step = distance_limit / speed; // (m) / (m/s) = m * s / m = s
@@ -504,6 +549,9 @@ impl toybox_core::State for State {
             for b in self.state.bricks.iter_mut() {
                 b.alive = true;
             }
+            // Delete old ball(s).
+            self.state.balls.clear();
+            // New ball.
             self.start_ball();
             self.state.reset = false;
         }
@@ -586,15 +634,17 @@ impl toybox_core::State for State {
             screen::PADDLE_START_SIZE.1,
         ));
 
-        let (ball_x, ball_y) = self.state.ball.position.pixels();
         let ball_r = self.state.ball_radius as i32;
-        output.push(Drawable::rect(
-            self.config.ball_color,
-            ball_x - ball_r,
-            ball_y - ball_r,
-            ball_r * 2,
-            ball_r * 2,
-        ));
+        for ball in self.state.balls.iter() {
+            let (ball_x, ball_y) = ball.position.pixels();
+            output.push(Drawable::rect(
+                self.config.ball_color,
+                ball_x - ball_r,
+                ball_y - ball_r,
+                ball_r * 2,
+                ball_r * 2,
+            ));
+        }
 
         let score_offset = 88;
         let score_x = screen::BOARD_LEFT_X + score_offset;
