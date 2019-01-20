@@ -80,196 +80,100 @@ pub mod screen {
 lazy_static! {
     static ref INVADER_INIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_1"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_2"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_3"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_4"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_5: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_5"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_6: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_6"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_1"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_2"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_3"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_4"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_5: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_5"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_6: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_6"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_1"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_2"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_3"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_4"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref PLAYER_SPRITE: FixedSpriteData = load_sprite_default(
         include_str!("resources/player_ship"),
-        (&screen::SHIP_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::SHIP_COLOR).into()
+    );
     static ref PLAYER_HIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/player_ship_hit_1"),
-        (&screen::SHIP_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::SHIP_COLOR).into()
+    );
     static ref PLAYER_HIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/player_ship_hit_2"),
-        (&screen::SHIP_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::SHIP_COLOR).into()
+    );
     static ref UFO_MOTHERSHIP_SPRITE: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/mothership"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_1"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_2"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_3"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_4"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
 }
 
 pub fn load_sprite(
@@ -277,7 +181,6 @@ pub fn load_sprite(
     on_color: Color,
     on_symbol: char,
     off_symbol: char,
-    _scale: i32,
 ) -> Result<SpriteData, String> {
     let off_color = Color::invisible();
     let mut pixels = Vec::new();
@@ -299,10 +202,13 @@ pub fn load_sprite(
     }
     let width = pixels[0].len();
     debug_assert!(pixels.iter().all(|row| row.len() == width));
-    Ok(SpriteData::new(pixels, 1))
+    Ok(SpriteData::new(pixels))
 }
-pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<SpriteData, String> {
-    load_sprite(data, on_color, 'X', '.', scale)
+pub fn load_sprite_dynamic(data: &str, on_color: Color) -> Result<SpriteData, String> {
+    load_sprite(data, on_color, 'X', '.')
+}
+pub fn load_sprite_default(data: &str, on_color: Color) -> FixedSpriteData {
+    load_sprite_dynamic(data, on_color).unwrap().to_fixed()
 }
 
 pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
@@ -380,12 +286,9 @@ fn get_ufo_sprite(ufo: &Ufo) -> Option<FixedSpriteData> {
 }
 
 lazy_static! {
-    static ref SHIELD_SPRITE: SpriteData = load_sprite_default(
-        screen::SHIELD_SPRITE_DATA,
-        (&screen::SHIELD_COLOR).into(),
-        1
-    )
-    .expect("Shield sprite should be included!");
+    static ref SHIELD_SPRITE: SpriteData =
+        load_sprite_dynamic(screen::SHIELD_SPRITE_DATA, (&screen::SHIELD_COLOR).into(),)
+            .expect("Shield sprite should be included!");
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
