@@ -11,6 +11,7 @@ members = [
   "tb_breakout",
   "tb_gridworld",
   "tb_spaceinvaders",
+  "bench_games",
   "wp_breakout"
 ]
 exclude = [
