@@ -110,7 +110,8 @@ def agent_test(game_name, system, num_games):
         while not done:
             action = agent.act(obs, reward, done)
             obs, _reward, done, info = env.step(action)
-            score += info['score']
+            # Without OpenAI wrappers, reward is change in score
+            score += _reward
         scores.append(score)
     print('Avg/err scores for %d games of %s: %f\n\t%f\n\n' % (num_games, game, np.average(scores), sem(scores)))
                 
@@ -126,6 +127,15 @@ def main(Nsteps, num_games):
             toybox_raw(game, Nsteps, FPS_dict)
             ale_raw(game, Nsteps, FPS_dict)
 
+        # benchmark envs 
+        FPS_tb = FPS_dict[tb_env_name]['gym']
+        FPS_ale = FPS_dict[ale_env_name]['gym']
+        for _ in range(30):
+            tb_gym_fps = env_test(game, 'toybox', Nsteps)
+            FPS_tb.append(tb_gym_fps)
+            ale_gym_fps = env_test(game, 'ale', Nsteps)
+            FPS_ale.append(ale_gym_fps)
+
         tb_fps = FPS_dict[tb_env_name]['raw']
         ale_fps = FPS_dict[ale_env_name]['raw']
 
@@ -137,29 +147,20 @@ def main(Nsteps, num_games):
         print("toybox-%s-FPS:\n\t %3.4f\n\t%3.4f" % (game, tb_avg, tb_sterr))
         print("ale-%s-FPS:\n\t %3.4f\n\t %3.4f" % (game, ale_avg, ale_sterr))
 
+        tb_before = np.average(FPS_dict[tb_env_name]['raw'])
+        tb_after = np.average(FPS_tb)
+        print('GYM: %s-toybox-FPS:\n\t %3.4f\n\t %3.4f' % (game, tb_after, sem(FPS_tb)))
+        slowdown = (tb_before - tb_after) / tb_before
+        print('Slowdown: %3.4f\n' % slowdown)
 
-        # benchmark envs 
-        FPS_tb = FPS_dict[tb_env_name]['gym']
-        FPS_ale = FPS_dict[ale_env_name]['gym']
-        for _ in range(30):
-            tb_gym_fps = env_test(game, 'toybox', Nsteps)
-            FPS_tb.append(tb_gym_fps)
-            ale_gym_fps = env_test(game, 'ale', Nsteps)
-            FPS_ale.append(ale_gym_fps)
-    tb_before = np.average(FPS_dict[tb_env_name]['raw'])
-    tb_after = np.average(FPS_tb)
-    print('GYM: %s-toybox-FPS:\n\t %3.4f\n\t %3.4f' % (game, tb_after, sem(FPS_tb)))
-    slowdown = (tb_before - tb_after) / tb_before
-    print('Slowdown: %3.4f\n' % slowdown)
+        ale_before = np.average(FPS_dict[ale_env_name]['raw'])
+        ale_after = np.average(FPS_ale)
+        print('GYM: %s-ALE-FPS:\n\t %3.4f\n\t %3.4f' % (game, ale_after, sem(FPS_ale)))
+        slowdown = (ale_before - ale_after) / ale_before
+        print('Slowdown: %3.4f\n' % slowdown)
 
-    ale_before = np.average(FPS_dict[ale_env_name]['raw'])
-    ale_after = np.average(FPS_ale)
-    print('GYM: %s-ALE-FPS:\n\t %3.4f\n\t %3.4f' % (game, ale_after, sem(FPS_ale)))
-    slowdown = (ale_before - ale_after) / ale_before
-    print('Slowdown: %3.4f\n' % slowdown)
-
-    for system in ['toybox', 'ale']:
-        agent_test(game, system, 30)
+        for system in ['toybox', 'ale']:
+            agent_test(game, system, 30)
 
 if __name__ == '__main__':
-    main(1000, 10)
+    main(10000, 30)
