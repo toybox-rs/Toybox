@@ -233,7 +233,7 @@ def main():
     if not isinstance(turtle, ToyboxBaseEnv): 
             raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
 
-    n_trials = 1
+    n_trials = 30
     max_steps = 5e6
     record_period = 10
     # get initial config
@@ -241,6 +241,7 @@ def main():
     state = turtle.toybox.to_json()
 
     def run_test(config, prot):
+        print('Running %s' % prot)
         obs = env.reset()
         for trial in range(n_trials):
             # for each trial, record the score at mod 10 steps 
@@ -259,7 +260,7 @@ def main():
                 score = info[0]['score']
                 if n_steps % record_period == 0:
                     d = (extra_args['load_path'], trial, n_steps, prot, score)
-                    print("{}\t{}\t{}\t{}\t{}".format(*d))
+                    #print("{}\t{}\t{}\t{}\t{}".format(*d))
                     dat.append(d)
                 n_steps += 1
             #('trained_env', 'trial', 'step', 'mvmt', 'score')
@@ -273,34 +274,35 @@ def main():
         assert (env and trial and step and mvmt and score)
         dat.append((env, trial, step, mvmt, score))
 
-    # First run for the lookup movement AI
+    # First test: Amidar movement
     # Copied from https://github.com/KDL-umass/Amidar/blob/master/amidar/resources/test_states/start_state.json
+    starts = [{'tx' : 0, 'ty' : 0}, {'tx' : 0, 'ty': 0}, {'tx' : 7, 'ty': 0}, {'tx' : 0, 'ty': 25}, {'tx' : 9, 'ty': 30}]
     enemy_protocols = [
-        {'EnemyPerimeterAI' : {'start' : {'tx' : 0, 'ty' : 0}}},
+        {'EnemyPerimeterAI' : {'start' : starts[0]}},
         {'EnemyAmidarMvmt' : {
             'vert'      : 'Up', 'horiz'      : 'Left', 
             'start_vert': 'Up', 'start_horiz': 'Left',
-            'start' : {'tx' : 0, 'ty': 0}
+            'start' : starts[1]
             }},
         {
             'EnemyAmidarMvmt' : {
             'vert'      : 'Up', 'horiz'      : 'Left', 
             'start_vert': 'Up', 'start_horiz': 'Left',
-            'start' : {'tx' : 7, 'ty': 0}
+            'start' : starts[2]
             }
         },
         {
             'EnemyAmidarMvmt' : {
             'vert'      : 'Down', 'horiz'      : 'Right', 
             'start_vert': 'Down', 'start_horiz': 'Right',
-            'start' : {'tx' : 0, 'ty': 25}
+            'start' : starts[3]
             }
         },
                 {
             'EnemyAmidarMvmt' : {
             'vert'      : 'Up', 'horiz'      : 'Left', 
             'start_vert': 'Up', 'start_horiz': 'Left',
-            'start' : {'tx' : 9, 'ty': 30}
+            'start' : starts[4]
             }
         }
     ]
@@ -310,13 +312,35 @@ def main():
     turtle.toybox.write_config_json(config)
     run_test(config, 'EnemyAmidarMvmt')
     
+    # Second test: Look up (control)
     config['enemies'] = []
     for i in range(5):
         config['enemies'].append({'EnemyLookupAI': {'next': 0, 'default_route_index': i}})
     turtle.toybox.write_config_json(config)
     run_test(config, 'EnemyLookupAI')
 
+    # Third test: Random movement
+    config['enemies'] = []
+    for i in range(5):
+        config['enemies'].append({'EnemyRandomMvmt': {
+            'start' : starts[i],
+            'start_dir': 'Right',
+            'dir': 'Right'
+        }})
+    turtle.toybox.write_config_json(config)
+    run_test(config, 'EnemyRandomMvmt')
 
+    # Fourth test: Target Player
+    config['enemies'] = []
+    for i in range(5):
+        config['enemies'].append({'EnemyTargetPlayer' : {
+            'start' : starts[i],
+            'start_dir': 'Right',
+            'dir': 'Right',
+            'player_seen': None
+        }})
+    turtle.toybox.write_config_json(config)
+    run_test(config, 'EnemyTargetPlayer')
 
     with open('amidar_protocol_{}.tsv'.format(extra_args['load_path']), 'w') as fp:
         for row in dat:

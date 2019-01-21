@@ -297,7 +297,7 @@ pub enum MovementAI {
         start_dir: Direction,
         dir: Direction,
         player_seen: Option<TilePoint>,
-    }
+    },
 }
 
 impl MovementAI {
@@ -326,14 +326,15 @@ impl MovementAI {
             } => {
                 *dir = start_dir;
             }
-            &mut MovementAI::EnemyTargetPlayer { 
+            &mut MovementAI::EnemyTargetPlayer {
                 start_dir,
                 ref mut dir,
                 ref mut player_seen,
-                .. } => {
-                    *dir=start_dir;
-                    *player_seen=None;
-                }
+                ..
+            } => {
+                *dir = start_dir;
+                *player_seen = None;
+            }
         }
     }
     fn choose_next_tile(
@@ -420,28 +421,31 @@ impl MovementAI {
                 }
             }
             &mut MovementAI::EnemyRandomMvmt { ref mut dir, .. } => {
-                if board.is_junction(position) {
-                    let directions = &[
-                        Direction::Up,
-                        Direction::Down,
-                        Direction::Left,
-                        Direction::Right,
-                    ];
-                    let eligible: Vec<TilePoint> = directions
-                        .iter()
-                        .map(|d| board.can_move(position, *d))
-                        .filter(|d| d.is_some())
-                        .map(|d| d.unwrap())
-                        .collect();
-                    return eligible.choose(rng).cloned();
+                let directions = &[
+                    Direction::Up,
+                    Direction::Down,
+                    Direction::Left,
+                    Direction::Right,
+                ];
+                let eligible: Vec<(&Direction, Option<TilePoint>)> = directions
+                    .iter()
+                    .map(|d| (d, board.can_move(position, *d)))
+                    .filter(|(_, tp)| tp.is_some())
+                    .collect();
+                let (d, tp) = eligible.choose(rng).cloned().unwrap();
+                let tp_default = board.can_move(position, *dir);
+                if board.is_junction(position) || tp_default.is_none() {
+                    // Move to the randomly selected tile point, in its dir.
+                    *dir = *d;
+                    return tp;
                 }
-                board.can_move(position, *dir)
+                tp_default
             }
-            &mut MovementAI::EnemyTargetPlayer { 
-                ref mut player_seen, 
+            &mut MovementAI::EnemyTargetPlayer {
+                ref mut player_seen,
                 ref mut dir,
-                .. 
-                } => {
+                ..
+            } => {
                 let player = player.unwrap();
                 assert!(player.is_player());
                 let player_tile = player.position.to_tile();
@@ -451,18 +455,18 @@ impl MovementAI {
                     // The player is currently within view
                     *player_seen = Some(player_tile);
                     *dir = if px == position.tx {
-                            if py < position.ty { 
-                                Direction::Up 
-                            } else { 
-                                Direction::Down 
-                            }
+                        if py < position.ty {
+                            Direction::Up
                         } else {
-                            if px < position.tx { 
-                                Direction::Left 
-                            } else {
-                                Direction::Right
-                            }
-                        };
+                            Direction::Down
+                        }
+                    } else {
+                        if px < position.tx {
+                            Direction::Left
+                        } else {
+                            Direction::Right
+                        }
+                    };
                     board.can_move(position, *dir)
                 } else {
                     if player_seen.is_some() && *position == player_seen.clone().unwrap() {
@@ -472,17 +476,18 @@ impl MovementAI {
                     }
                     if player_seen.is_some() {
                         // We are still tracking the player
-                        board.can_move(position, *dir)                
+                        board.can_move(position, *dir)
                     } else {
                         // Explore
-                        if board.is_junction(position) {
+                        let tp_default = board.can_move(position, *dir);
+                        if board.is_junction(position) || tp_default.is_none() {
                             let directions = &[
                                 Direction::Up,
                                 Direction::Down,
                                 Direction::Left,
                                 Direction::Right,
                             ];
-                            let eligible : Vec<(&Direction, Option<TilePoint>)> = directions
+                            let eligible: Vec<(&Direction, Option<TilePoint>)> = directions
                                 .iter()
                                 .map(|d| (d, board.can_move(position, *d)))
                                 .filter(|(_, tp)| tp.is_some())
@@ -491,7 +496,7 @@ impl MovementAI {
                             *dir = *d;
                             tp
                         } else {
-                            board.can_move(position, *dir)
+                            tp_default
                         }
                     }
                 }
@@ -594,9 +599,9 @@ impl Mob {
 
         // Not an else if -- if a player or enemy reaches a tile they can immediately choose a new target.
         if self.step.is_none() {
-            self.step = self
-                .ai
-                .choose_next_tile(&self.position.to_tile(), buttons, board, player, rng)
+            self.step =
+                self.ai
+                    .choose_next_tile(&self.position.to_tile(), buttons, board, player, rng)
         }
 
         // Manage history:
@@ -704,17 +709,20 @@ impl Board {
     }
 
     fn is_line_of_sight(&self, p1: &TilePoint, p2: &TilePoint) -> bool {
-        if p1 == p2 { 
+        if p1 == p2 {
             // I hope this does structural equality.
             true
         } else if p1.ty == p2.ty {
-            // get the min X and check to see if every tile moving right between 
+            // get the min X and check to see if every tile moving right between
             // the min and the target is track.
             let (leftest, rightest) = if p1.tx < p2.tx { (p1, p2) } else { (p2, p1) };
             let mut x = leftest.tx;
             let y = p1.ty;
             while x < rightest.tx {
-                if self.can_move(&TilePoint::new(x, y), Direction::Right).is_some() {
+                if self
+                    .can_move(&TilePoint::new(x, y), Direction::Right)
+                    .is_some()
+                {
                     x += 1;
                 } else {
                     return false;
@@ -722,16 +730,19 @@ impl Board {
             }
             true
         } else if p1.tx == p2.tx {
-            // get the min Y and check to see if every time moving down between 
+            // get the min Y and check to see if every time moving down between
             // the min and the target is track.
             let (toppest, downest) = if p1.ty < p2.ty { (p1, p2) } else { (p2, p1) };
             let x = p1.tx;
             let mut y = toppest.ty;
             while y < downest.ty {
-                if self.can_move(&TilePoint::new(x,y), Direction::Down).is_some() {
+                if self
+                    .can_move(&TilePoint::new(x, y), Direction::Down)
+                    .is_some()
+                {
                     y += 1;
                 } else {
-                    return false
+                    return false;
                 }
             }
             true
@@ -1452,6 +1463,13 @@ mod tests {
     fn what_json_do_we_want() {
         let data = MovementAI::EnemyPerimeterAI {
             start: TilePoint::new(0, 0),
+        };
+        println!("{}", serde_json::to_string_pretty(&data).unwrap());
+        let data = MovementAI::EnemyTargetPlayer {
+            start: TilePoint::new(0, 0),
+            start_dir: Direction::Up,
+            dir: Direction::Up,
+            player_seen: None,
         };
         println!("{}", serde_json::to_string_pretty(&data).unwrap());
     }

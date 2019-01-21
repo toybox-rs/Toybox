@@ -300,7 +300,7 @@ def main():
             print(tup)
             data.append(tup)
     
-    with open('ez_channel.tsv', 'w') as fp:
+    with open('ez_channel_{}.tsv'.format(extra_args['load_path']), 'w') as fp:
         for row in data:
             print('\t'.join([str(r) for r in row]), file=fp)
 
