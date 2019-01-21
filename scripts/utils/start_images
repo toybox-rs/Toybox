@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from PIL import Image
 import argparse
 import atari_py
 import os
@@ -31,10 +32,8 @@ def play(args, ale, actions):
     ale.act(a)    
     filename = 'frame%s.png' % str(frame_num).zfill(4)
     frame_num += 1
-    rgb = ale.getScreenRGB()
-
-    #print(rgb)
-    ale.saveScreenPNG(str.encode(args.output + os.sep + filename))
+    img = Image.fromarray(ale.getScreenRGB2(), 'RGB')
+    img.save(args.output + os.sep + filename, format='png')
   return actions_taken
 
 def record(actions):
