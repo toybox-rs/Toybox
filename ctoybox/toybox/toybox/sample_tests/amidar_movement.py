@@ -1,7 +1,11 @@
 import toybox
+from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox.envs.atari.amidar import AmidarEnv
+from toybox.envs.atari.breakout import BreakoutEnv
 
 import time
 import sys
+import csv
 import multiprocessing
 import os.path as osp
 import gym
@@ -10,8 +14,6 @@ import tensorflow as tf
 import numpy as np
 from scipy.stats import sem
 from statistics import stdev
-import math
-from tqdm import tqdm
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -193,8 +195,6 @@ def get_learn_function_defaults(alg, env_type):
         kwargs = {}
     return kwargs
 
-
-
 def parse_cmdline_kwargs(args):
     '''
     convert a list of '='-spaced command-line arguments to a dictionary, evaluating python objects when possible
@@ -212,7 +212,6 @@ def parse_cmdline_kwargs(args):
 
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
-
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -230,74 +229,122 @@ def main():
 
     logger.log("Running trained model")
     env = build_env(args)
-    obs = env.reset()
     turtle = atari_wrappers.get_turtle(env)
+    if not isinstance(turtle, ToyboxBaseEnv): 
+            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
 
-    data = []
-
-
-    # get initial state
-    start_state = turtle.toybox.to_json()
+    n_trials = 30
+    max_steps = 5e6
+    record_period = 10
+    # get initial config
     config = turtle.toybox.config_to_json()
-    ball_speed_slow = config['ball_speed_slow']
+    state = turtle.toybox.to_json()
 
-    # Only let them beat one level.
-    clear_level_score = sum([b['points'] for b in start_state['bricks']])
+    def run_test(config, prot):
+        print('Running %s' % prot)
+        obs = env.reset()
+        for trial in range(n_trials):
+            # for each trial, record the score at mod 10 steps 
+            assert (prot in turtle.toybox.to_json()['enemies'][-1]['ai'])
+            n_steps = 0
+            num_lives = turtle.ale.lives()
+            done = False
 
-    # Give the ball only one life.
-    start_state['lives'] = 1
-
-    ball = start_state['balls'][0]
-    # Use center ball position.
-    ball['position']['x'] = 120.0
-    ball['position']['y'] = 80.0
-
-    #for angle in [90,90,270,270]:
-    for angle in range(0,360,5):
-        velocity_y = ball_speed_slow * math.sin(math.radians(angle))
-        velocity_x = ball_speed_slow * math.cos(math.radians(angle))
-
-        if abs(velocity_y) < 0.0001:
-            print('Skip angle=', angle, 'velocity_y=', velocity_y)
-            continue
-        ball['velocity']['y'] = velocity_y
-        ball['velocity']['x'] = velocity_x
-
-        # indicate we're starting a new angle
-        print(angle, velocity_x, velocity_y)
-
-        for trial in range(30):
-            time.sleep(1/60.0);
+            while n_steps < max_steps and not done:
+                action = model.step(obs)[0]
+                num_lives = turtle.ale.lives()
+                obs, _, done, info = env.step(action)
+                #env.render()
+                #time.sleep(1/30.0)
+                done = done and num_lives == 1
+                score = info[0]['score']
+                if n_steps % record_period == 0:
+                    d = (extra_args['load_path'], trial, n_steps, prot, score)
+                    #print("{}\t{}\t{}\t{}\t{}".format(*d))
+                    dat.append(d)
+                n_steps += 1
+            #('trained_env', 'trial', 'step', 'mvmt', 'score')
+            
             obs = env.reset()
-            time.sleep(1/60.0);
+            turtle.toybox.write_config_json(config)
 
-            # overwrite state inside the env wrappers:
-            turtle.toybox.write_json(start_state)
-            # Take a step to overwrite anything that's stuck there, e.g., gameover
-            obs, _, done, info = env.step(0)
 
-            # keep track of the score as best in case a game_over wipes it out while we're reading
-            best_score = 0
+    dat = [('trained_env', 'trial', 'step', 'mvmt', 'score')]
+    def add_dat(env=None, trial=None, step=None, mvmt=None, score=None):
+        assert (env and trial and step and mvmt and score)
+        dat.append((env, trial, step, mvmt, score))
 
-            tup = None
-            # give it 2 minutes of human time to finish.
-            for t in range(7200):
-                actions = model.step(obs)[0]
-                obs, _, done, info = env.step(actions)
-                score = turtle.toybox.get_score()
-                if score > best_score:
-                    best_score = score
-                tup = (trial, angle, velocity_x, velocity_y, best_score, t)
-                if done or turtle.toybox.get_lives() != 1 or turtle.toybox.game_over() or score >= clear_level_score:
-                    break
+    # First test: Amidar movement
+    # Copied from https://github.com/KDL-umass/Amidar/blob/master/amidar/resources/test_states/start_state.json
+    starts = [{'tx' : 0, 'ty' : 0}, {'tx' : 0, 'ty': 0}, {'tx' : 7, 'ty': 0}, {'tx' : 0, 'ty': 25}, {'tx' : 9, 'ty': 30}]
+    enemy_protocols = [
+        {'EnemyPerimeterAI' : {'start' : starts[0]}},
+        {'EnemyAmidarMvmt' : {
+            'vert'      : 'Up', 'horiz'      : 'Left', 
+            'start_vert': 'Up', 'start_horiz': 'Left',
+            'start' : starts[1]
+            }},
+        {
+            'EnemyAmidarMvmt' : {
+            'vert'      : 'Up', 'horiz'      : 'Left', 
+            'start_vert': 'Up', 'start_horiz': 'Left',
+            'start' : starts[2]
+            }
+        },
+        {
+            'EnemyAmidarMvmt' : {
+            'vert'      : 'Down', 'horiz'      : 'Right', 
+            'start_vert': 'Down', 'start_horiz': 'Right',
+            'start' : starts[3]
+            }
+        },
+                {
+            'EnemyAmidarMvmt' : {
+            'vert'      : 'Up', 'horiz'      : 'Left', 
+            'start_vert': 'Up', 'start_horiz': 'Left',
+            'start' : starts[4]
+            }
+        }
+    ]
+    config['enemies'] = enemy_protocols
 
-            # how did we do?
-            print(tup)
-            data.append(tup)
+    # Load up enemies
+    turtle.toybox.write_config_json(config)
+    run_test(config, 'EnemyAmidarMvmt')
     
-    with open('polar_angles2.tsv', 'w') as fp:
-        for row in data:
-            print('\t'.join([str(r) for r in row]), file=fp)
+    # Second test: Look up (control)
+    config['enemies'] = []
+    for i in range(5):
+        config['enemies'].append({'EnemyLookupAI': {'next': 0, 'default_route_index': i}})
+    turtle.toybox.write_config_json(config)
+    run_test(config, 'EnemyLookupAI')
+
+    # Third test: Random movement
+    config['enemies'] = []
+    for i in range(5):
+        config['enemies'].append({'EnemyRandomMvmt': {
+            'start' : starts[i],
+            'start_dir': 'Right',
+            'dir': 'Right'
+        }})
+    turtle.toybox.write_config_json(config)
+    run_test(config, 'EnemyRandomMvmt')
+
+    # Fourth test: Target Player
+    config['enemies'] = []
+    for i in range(5):
+        config['enemies'].append({'EnemyTargetPlayer' : {
+            'start' : starts[i],
+            'start_dir': 'Right',
+            'dir': 'Right',
+            'player_seen': None
+        }})
+    turtle.toybox.write_config_json(config)
+    run_test(config, 'EnemyTargetPlayer')
+
+    with open('amidar_protocol_{}.tsv'.format(extra_args['load_path']), 'w') as fp:
+        for row in dat:
+            fp.write("{}\t{}\t{}\t{}\t{}\n".format(*row))
 
     env.close()
 

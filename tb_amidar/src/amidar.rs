@@ -4,7 +4,10 @@ use std::any::Any;
 use std::collections::{HashSet, VecDeque};
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
+use toybox_core::random;
 use toybox_core::{AleAction, Direction, Input};
+
+use rand::seq::SliceRandom;
 
 // Window constants:
 pub mod screen {
@@ -59,7 +62,8 @@ pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub struct Amidar {
+    pub rand: random::Gen,
     bg_color: Color,
     player_color: Color,
     unpainted_color: Color,
@@ -76,7 +80,7 @@ pub struct Config {
     enemies: Vec<MovementAI>,
 }
 
-impl Config {
+impl Amidar {
     pub fn colors(&self) -> Vec<&Color> {
         vec![
             &self.bg_color,
@@ -89,9 +93,10 @@ impl Config {
     }
 }
 
-impl Default for Config {
+impl Default for Amidar {
     fn default() -> Self {
-        Config {
+        Amidar {
+            rand: random::Gen::new_from_seed(13),
             bg_color: Color::black(),
             player_color: Color::rgb(255, 255, 153),
             unpainted_color: Color::rgb(148, 0, 211),
@@ -282,6 +287,17 @@ pub enum MovementAI {
         start_horiz: Direction,
         start: TilePoint,
     },
+    EnemyRandomMvmt {
+        start: TilePoint,
+        start_dir: Direction,
+        dir: Direction,
+    },
+    EnemyTargetPlayer {
+        start: TilePoint,
+        start_dir: Direction,
+        dir: Direction,
+        player_seen: Option<TilePoint>,
+    },
 }
 
 impl MovementAI {
@@ -303,6 +319,22 @@ impl MovementAI {
                 *vert = start_vert;
                 *horiz = start_horiz;
             }
+            &mut MovementAI::EnemyRandomMvmt {
+                ref mut dir,
+                start_dir,
+                ..
+            } => {
+                *dir = start_dir;
+            }
+            &mut MovementAI::EnemyTargetPlayer {
+                start_dir,
+                ref mut dir,
+                ref mut player_seen,
+                ..
+            } => {
+                *dir = start_dir;
+                *player_seen = None;
+            }
         }
     }
     fn choose_next_tile(
@@ -310,6 +342,8 @@ impl MovementAI {
         position: &TilePoint,
         buttons: Input,
         board: &Board,
+        player: Option<Mob>,
+        rng: &mut random::Gen,
     ) -> Option<TilePoint> {
         match self {
             &mut MovementAI::Player => {
@@ -386,6 +420,87 @@ impl MovementAI {
                     return board.can_move(position, *horiz);
                 }
             }
+            &mut MovementAI::EnemyRandomMvmt { ref mut dir, .. } => {
+                let directions = &[
+                    Direction::Up,
+                    Direction::Down,
+                    Direction::Left,
+                    Direction::Right,
+                ];
+                let eligible: Vec<(&Direction, Option<TilePoint>)> = directions
+                    .iter()
+                    .map(|d| (d, board.can_move(position, *d)))
+                    .filter(|(_, tp)| tp.is_some())
+                    .collect();
+                let (d, tp) = eligible.choose(rng).cloned().unwrap();
+                let tp_default = board.can_move(position, *dir);
+                if board.is_junction(position) || tp_default.is_none() {
+                    // Move to the randomly selected tile point, in its dir.
+                    *dir = *d;
+                    return tp;
+                }
+                tp_default
+            }
+            &mut MovementAI::EnemyTargetPlayer {
+                ref mut player_seen,
+                ref mut dir,
+                ..
+            } => {
+                let player = player.unwrap();
+                assert!(player.is_player());
+                let player_tile = player.position.to_tile();
+                let px = player_tile.tx;
+                let py = player_tile.ty;
+                if board.is_line_of_sight(position, &player_tile) {
+                    // The player is currently within view
+                    *player_seen = Some(player_tile);
+                    *dir = if px == position.tx {
+                        if py < position.ty {
+                            Direction::Up
+                        } else {
+                            Direction::Down
+                        }
+                    } else {
+                        if px < position.tx {
+                            Direction::Left
+                        } else {
+                            Direction::Right
+                        }
+                    };
+                    board.can_move(position, *dir)
+                } else {
+                    if player_seen.is_some() && *position == player_seen.clone().unwrap() {
+                        // If we've caught up with the player's last known position,
+                        // the trail is stale. Reset.
+                        *player_seen = None;
+                    }
+                    if player_seen.is_some() {
+                        // We are still tracking the player
+                        board.can_move(position, *dir)
+                    } else {
+                        // Explore
+                        let tp_default = board.can_move(position, *dir);
+                        if board.is_junction(position) || tp_default.is_none() {
+                            let directions = &[
+                                Direction::Up,
+                                Direction::Down,
+                                Direction::Left,
+                                Direction::Right,
+                            ];
+                            let eligible: Vec<(&Direction, Option<TilePoint>)> = directions
+                                .iter()
+                                .map(|d| (d, board.can_move(position, *d)))
+                                .filter(|(_, tp)| tp.is_some())
+                                .collect();
+                            let (d, tp) = eligible.choose(rng).cloned().unwrap();
+                            *dir = *d;
+                            tp
+                        } else {
+                            tp_default
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -437,11 +552,19 @@ impl Mob {
                 .to_world(),
             MovementAI::EnemyPerimeterAI { .. } => TilePoint::new(0, 0).to_world(),
             MovementAI::EnemyAmidarMvmt { ref start, .. } => start.clone().to_world(),
+            MovementAI::EnemyRandomMvmt { ref start, .. } => start.clone().to_world(),
+            MovementAI::EnemyTargetPlayer { ref start, .. } => start.clone().to_world(),
         };
         self.history.clear();
     }
 
-    pub fn update(&mut self, buttons: Input, board: &mut Board) -> Option<BoardUpdate> {
+    pub fn update(
+        &mut self,
+        buttons: Input,
+        board: &mut Board,
+        player: Option<Mob>,
+        rng: &mut random::Gen,
+    ) -> Option<BoardUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -476,9 +599,9 @@ impl Mob {
 
         // Not an else if -- if a player or enemy reaches a tile they can immediately choose a new target.
         if self.step.is_none() {
-            self.step = self
-                .ai
-                .choose_next_tile(&self.position.to_tile(), buttons, board)
+            self.step =
+                self.ai
+                    .choose_next_tile(&self.position.to_tile(), buttons, board, player, rng)
         }
 
         // Manage history:
@@ -585,6 +708,49 @@ impl Board {
         (tx == 0 || tx == last_x) && (ty == 0 || ty == last_y)
     }
 
+    fn is_line_of_sight(&self, p1: &TilePoint, p2: &TilePoint) -> bool {
+        if p1 == p2 {
+            // I hope this does structural equality.
+            true
+        } else if p1.ty == p2.ty {
+            // get the min X and check to see if every tile moving right between
+            // the min and the target is track.
+            let (leftest, rightest) = if p1.tx < p2.tx { (p1, p2) } else { (p2, p1) };
+            let mut x = leftest.tx;
+            let y = p1.ty;
+            while x < rightest.tx {
+                if self
+                    .can_move(&TilePoint::new(x, y), Direction::Right)
+                    .is_some()
+                {
+                    x += 1;
+                } else {
+                    return false;
+                }
+            }
+            true
+        } else if p1.tx == p2.tx {
+            // get the min Y and check to see if every time moving down between
+            // the min and the target is track.
+            let (toppest, downest) = if p1.ty < p2.ty { (p1, p2) } else { (p2, p1) };
+            let x = p1.tx;
+            let mut y = toppest.ty;
+            while y < downest.ty {
+                if self
+                    .can_move(&TilePoint::new(x, y), Direction::Down)
+                    .is_some()
+                {
+                    y += 1;
+                } else {
+                    return false;
+                }
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     fn get_perimeter(&self, position: &TilePoint) -> Vec<Direction> {
         let tx = position.tx;
         let ty = position.ty;
@@ -618,6 +784,14 @@ impl Board {
             Some(tp)
         } else {
             None
+        }
+    }
+
+    fn is_junction(&self, tile: &TilePoint) -> bool {
+        if let Some(num) = self.tile_id(tile) {
+            self.junctions.contains(&num)
+        } else {
+            false
         }
     }
 
@@ -829,6 +1003,7 @@ impl Board {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StateCore {
+    pub rand: random::Gen,
     pub score: i32,
     pub lives: i32,
     pub jumps: i32,
@@ -841,14 +1016,14 @@ pub struct StateCore {
 }
 
 pub struct State {
-    pub config: Config,
+    pub config: Amidar,
     pub state: StateCore,
 }
 
 impl State {
-    pub fn try_new() -> Result<State, String> {
+    pub fn try_new(config: &Amidar) -> Result<State, String> {
         let board = Board::fast_new();
-        let config = Config::default();
+        let mut config = config.clone();
 
         let enemies = config
             .enemies
@@ -858,19 +1033,22 @@ impl State {
         let player_start = TilePoint::new(31, 15);
         let player = Mob::new_player(player_start.to_world());
 
+        let core = StateCore {
+            rand: random::Gen::new_child(&mut config.rand),
+            lives: config.start_lives,
+            score: 0,
+            chase_timer: 0,
+            jumps: config.start_jumps,
+            jump_timer: 0,
+            player,
+            player_start,
+            enemies,
+            board,
+        };
+
         let mut state = State {
-            config: config.clone(),
-            state: StateCore {
-                lives: config.start_lives,
-                score: 0,
-                chase_timer: 0,
-                jumps: config.start_jumps,
-                jump_timer: 0,
-                player,
-                player_start,
-                enemies,
-                board,
-            },
+            config,
+            state: core,
         };
         state.reset();
         Ok(state)
@@ -923,25 +1101,22 @@ enum EnemyPlayerState {
     EnemyCatch(usize),
 }
 
-#[derive(Clone)]
-pub struct Amidar;
-impl Default for Amidar {
-    fn default() -> Self {
-        Amidar.clone()
-    }
-}
 impl toybox_core::Simulation for Amidar {
     fn as_any(&self) -> &Any {
         self
     }
-    fn reset_seed(&mut self, _seed: u32) {}
+    fn reset_seed(&mut self, seed: u32) {
+        self.rand.reset_seed(seed)
+    }
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::try_new().expect("new_game should succeed."))
+        Box::new(State::try_new(self).expect("new_game should succeed."))
     }
-
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Amidar should be JSON serializable!")
+    }
     /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/Amidar.cpp#L80)
     fn legal_action_set(&self) -> Vec<AleAction> {
         vec![
@@ -963,23 +1138,18 @@ impl toybox_core::Simulation for Amidar {
         json_str: &str,
     ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
-        let config: Config = Config::default();
         Ok(Box::new(State {
-            config: config.clone(),
+            config: self.clone(),
             state: state,
         }))
     }
-    fn new_state_config_from_json(
+
+    fn from_json(
         &self,
         json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        let state: StateCore = serde_json::from_str(json_state)?;
-        let config: Config = serde_json::from_str(json_config)?;
-        Ok(Box::new(State {
-            config: config,
-            state: state,
-        }))
+    ) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: Amidar = serde_json::from_str(json_config)?;
+        Ok(Box::new(config))
     }
 }
 
@@ -988,14 +1158,23 @@ impl toybox_core::State for State {
         self
     }
     fn lives(&self) -> i32 {
-        self.state.lives
+        // If everything is painted, game is over. Set lives to 0.
+        if self.state.board.boxes.iter().all(|b: &GridBox| b.painted) {
+            0
+        } else {
+            self.state.lives
+        }
     }
     fn score(&self) -> i32 {
         self.state.score
     }
     fn update_mut(&mut self, buttons: Input) {
         let pre_update_score: i32 = self.score();
-        if let Some(score_change) = self.state.player.update(buttons, &mut self.state.board) {
+        if let Some(score_change) =
+            self.state
+                .player
+                .update(buttons, &mut self.state.board, None, &mut self.state.rand)
+        {
             self.state.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
             self.state.score += score_change.vertical.signum();
@@ -1029,7 +1208,12 @@ impl toybox_core::State for State {
 
         // move enemies:
         for e in self.state.enemies.iter_mut() {
-            e.update(Input::default(), &mut self.state.board);
+            e.update(
+                Input::default(),
+                &mut self.state.board,
+                Some(self.state.player.clone()),
+                &mut self.state.rand,
+            );
         }
 
         // check-collisions again (so we can't run through enemies):
@@ -1069,13 +1253,7 @@ impl toybox_core::State for State {
 
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        output.push(Drawable::rect(
-            self.config.bg_color,
-            0,
-            0,
-            screen::GAME_SIZE.0,
-            screen::GAME_SIZE.1,
-        ));
+        output.push(Drawable::Clear(self.config.bg_color));
         if self.state.lives < 0 {
             return output;
         }
@@ -1220,10 +1398,6 @@ impl toybox_core::State for State {
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
-
-    fn config_to_json(&self) -> String {
-        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
-    }
 }
 
 #[cfg(test)]
@@ -1232,7 +1406,7 @@ mod tests {
 
     #[test]
     fn test_colors_unique_in_gray() {
-        let config = Config::default();
+        let config = Amidar::default();
         let num_colors = config.colors().len();
         let uniq_grays: HashSet<u8> = config
             .colors()
@@ -1283,5 +1457,20 @@ mod tests {
     #[test]
     fn test_load_png() {
         let img = &images::PLAYER_L1;
+    }
+
+    #[test]
+    fn what_json_do_we_want() {
+        let data = MovementAI::EnemyPerimeterAI {
+            start: TilePoint::new(0, 0),
+        };
+        println!("{}", serde_json::to_string_pretty(&data).unwrap());
+        let data = MovementAI::EnemyTargetPlayer {
+            start: TilePoint::new(0, 0),
+            start_dir: Direction::Up,
+            dir: Direction::Up,
+            player_seen: None,
+        };
+        println!("{}", serde_json::to_string_pretty(&data).unwrap());
     }
 }

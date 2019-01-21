@@ -11,6 +11,7 @@ import pygame.surfarray
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='human_play for toybox')
     parser.add_argument('game', type=str, help='try one of amidar, breakout, space_invaders')
+    parser.add_argument('--scale', type=int, default=2)
 
     args = parser.parse_args()
     print('Starting up: '+args.game)
@@ -20,9 +21,11 @@ if __name__ == '__main__':
         w = tb.get_width()
         h = tb.get_height()
 
-        pygame.display.set_mode((w, h))
+        dim = (w*args.scale,h*args.scale)
+
+        pygame.display.set_mode(dim)
         clock = pygame.time.Clock()
-        FPS = 24
+        FPS = 32
 
         quit = False
         while not quit:
@@ -45,7 +48,9 @@ if __name__ == '__main__':
             tb.apply_action(player_input)
             image = tb.get_rgb_frame()
             screen = pygame.display.get_surface()
-            pygame.surfarray.blit_array(screen, np.swapaxes(image,0,1))
+            img = pygame.surfarray.make_surface(np.swapaxes(image,0,1))
+            img2x = pygame.transform.scale(img, dim)
+            screen.blit(img2x, dest=(0,0))
             pygame.display.update()
             clock.tick(FPS)
     pygame.quit()

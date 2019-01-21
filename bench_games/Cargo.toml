@@ -1,0 +1,14 @@
+[package]
+name = "bench_games"
+version = "0.1.0"
+authors = ["John Foley <jfoley@cs.umass.edu>"]
+edition = "2018"
+
+[dependencies]
+amidar = {path = "../tb_amidar", version="*"}
+breakout = {path = "../tb_breakout", version="*"}
+toybox = {path = "../toybox", version="*"}
+
+[dependencies.toybox-core]
+version = "*"
+path = "../core"

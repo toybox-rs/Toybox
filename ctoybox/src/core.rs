@@ -40,6 +40,18 @@ pub extern "C" fn simulator_seed(ptr: *mut WrapSimulator, seed: u32) {
 }
 
 #[no_mangle]
+pub extern "C" fn simulator_to_json(ptr: *mut WrapSimulator) -> *const c_char {
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let json: String = simulator.to_json();
+    let cjson: CString = CString::new(json).expect("Simulator JSON &str to CString fail!");
+    CString::into_raw(cjson)
+}
+
+#[no_mangle]
 pub extern "C" fn simulator_is_legal_action(ptr: *mut WrapSimulator, action: i32) -> bool {
     let &mut WrapSimulator { ref mut simulator } = unsafe {
         assert!(!ptr.is_null());
@@ -179,7 +191,7 @@ pub extern "C" fn state_score(state_ptr: *mut WrapState) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn to_json(state_ptr: *mut WrapState) -> *const c_char {
+pub extern "C" fn state_to_json(state_ptr: *mut WrapState) -> *const c_char {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
@@ -191,19 +203,7 @@ pub extern "C" fn to_json(state_ptr: *mut WrapState) -> *const c_char {
 }
 
 #[no_mangle]
-pub extern "C" fn config_to_json(state_ptr: *mut WrapState) -> *const c_char {
-    let &mut WrapState { ref mut state } = unsafe {
-        assert!(!state_ptr.is_null());
-        &mut *state_ptr
-    };
-
-    let json: String = state.config_to_json();
-    let cjson: CString = CString::new(json).expect("crap!");
-    CString::into_raw(cjson)
-}
-
-#[no_mangle]
-pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mut WrapState {
+pub extern "C" fn state_from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mut WrapState {
     let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
     let json_str: &str = json_str
         .to_str()
@@ -217,4 +217,26 @@ pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mu
         .expect("Could not parse state JSON!");
     let state = Box::new(WrapState { state });
     Box::into_raw(state)
+}
+
+#[no_mangle]
+pub extern "C" fn simulator_from_json(
+    ptr: *mut WrapSimulator,
+    json_str: *const i8,
+) -> *mut WrapSimulator {
+    let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
+    let json_str: &str = json_str
+        .to_str()
+        .expect("Could not convert your config string to UTF-8!");
+
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let new_sim = simulator
+        .from_json(json_str)
+        .expect("Could not parse some JSON!");
+
+    let out = Box::new(WrapSimulator { simulator: new_sim });
+    Box::into_raw(out)
 }

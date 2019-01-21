@@ -80,196 +80,100 @@ pub mod screen {
 lazy_static! {
     static ref INVADER_INIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_1"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_2"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_3"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_4"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_5: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_5"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_INIT_6: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_init_6"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_1"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_2"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_3"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_4"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_5: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_5"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_FLIP_6: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_flip_6"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_1"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_2"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_3"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref INVADER_HIT_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_4"),
-        (&screen::ENEMY_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::ENEMY_COLOR).into()
+    );
     static ref PLAYER_SPRITE: FixedSpriteData = load_sprite_default(
         include_str!("resources/player_ship"),
-        (&screen::SHIP_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::SHIP_COLOR).into()
+    );
     static ref PLAYER_HIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/player_ship_hit_1"),
-        (&screen::SHIP_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::SHIP_COLOR).into()
+    );
     static ref PLAYER_HIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/player_ship_hit_2"),
-        (&screen::SHIP_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::SHIP_COLOR).into()
+    );
     static ref UFO_MOTHERSHIP_SPRITE: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/mothership"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_1: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_1"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_2: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_2"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_3: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_3"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
     static ref UFO_HIT_4: FixedSpriteData = load_sprite_default(
         include_str!("resources/space_invaders/invader_hit_4"),
-        (&screen::UFO_COLOR).into(),
-        1
-    )
-    .unwrap()
-    .to_fixed()
-    .unwrap();
+        (&screen::UFO_COLOR).into()
+    );
 }
 
 pub fn load_sprite(
@@ -277,7 +181,6 @@ pub fn load_sprite(
     on_color: Color,
     on_symbol: char,
     off_symbol: char,
-    _scale: i32,
 ) -> Result<SpriteData, String> {
     let off_color = Color::invisible();
     let mut pixels = Vec::new();
@@ -299,10 +202,13 @@ pub fn load_sprite(
     }
     let width = pixels[0].len();
     debug_assert!(pixels.iter().all(|row| row.len() == width));
-    Ok(SpriteData::new(pixels, 1))
+    Ok(SpriteData::new(pixels))
 }
-pub fn load_sprite_default(data: &str, on_color: Color, scale: i32) -> Result<SpriteData, String> {
-    load_sprite(data, on_color, 'X', '.', scale)
+pub fn load_sprite_dynamic(data: &str, on_color: Color) -> Result<SpriteData, String> {
+    load_sprite(data, on_color, 'X', '.')
+}
+pub fn load_sprite_default(data: &str, on_color: Color) -> FixedSpriteData {
+    load_sprite_dynamic(data, on_color).unwrap().to_fixed()
 }
 
 pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
@@ -380,24 +286,23 @@ fn get_ufo_sprite(ufo: &Ufo) -> Option<FixedSpriteData> {
 }
 
 lazy_static! {
-    static ref SHIELD_SPRITE: SpriteData = load_sprite_default(
-        screen::SHIELD_SPRITE_DATA,
-        (&screen::SHIELD_COLOR).into(),
-        1
-    )
-    .expect("Shield sprite should be included!");
+    static ref SHIELD_SPRITE: SpriteData =
+        load_sprite_dynamic(screen::SHIELD_SPRITE_DATA, (&screen::SHIELD_COLOR).into(),)
+            .expect("Shield sprite should be included!");
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub struct SpaceInvaders {
+    pub rand: random::Gen,
     row_scores: Vec<i32>,
     start_lives: i32,
     pub enemy_protocol: FiringAI,
     pub jitter: f64,
 }
-impl Default for Config {
+impl Default for SpaceInvaders {
     fn default() -> Self {
-        Config {
+        SpaceInvaders {
+            rand: random::Gen::new_from_seed(17),
             row_scores: screen::ENEMY_POINTS.iter().cloned().collect(),
             start_lives: screen::START_LIVES,
             enemy_protocol: FiringAI::TargetPlayer,
@@ -483,6 +388,7 @@ pub struct StateCore {
     pub rand: random::Gen,
     pub life_display_timer: i32,
     pub lives: i32,
+    pub levels_completed: i32,
     pub score: i32,
     /// Ship is a rectangular actor (logically).
     pub ship: Player,
@@ -630,6 +536,7 @@ impl StateCore {
             rand,
             life_display_timer: screen::NEW_LIFE_TIME,
             lives: 3,
+            levels_completed: 0,
             score: 0,
             ship: Player::new(player_start_x, player_start_y),
             ship_laser: None,
@@ -892,7 +799,7 @@ impl StateCore {
         closest_id
     }
 
-    fn enemy_fire_lasers(&mut self, config: Config) {
+    fn enemy_fire_lasers(&mut self, config: &SpaceInvaders) {
         // Don't fire too many lasers.
         if self.enemy_lasers.len() > 1 {
             return;
@@ -972,31 +879,22 @@ impl StateCore {
             .iter()
             .any(|e| e.alive && e.rect().y2() >= screen::SKY_TO_GROUND)
     }
+    fn has_won(&self) -> bool {
+        self.enemies.iter().all(|e| !e.alive)
+    }
     fn reset_condition(&self) -> bool {
-        let dead = self.lives < 0;
-        let won = self.enemies.iter().all(|e| !e.alive);
+        let game_over = self.lives < 0;
+        let won = self.has_won();
         let lost = self.has_lost();
-        dead || won || lost
+        game_over || won || lost
     }
 }
 
 pub struct State {
-    pub config: Config,
+    pub config: SpaceInvaders,
     pub state: StateCore,
 }
 
-pub struct SpaceInvaders {
-    pub config: Config,
-    pub rand: random::Gen,
-}
-impl Default for SpaceInvaders {
-    fn default() -> Self {
-        SpaceInvaders {
-            config: Config::default(),
-            rand: random::Gen::new_from_seed(17),
-        }
-    }
-}
 impl toybox_core::Simulation for SpaceInvaders {
     fn as_any(&self) -> &Any {
         self
@@ -1009,7 +907,7 @@ impl toybox_core::Simulation for SpaceInvaders {
     }
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State {
-            config: self.config.clone(),
+            config: self.clone(),
             state: StateCore::new(random::Gen::new_child(&mut self.rand)),
         })
     }
@@ -1029,20 +927,19 @@ impl toybox_core::Simulation for SpaceInvaders {
         json_str: &str,
     ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
-        let config: Config = Config::default();
         Ok(Box::new(State {
             state,
-            config: config.clone(),
+            config: self.clone(),
         }))
     }
-    fn new_state_config_from_json(
-        &self,
-        json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        let state: StateCore = serde_json::from_str(json_state)?;
-        let config: Config = serde_json::from_str(json_config)?;
-        Ok(Box::new(State { config, state }))
+
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("SpaceInvaders should be JSON-serializable!")
+    }
+
+    fn from_json(&self, json_str: &str) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: SpaceInvaders = serde_json::from_str(json_str)?;
+        Ok(Box::new(config))
     }
 }
 
@@ -1051,13 +948,25 @@ impl toybox_core::State for State {
         self
     }
     fn lives(&self) -> i32 {
-        self.state.lives
+        // If we have removed all enemies, set lives to 0 and end.
+        if self.state.enemies.iter().all(|e: &Enemy| !e.alive) {
+            0
+        } else {
+            self.state.lives
+        }
     }
     fn score(&self) -> i32 {
         self.state.score
     }
     fn update_mut(&mut self, buttons: Input) {
         if self.state.reset_condition() {
+            // Subtract lives on death.
+            if self.state.has_lost() {
+                self.state.lives -= 1;
+            } else if self.state.has_won() {
+                self.state.levels_completed += 1;
+            }
+
             self.state.reset_board();
             return;
         }
@@ -1086,7 +995,7 @@ impl toybox_core::State for State {
             // Enemies only move if the player is alive
             self.state.enemy_shift();
             // Enemies only fire if the player is alive
-            self.state.enemy_fire_lasers(self.config.clone());
+            self.state.enemy_fire_lasers(&self.config);
             self.state.remove_shields();
 
             // See if lasers have gone off-screen.
@@ -1129,13 +1038,7 @@ impl toybox_core::State for State {
 
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        output.push(Drawable::rect(
-            Color::black(),
-            0,
-            0,
-            screen::GAME_SIZE.0,
-            screen::GAME_SIZE.1,
-        ));
+        output.push(Drawable::Clear(Color::black()));
         // draw ground:
         output.push(Drawable::rect(
             (&screen::GROUND_COLOR).into(),
@@ -1170,7 +1073,7 @@ impl toybox_core::State for State {
             }
         } else {
             output.extend(draw_score(
-                self.state.score,
+                self.state.score % 10000,
                 screen::SCORE_LEFT_X_POS,
                 screen::SCORE_Y_POS,
                 FontChoice::LEFT,
@@ -1247,10 +1150,6 @@ impl toybox_core::State for State {
 
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
-    }
-
-    fn config_to_json(&self) -> String {
-        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
     }
 }
 

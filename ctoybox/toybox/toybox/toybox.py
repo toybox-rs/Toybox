@@ -9,9 +9,17 @@ import json
 
 from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
 
+def json_str(js):
+    if type(js) is dict:
+        js = json.dumps(js)
+    elif type(js) is not str:
+        raise ValueError('Unknown json type: %s (only str and dict supported)' % type(js))
+    return js
+
 class Simulator(object):
-    def __init__(self, game_name):
-        sim = _lib.simulator_alloc(game_name.encode('utf-8'))
+    def __init__(self, game_name, sim=None):
+        if sim is None:
+            sim = _lib.simulator_alloc(game_name.encode('utf-8'))
         # sim should be a pointer
         #self.__sim = ctypes.pointer(ctypes.c_int(sim))
         self.game_name = game_name
@@ -47,13 +55,19 @@ class Simulator(object):
     def new_game(self):
         return State(self)
 
-    def from_json(self, js):
-        if type(js) is dict:
-            js = json.dumps(js)
-        elif type(js) is not str:
-            raise ValueError('Unknown json type: %s (only str and dict supported)' % type(js))
-        state = _lib.from_json(self.get_simulator(), js.encode('utf-8'))
+    def state_from_json(self, js):
+        state = _lib.from_json(self.get_simulator(), json_str(js).encode('utf-8'))
         return State(self, state=state)
+
+    def to_json(self):
+        json_str = _lib.simulator_to_json(self.get_simulator()).decode('utf-8')
+        return json.loads(str(json_str))
+
+    def from_json(self, config_js):
+        old_sim = self.__sim
+        self.__sim = _lib.simulator_from_json(self.get_simulator(), json_str(config_js).encode('utf-8'))
+        del old_sim
+
 
 class State(object):
     def __init__(self, sim, state=None):
@@ -192,11 +206,7 @@ class State(object):
         return np.reshape(frame, (h,w,1))
 
     def to_json(self):
-        json_str = _lib.to_json(self.__state).decode('utf-8')
-        return json.loads(str(json_str))
-
-    def config_to_json(self):
-        json_str = _lib.config_to_json(self.__state).decode('utf-8')
+        json_str = _lib.state_to_json(self.__state).decode('utf-8')
         return json.loads(str(json_str))
 
 class Toybox(object):
@@ -230,13 +240,11 @@ class Toybox(object):
         for _ in range(self.frames_per_action):
             if not _lib.state_apply_ale_action(self.rstate.get_state(), action_int):
                 raise ValueError("Expected to apply action, but failed: {0}".format(action_int))
-        return self.rstate.render_frame(self.rsimulator, self.grayscale)
 
     def apply_action(self, action_input_obj):
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
             _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
-        return self.rstate.render_frame(self.rsimulator, self.grayscale)
     
     def get_state(self):
         return self.rstate.render_frame(self.rsimulator, self.grayscale)
@@ -266,17 +274,23 @@ class Toybox(object):
 
     def to_json(self):
         return self.rstate.to_json()
-
-    def config_to_json(self):
-        return self.rstate.config_to_json()
-
+    
     def from_json(self, js):
         return self.rsimulator.from_json(js)
+
+    def config_to_json(self):
+        return self.rsimulator.to_json()
 
     def write_json(self, js):
         old_state = self.rstate
         del old_state
         self.rstate = self.from_json(js)
+
+    def write_config_json(self, config_js):
+        # from_json replaces simulator!
+        self.rsimulator.from_json(config_js)
+        # new_game replaces state!
+        self.new_game()
 
     def predicate_met(self, pred): 
         return False

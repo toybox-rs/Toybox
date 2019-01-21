@@ -106,10 +106,13 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         assert(type(self._action_set)== list)
     
         # Convert the input action (string or int) into the ctypes struct.
-        # action = self._action_to_input(\
-        #     self._action_set[int(action_index)])
-        # action.button1 = True
-        self.toybox.apply_ale_action(action_index)
+        clz = self.__class__.__name__
+        if clz == 'BreakoutEnv':
+            action = self._action_to_input(
+                self._action_set[int(action_index)])
+            self.toybox.apply_action(action)
+        else:
+            self.toybox.apply_ale_action(action_index)    
         obs = self._get_obs()
         
         
