@@ -292,6 +292,12 @@ pub enum MovementAI {
         start_dir: Direction,
         dir: Direction,
     },
+    EnemyTargetPlayer {
+        start: TilePoint,
+        start_dir: Direction,
+        dir: Direction,
+        player_seen: Option<TilePoint>,
+    }
 }
 
 impl MovementAI {
@@ -320,6 +326,14 @@ impl MovementAI {
             } => {
                 *dir = start_dir;
             }
+            &mut MovementAI::EnemyTargetPlayer { 
+                start_dir,
+                ref mut dir,
+                ref mut player_seen,
+                .. } => {
+                    *dir=start_dir;
+                    *player_seen=None;
+                }
         }
     }
     fn choose_next_tile(
@@ -327,6 +341,7 @@ impl MovementAI {
         position: &TilePoint,
         buttons: Input,
         board: &Board,
+        player: Option<Mob>,
         rng: &mut random::Gen,
     ) -> Option<TilePoint> {
         match self {
@@ -422,6 +437,65 @@ impl MovementAI {
                 }
                 board.can_move(position, *dir)
             }
+            &mut MovementAI::EnemyTargetPlayer { 
+                ref mut player_seen, 
+                ref mut dir,
+                .. 
+                } => {
+                let player = player.unwrap();
+                assert!(player.is_player());
+                let player_tile = player.position.to_tile();
+                let px = player_tile.tx;
+                let py = player_tile.ty;
+                if board.is_line_of_sight(position, &player_tile) {
+                    // The player is currently within view
+                    *player_seen = Some(player_tile);
+                    *dir = if px == position.tx {
+                            if py < position.ty { 
+                                Direction::Up 
+                            } else { 
+                                Direction::Down 
+                            }
+                        } else {
+                            if px < position.tx { 
+                                Direction::Left 
+                            } else {
+                                Direction::Right
+                            }
+                        };
+                    board.can_move(position, *dir)
+                } else {
+                    if player_seen.is_some() && *position == player_seen.clone().unwrap() {
+                        // If we've caught up with the player's last known position,
+                        // the trail is stale. Reset.
+                        *player_seen = None;
+                    }
+                    if player_seen.is_some() {
+                        // We are still tracking the player
+                        board.can_move(position, *dir)                
+                    } else {
+                        // Explore
+                        if board.is_junction(position) {
+                            let directions = &[
+                                Direction::Up,
+                                Direction::Down,
+                                Direction::Left,
+                                Direction::Right,
+                            ];
+                            let eligible : Vec<(&Direction, Option<TilePoint>)> = directions
+                                .iter()
+                                .map(|d| (d, board.can_move(position, *d)))
+                                .filter(|(_, tp)| tp.is_some())
+                                .collect();
+                            let (d, tp) = eligible.choose(rng).cloned().unwrap();
+                            *dir = *d;
+                            tp
+                        } else {
+                            board.can_move(position, *dir)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -474,6 +548,7 @@ impl Mob {
             MovementAI::EnemyPerimeterAI { .. } => TilePoint::new(0, 0).to_world(),
             MovementAI::EnemyAmidarMvmt { ref start, .. } => start.clone().to_world(),
             MovementAI::EnemyRandomMvmt { ref start, .. } => start.clone().to_world(),
+            MovementAI::EnemyTargetPlayer { ref start, .. } => start.clone().to_world(),
         };
         self.history.clear();
     }
@@ -482,6 +557,7 @@ impl Mob {
         &mut self,
         buttons: Input,
         board: &mut Board,
+        player: Option<Mob>,
         rng: &mut random::Gen,
     ) -> Option<BoardUpdate> {
         if self.history.is_empty() {
@@ -520,7 +596,7 @@ impl Mob {
         if self.step.is_none() {
             self.step = self
                 .ai
-                .choose_next_tile(&self.position.to_tile(), buttons, board, rng)
+                .choose_next_tile(&self.position.to_tile(), buttons, board, player, rng)
         }
 
         // Manage history:
@@ -625,6 +701,43 @@ impl Board {
         let last_y = (self.height as i32) - 1;
         let last_x = (self.width as i32) - 1;
         (tx == 0 || tx == last_x) && (ty == 0 || ty == last_y)
+    }
+
+    fn is_line_of_sight(&self, p1: &TilePoint, p2: &TilePoint) -> bool {
+        if p1 == p2 { 
+            // I hope this does structural equality.
+            true
+        } else if p1.ty == p2.ty {
+            // get the min X and check to see if every tile moving right between 
+            // the min and the target is track.
+            let (leftest, rightest) = if p1.tx < p2.tx { (p1, p2) } else { (p2, p1) };
+            let mut x = leftest.tx;
+            let y = p1.ty;
+            while x < rightest.tx {
+                if self.can_move(&TilePoint::new(x, y), Direction::Right).is_some() {
+                    x += 1;
+                } else {
+                    return false;
+                }
+            }
+            true
+        } else if p1.tx == p2.tx {
+            // get the min Y and check to see if every time moving down between 
+            // the min and the target is track.
+            let (toppest, downest) = if p1.ty < p2.ty { (p1, p2) } else { (p2, p1) };
+            let x = p1.tx;
+            let mut y = toppest.ty;
+            while y < downest.ty {
+                if self.can_move(&TilePoint::new(x,y), Direction::Down).is_some() {
+                    y += 1;
+                } else {
+                    return false
+                }
+            }
+            true
+        } else {
+            false
+        }
     }
 
     fn get_perimeter(&self, position: &TilePoint) -> Vec<Direction> {
@@ -1049,7 +1162,7 @@ impl toybox_core::State for State {
         if let Some(score_change) =
             self.state
                 .player
-                .update(buttons, &mut self.state.board, &mut self.state.rand)
+                .update(buttons, &mut self.state.board, None, &mut self.state.rand)
         {
             self.state.score += score_change.horizontal;
             // max 1 point for vertical, for some reason.
@@ -1087,6 +1200,7 @@ impl toybox_core::State for State {
             e.update(
                 Input::default(),
                 &mut self.state.board,
+                Some(self.state.player.clone()),
                 &mut self.state.rand,
             );
         }
