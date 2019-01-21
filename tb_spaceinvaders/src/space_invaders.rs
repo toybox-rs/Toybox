@@ -388,6 +388,7 @@ pub struct StateCore {
     pub rand: random::Gen,
     pub life_display_timer: i32,
     pub lives: i32,
+    pub levels_completed: i32,
     pub score: i32,
     /// Ship is a rectangular actor (logically).
     pub ship: Player,
@@ -535,6 +536,7 @@ impl StateCore {
             rand,
             life_display_timer: screen::NEW_LIFE_TIME,
             lives: 3,
+            levels_completed: 0,
             score: 0,
             ship: Player::new(player_start_x, player_start_y),
             ship_laser: None,
@@ -877,9 +879,12 @@ impl StateCore {
             .iter()
             .any(|e| e.alive && e.rect().y2() >= screen::SKY_TO_GROUND)
     }
+    fn has_won(&self) -> bool {
+        self.enemies.iter().all(|e| !e.alive)
+    }
     fn reset_condition(&self) -> bool {
         let game_over = self.lives < 0;
-        let won = self.enemies.iter().all(|e| !e.alive);
+        let won = self.has_won();
         let lost = self.has_lost();
         game_over || won || lost
     }
@@ -958,6 +963,8 @@ impl toybox_core::State for State {
             // Subtract lives on death.
             if self.state.has_lost() {
                 self.state.lives -= 1;
+            } else if self.state.has_won() {
+                self.state.levels_completed += 1;
             }
 
             self.state.reset_board();
