@@ -878,10 +878,10 @@ impl StateCore {
             .any(|e| e.alive && e.rect().y2() >= screen::SKY_TO_GROUND)
     }
     fn reset_condition(&self) -> bool {
-        let dead = self.lives < 0;
+        let game_over = self.lives < 0;
         let won = self.enemies.iter().all(|e| !e.alive);
         let lost = self.has_lost();
-        dead || won || lost
+        game_over || won || lost
     }
 }
 
@@ -955,6 +955,11 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         if self.state.reset_condition() {
+            // Subtract lives on death.
+            if self.state.has_lost() {
+                self.state.lives -= 1;
+            }
+
             self.state.reset_board();
             return;
         }
