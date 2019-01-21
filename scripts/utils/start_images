@@ -12,6 +12,18 @@ def play(args, ale, actions):
   actions_taken = []
   legal_actions = ale.getLegalActionSet()
   frame_num = 0
+
+  # known bug for amidar ALE RGB rendering: 
+  # solution: skip rendering on the first three frames
+  if args.game == 'amidar': 
+    while not ale.game_over() and frame_num < 240:
+      index = frame_num if actions else \
+      (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
+      a = (actions or legal_actions)[index]
+      actions_taken.append(a)
+      ale.act(a)    
+      frame_num += 1
+
   while not ale.game_over() and frame_num < args.num_frames:
     index = frame_num if actions else \
     (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
@@ -23,7 +35,7 @@ def play(args, ale, actions):
     img = Image.fromarray(ale.getScreenRGB2(), 'RGB')
     img.save(args.output + os.sep + filename, format='png')
   return actions_taken
-  
+
 def record(actions):
   with open('actions', 'w') as f:
     f.write("\n".join([str(a) for a in actions]))
@@ -45,6 +57,7 @@ def main(args):
   game_path = atari_py.get_game_path(args.game)
 
   ale = ALEInterface()
+  __USE_SDL = True
   ale.setInt(b'random_seed', args.seed)
   ale.setFloat(b'repeat_action_probability', 0.0)
   ale.loadROM(str.encode(game_path))
