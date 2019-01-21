@@ -8,7 +8,6 @@ use toybox_core::random;
 use toybox_core::{AleAction, Direction, Input};
 
 use rand::seq::SliceRandom;
-use rand::Rng;
 
 // Window constants:
 pub mod screen {
@@ -1129,13 +1128,7 @@ impl toybox_core::State for State {
 
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        output.push(Drawable::rect(
-            self.config.bg_color,
-            0,
-            0,
-            screen::GAME_SIZE.0,
-            screen::GAME_SIZE.1,
-        ));
+        output.push(Drawable::Clear(self.config.bg_color));
         if self.state.lives < 0 {
             return output;
         }

@@ -255,7 +255,6 @@ impl toybox_core::Simulation for Breakout {
 
     /// Create a new game of breakout.
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        let (w, h) = screen::GAME_SIZE;
         let mut bricks = Vec::new();
 
         let offset = Vec2D::new(
@@ -590,13 +589,7 @@ impl toybox_core::State for State {
 
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        output.push(Drawable::rect(
-            self.config.bg_color,
-            0,
-            0,
-            screen::GAME_SIZE.0,
-            screen::GAME_SIZE.1,
-        ));
+        output.push(Drawable::Clear(self.config.bg_color));
 
         // Draw frame top:
         output.push(Drawable::rect(

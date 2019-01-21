@@ -121,7 +121,7 @@ impl State {
         }
         for row in &config.grid {
             let mut grid_row = Vec::new();
-            for (x, ch) in row.chars().enumerate() {
+            for ch in row.chars() {
                 let tile_id = char_to_index[&ch];
                 grid_row.push(tile_id);
             }
@@ -167,7 +167,7 @@ impl toybox_core::Simulation for GridWorld {
     fn as_any(&self) -> &Any {
         self
     }
-    fn reset_seed(&mut self, seed: u32) {}
+    fn reset_seed(&mut self, _seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
         self.game_size
     }
@@ -236,8 +236,7 @@ impl toybox_core::State for State {
     }
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        let (w, h) = self.size();
-        output.push(Drawable::rect(Color::black(), 0, 0, w, h));
+        output.push(Drawable::Clear(Color::black()));
 
         for (y, row) in self.grid.iter().enumerate() {
             for (x, cell) in row.iter().enumerate() {

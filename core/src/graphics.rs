@@ -139,33 +139,20 @@ impl FixedSpriteData {
 pub struct SpriteData {
     pub x: i32,
     pub y: i32,
-    pub scale: i32,
     pub data: Vec<Vec<Color>>,
 }
 impl SpriteData {
-    pub fn to_fixed(self) -> Option<FixedSpriteData> {
-        if self.scale == 1 {
-            Some(FixedSpriteData::new(self.data))
-        } else {
-            None
-        }
+    pub fn to_fixed(self) -> FixedSpriteData {
+        FixedSpriteData::new(self.data)
     }
-    pub fn new(data: Vec<Vec<Color>>, scale: i32) -> SpriteData {
-        SpriteData {
-            x: 0,
-            y: 0,
-            scale,
-            data,
-        }
+    pub fn new(data: Vec<Vec<Color>>) -> SpriteData {
+        SpriteData { x: 0, y: 0, data }
     }
     pub fn width(&self) -> i32 {
         self.data[0].len() as i32
     }
     pub fn height(&self) -> i32 {
         self.data.len() as i32
-    }
-    pub fn scale(&self) -> i32 {
-        self.scale
     }
     pub fn position(&self) -> (i32, i32) {
         (self.x, self.y)
@@ -185,7 +172,6 @@ impl SpriteData {
         SpriteData {
             x,
             y,
-            scale: self.scale,
             data: self.data.clone(),
         }
     }
@@ -193,6 +179,7 @@ impl SpriteData {
 
 #[derive(Clone)]
 pub enum Drawable {
+    Clear(Color),
     Rectangle {
         color: Color,
         x: i32,
@@ -254,6 +241,12 @@ impl GrayscaleBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
+                &Drawable::Clear(color) => {
+                    let fill = color.grayscale_byte();
+                    for x in self.data.iter_mut() {
+                        *x = fill;
+                    }
+                }
                 &Drawable::Rectangle { color, x, y, w, h } => {
                     let fill = color.grayscale_byte();
                     for yi in y..(y + h) {
@@ -266,20 +259,10 @@ impl GrayscaleBuffer {
                     let w = sprite.width();
                     let h = sprite.height();
                     let (x, y) = sprite.position();
-                    let scale = sprite.scale();
-                    debug_assert!(scale > 0);
                     for yi in 0..h {
                         for xi in 0..w {
                             let color = sprite.data[yi as usize][xi as usize];
-                            for xt in 0..sprite.scale {
-                                for yt in 0..sprite.scale {
-                                    self.set_pixel_alpha(
-                                        xi * scale + x + xt,
-                                        yi * scale + y + yt,
-                                        color,
-                                    )
-                                }
-                            }
+                            self.set_pixel_alpha(xi + x, yi + y, color)
                         }
                     }
                 }
@@ -343,17 +326,32 @@ impl ImageBuffer {
     }
 
     /// Used in breakout_wp
-    pub fn render_sprite(&mut self, scale: i32, data: &Vec<Vec<Color>>) {
+    pub fn render_sprite(&mut self, data: &Vec<Vec<Color>>) {
         let h = data.len() as i32;
         let w = data[0].len() as i32;
         for yi in 0..h {
             for xi in 0..w {
                 let color = data[yi as usize][xi as usize];
-                for xt in 0..scale {
-                    for yt in 0..scale {
-                        self.set_pixel_alpha(xi * scale + xt, yi * scale + yt, color)
-                    }
-                }
+                self.set_pixel_alpha(xi, yi, color)
+            }
+        }
+    }
+
+    fn render_rectangle(&mut self, color: Color, x: i32, y: i32, w: i32, h: i32) {
+        for yi in y..(y + h) {
+            for xi in x..(x + w) {
+                self.set_pixel(xi, yi, color)
+            }
+        }
+    }
+
+    fn render_static_sprite(&mut self, x: i32, y: i32, sprite: &FixedSpriteData) {
+        let w = sprite.width();
+        let h = sprite.height();
+        for yi in 0..h {
+            for xi in 0..w {
+                let color = sprite.data[yi as usize][xi as usize];
+                self.set_pixel_alpha(xi + x, yi + y, color)
             }
         }
     }
@@ -361,45 +359,30 @@ impl ImageBuffer {
     pub fn render(&mut self, commands: &[Drawable]) {
         for cmd in commands {
             match cmd {
-                &Drawable::Rectangle { color, x, y, w, h } => {
-                    for yi in y..(y + h) {
-                        for xi in x..(x + w) {
-                            self.set_pixel(xi, yi, color)
-                        }
+                &Drawable::Clear(color) => {
+                    for pixel in self.data.chunks_exact_mut(4) {
+                        pixel[0] = color.r;
+                        pixel[1] = color.g;
+                        pixel[2] = color.b;
+                        pixel[3] = color.a;
                     }
+                }
+                &Drawable::Rectangle { color, x, y, w, h } => {
+                    self.render_rectangle(color, x, y, w, h)
                 }
                 &Drawable::StaticSprite {
                     x,
                     y,
                     data: ref sprite,
-                } => {
-                    let w = sprite.width();
-                    let h = sprite.height();
-                    for yi in 0..h {
-                        for xi in 0..w {
-                            let color = sprite.data[yi as usize][xi as usize];
-                            self.set_pixel_alpha(xi + x, yi + y, color)
-                        }
-                    }
-                }
+                } => self.render_static_sprite(x, y, sprite),
                 &Drawable::DestructibleSprite(ref sprite) => {
                     let w = sprite.width();
                     let h = sprite.height();
                     let (x, y) = sprite.position();
-                    let scale = sprite.scale();
-                    debug_assert!(scale > 0);
                     for yi in 0..h {
                         for xi in 0..w {
                             let color = sprite.data[yi as usize][xi as usize];
-                            for xt in 0..sprite.scale {
-                                for yt in 0..sprite.scale {
-                                    self.set_pixel_alpha(
-                                        xi * scale + x + xt,
-                                        yi * scale + y + yt,
-                                        color,
-                                    )
-                                }
-                            }
+                            self.set_pixel_alpha(xi + x, yi + y, color)
                         }
                     }
                 }

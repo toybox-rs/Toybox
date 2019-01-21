@@ -240,13 +240,11 @@ class Toybox(object):
         for _ in range(self.frames_per_action):
             if not _lib.state_apply_ale_action(self.rstate.get_state(), action_int):
                 raise ValueError("Expected to apply action, but failed: {0}".format(action_int))
-        return self.rstate.render_frame(self.rsimulator, self.grayscale)
 
     def apply_action(self, action_input_obj):
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
             _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
-        return self.rstate.render_frame(self.rsimulator, self.grayscale)
     
     def get_state(self):
         return self.rstate.render_frame(self.rsimulator, self.grayscale)
