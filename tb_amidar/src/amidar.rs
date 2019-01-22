@@ -173,6 +173,9 @@ impl TilePoint {
     pub fn new(tx: i32, ty: i32) -> TilePoint {
         TilePoint { tx, ty }
     }
+    pub fn manhattan_dist(&self, other: &TilePoint) -> i32 {
+        (self.tx - other.tx).abs() + (self.ty - other.ty).abs()
+    }
     pub fn to_world(&self) -> WorldPoint {
         WorldPoint::new(self.tx * world::TILE_SIZE.0, self.ty * world::TILE_SIZE.1)
     }
@@ -295,6 +298,7 @@ pub enum MovementAI {
     EnemyTargetPlayer {
         start: TilePoint,
         start_dir: Direction,
+        vision_distance: i32,
         dir: Direction,
         player_seen: Option<TilePoint>,
     },
@@ -444,6 +448,7 @@ impl MovementAI {
             &mut MovementAI::EnemyTargetPlayer {
                 ref mut player_seen,
                 ref mut dir,
+                vision_distance,
                 ..
             } => {
                 let player = player.unwrap();
@@ -451,7 +456,9 @@ impl MovementAI {
                 let player_tile = player.position.to_tile();
                 let px = player_tile.tx;
                 let py = player_tile.ty;
-                if board.is_line_of_sight(position, &player_tile) {
+                if board.is_line_of_sight(position, &player_tile)
+                    && position.manhattan_dist(&player_tile) <= vision_distance
+                {
                     // The player is currently within view
                     *player_seen = Some(player_tile);
                     *dir = if px == position.tx {
