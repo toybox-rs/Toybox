@@ -257,7 +257,7 @@ def main():
                 num_lives = turtle.ale.lives()
                 obs, _, done, info = env.step(action)
                 #env.render()
-                #time.sleep(1/30.0)
+                #time.sleep(1)
                 done = done and num_lives == 1
                 score = info[0]['score']
                 if n_steps % record_period == 0:
@@ -278,18 +278,18 @@ def main():
 
     # First test: Amidar movement
     # Copied from https://github.com/KDL-umass/Amidar/blob/master/amidar/resources/test_states/start_state.json
-    starts = [{'tx' : 0, 'ty' : 0}, {'tx' : 0, 'ty': 0}, {'tx' : 7, 'ty': 0}, {'tx' : 0, 'ty': 25}, {'tx' : 9, 'ty': 30}]
+    starts = [{'tx' : 31, 'ty' : 10}, {'tx' : 31, 'ty': 8}, {'tx' : 31, 'ty': 6}, {'tx' : 27, 'ty': 16}, {'tx' : 29, 'ty': 16}]
     enemy_protocols = [
         {'EnemyPerimeterAI' : {'start' : starts[0]}},
         {'EnemyAmidarMvmt' : {
-            'vert'      : 'Up', 'horiz'      : 'Left', 
-            'start_vert': 'Up', 'start_horiz': 'Left',
+            'vert'      : 'Down', 'horiz'      : 'Left', 
+            'start_vert': 'Down', 'start_horiz': 'Left',
             'start' : starts[1]
             }},
         {
             'EnemyAmidarMvmt' : {
-            'vert'      : 'Up', 'horiz'      : 'Left', 
-            'start_vert': 'Up', 'start_horiz': 'Left',
+            'vert'      : 'Down', 'horiz'      : 'Right', 
+            'start_vert': 'Down', 'start_horiz': 'Right',
             'start' : starts[2]
             }
         },
@@ -302,8 +302,8 @@ def main():
         },
                 {
             'EnemyAmidarMvmt' : {
-            'vert'      : 'Up', 'horiz'      : 'Left', 
-            'start_vert': 'Up', 'start_horiz': 'Left',
+            'vert'      : 'Up', 'horiz'      : 'Right', 
+            'start_vert': 'Up', 'start_horiz': 'Right',
             'start' : starts[4]
             }
         }
@@ -344,7 +344,7 @@ def main():
     turtle.toybox.write_config_json(config)
     run_test(config, 'EnemyTargetPlayer')
 
-    with open('amidar_protocol_no_fire{}.tsv'.format(extra_args['load_path']), 'w') as fp:
+    with open('amidar_gang_up_no_fire_{}.tsv'.format(extra_args['load_path']), 'w') as fp:
         for row in dat:
             fp.write("{}\t{}\t{}\t{}\t{}\n".format(*row))
 

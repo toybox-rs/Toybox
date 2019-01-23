@@ -56,7 +56,7 @@ class Simulator(object):
         return State(self)
 
     def state_from_json(self, js):
-        state = _lib.from_json(self.get_simulator(), json_str(js).encode('utf-8'))
+        state = _lib.state_from_json(self.get_simulator(), json_str(js).encode('utf-8'))
         return State(self, state=state)
 
     def to_json(self):
@@ -272,19 +272,16 @@ class Toybox(object):
     def game_over(self):
         return self.rstate.game_over()
 
-    def to_json(self):
+    def to_state_json(self):
         return self.rstate.to_json()
-    
-    def from_json(self, js):
-        return self.rsimulator.from_json(js)
 
     def config_to_json(self):
         return self.rsimulator.to_json()
 
-    def write_json(self, js):
+    def write_state_json(self, js):
         old_state = self.rstate
         del old_state
-        self.rstate = self.from_json(js)
+        self.rstate = self.rsimulator.state_from_json(js)
 
     def write_config_json(self, config_js):
         # from_json replaces simulator!

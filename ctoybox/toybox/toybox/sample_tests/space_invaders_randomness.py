@@ -230,121 +230,53 @@ def main():
     logger.log("Running trained model")
     env = build_env(args)
     turtle = atari_wrappers.get_turtle(env)
+    print(turtle._action_set)
     if not isinstance(turtle, ToyboxBaseEnv): 
             raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
 
     n_trials = 30
-    max_steps = 5e6
-    record_period = 10
+    max_steps = 5e3
     # get initial config
-    config = turtle.toybox.config_to_json()
-    # turn off jumps
-    config['start_jumps'] = 0
-    state = turtle.toybox.to_json()
+    #config = turtle.toybox.config_to_json()
 
-    def run_test(config, prot):
-        print('Running %s' % prot)
+    dat = [('trained_env', 'trial', 'num_steps', 'p', 'score')]
+
+    
+
+    def run_test(config, p):
+        # Plays the game until death or max steps
         obs = env.reset()
         for trial in range(n_trials):
-            # for each trial, record the score at mod 10 steps 
-            assert (prot in turtle.toybox.to_json()['enemies'][-1]['ai'])
             n_steps = 0
             num_lives = turtle.ale.lives()
             done = False
+            score = 0
 
             while n_steps < max_steps and not done:
                 action = model.step(obs)[0]
+                # action = np.random.choice(range(len(turtle._action_set)), 1)[0]
                 num_lives = turtle.ale.lives()
                 obs, _, done, info = env.step(action)
+                s = info[0]['score']
+                if s > score:
+                    score = s
                 #env.render()
-                #time.sleep(1/30.0)
-                done = done and num_lives == 1
-                score = info[0]['score']
-                if n_steps % record_period == 0:
-                    d = (extra_args['load_path'], trial, n_steps, prot, score)
-                    #print("{}\t{}\t{}\t{}\t{}".format(*d))
-                    dat.append(d)
+                # time.sleep(1/30.0)
                 n_steps += 1
-            #('trained_env', 'trial', 'step', 'mvmt', 'score')
             
             obs = env.reset()
-            turtle.toybox.write_config_json(config)
+            stuff = ('random', trial, n_steps, p, score)
+            print(stuff)
+            dat.append(stuff)
 
-
-    dat = [('trained_env', 'trial', 'step', 'mvmt', 'score')]
-    def add_dat(env=None, trial=None, step=None, mvmt=None, score=None):
-        assert (env and trial and step and mvmt and score)
-        dat.append((env, trial, step, mvmt, score))
-
-    # First test: Amidar movement
-    # Copied from https://github.com/KDL-umass/Amidar/blob/master/amidar/resources/test_states/start_state.json
-    starts = [{'tx' : 0, 'ty' : 0}, {'tx' : 0, 'ty': 0}, {'tx' : 7, 'ty': 0}, {'tx' : 0, 'ty': 25}, {'tx' : 9, 'ty': 30}]
-    enemy_protocols = [
-        {'EnemyPerimeterAI' : {'start' : starts[0]}},
-        {'EnemyAmidarMvmt' : {
-            'vert'      : 'Up', 'horiz'      : 'Left', 
-            'start_vert': 'Up', 'start_horiz': 'Left',
-            'start' : starts[1]
-            }},
-        {
-            'EnemyAmidarMvmt' : {
-            'vert'      : 'Up', 'horiz'      : 'Left', 
-            'start_vert': 'Up', 'start_horiz': 'Left',
-            'start' : starts[2]
-            }
-        },
-        {
-            'EnemyAmidarMvmt' : {
-            'vert'      : 'Down', 'horiz'      : 'Right', 
-            'start_vert': 'Down', 'start_horiz': 'Right',
-            'start' : starts[3]
-            }
-        },
-                {
-            'EnemyAmidarMvmt' : {
-            'vert'      : 'Up', 'horiz'      : 'Left', 
-            'start_vert': 'Up', 'start_horiz': 'Left',
-            'start' : starts[4]
-            }
-        }
-    ]
-    config['enemies'] = enemy_protocols
-
-    # Load up enemies
-    turtle.toybox.write_config_json(config)
-    run_test(config, 'EnemyAmidarMvmt')
+    p=0.0
+    while p < 1.0:
+        config['jitter'] = p
+        turtle.toybox.write_config_json(config)
+        run_test(config, p)
+        p+=0.01
     
-    # Second test: Look up (control)
-    config['enemies'] = []
-    for i in range(5):
-        config['enemies'].append({'EnemyLookupAI': {'next': 0, 'default_route_index': i}})
-    turtle.toybox.write_config_json(config)
-    run_test(config, 'EnemyLookupAI')
-
-    # Third test: Random movement
-    config['enemies'] = []
-    for i in range(5):
-        config['enemies'].append({'EnemyRandomMvmt': {
-            'start' : starts[i],
-            'start_dir': 'Right',
-            'dir': 'Right'
-        }})
-    turtle.toybox.write_config_json(config)
-    run_test(config, 'EnemyRandomMvmt')
-
-    # Fourth test: Target Player
-    config['enemies'] = []
-    for i in range(5):
-        config['enemies'].append({'EnemyTargetPlayer' : {
-            'start' : starts[i],
-            'start_dir': 'Right',
-            'dir': 'Right',
-            'player_seen': None
-        }})
-    turtle.toybox.write_config_json(config)
-    run_test(config, 'EnemyTargetPlayer')
-
-    with open('amidar_protocol_no_fire{}.tsv'.format(extra_args['load_path']), 'w') as fp:
+    with open('space_invaders_no_shields_{}.tsv'.format('random'), 'w') as fp:
         for row in dat:
             fp.write("{}\t{}\t{}\t{}\t{}\n".format(*row))
 
