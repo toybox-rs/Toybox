@@ -244,54 +244,52 @@ def main():
     shield_configs = [(1,0,0), (0,1,0), (0,0,1), (0,0,0), (1,1,1)]
 
     dat = [('trained_env', 'trial', 'x', 'count', 's1', 's2', 's3', 'score')]
-    def run_test(s1,s2,s3):
-        obs = env.reset()
-        # Plays the game until death or max steps
-        for trial in range(n_trials):
-            n_steps = 0
-            num_lives = turtle.ale.lives()
-            done = False
-            score = 0
-
-            xs_observed = Counter()
-            while n_steps < max_steps and not done:
-                action = model.step(obs)[0]
-                # action = np.random.choice(range(len(turtle._action_set)), 1)[0]
-                num_lives = turtle.ale.lives()
-                obs, _, done, info = env.step(action)    
-                s = info[0]['score']
-                done = done and num_lives == 1
-                if s > score:
-                    score = s
-                # count up xs...
-                xs_observed[turtle.toybox.query_state_json('ship_x')] += 1
-                #env.render()
-                #time.sleep(1/30.0)
-                n_steps += 1
-            
+    with open('space_invaders_shield_xs.tsv', 'w') as fp:
+        def run_test(s1,s2,s3):
             obs = env.reset()
-            for (x,count) in xs_observed.items():
-                stuff = (extra_args['load_path'], trial, x, count, s1, s2, s3, score)
-                dat.append(stuff)
-            print(xs_observed)
+            # Plays the game until death or max steps
+            for trial in range(n_trials):
+                n_steps = 0
+                num_lives = turtle.ale.lives()
+                done = False
+                score = 0
 
-    source_shields = copy.deepcopy(config['shields'])
-    for (s1, s2, s3) in shield_configs:
-        keep_shields = []
-        if s1 == 1:
-            keep_shields.append(source_shields[0])
-        if s2 == 1:
-            keep_shields.append(source_shields[1])
-        if s3 == 1:
-            keep_shields.append(source_shields[2])
-        print((s1,s2,s3,len(keep_shields)))
-        config['shields'] = keep_shields
-        turtle.toybox.write_config_json(config)
-        run_test(s1,s2,s3)
-    
-    with open('space_invaders_no_shields_{}.tsv'.format('random'), 'w') as fp:
-        for row in dat:
-            fp.write("{}\t{}\t{}\t{}\t{}\n".format(*row))
+                xs_observed = Counter()
+                while n_steps < max_steps and not done:
+                    action = model.step(obs)[0]
+                    # action = np.random.choice(range(len(turtle._action_set)), 1)[0]
+                    num_lives = turtle.ale.lives()
+                    obs, _, done, info = env.step(action)    
+                    s = info[0]['score']
+                    done = done and num_lives == 1
+                    if s > score:
+                        score = s
+                    # count up xs...
+                    xs_observed[turtle.toybox.query_state_json('ship_x')] += 1
+                    #env.render()
+                    #time.sleep(1/30.0)
+                    n_steps += 1
+                
+                obs = env.reset()
+                for (x,count) in xs_observed.items():
+                    stuff = (extra_args['load_path'], trial, x, count, s1, s2, s3, score)
+                    fp.write('{0}\n'.format('\t'.join([str(s) for s in stuff])))
+                fp.flush()
+                print(xs_observed)
+
+        source_shields = copy.deepcopy(config['shields'])
+        for (s1, s2, s3) in shield_configs:
+            keep_shields = []
+            if s1 == 1:
+                keep_shields.append(source_shields[0])
+            if s2 == 1:
+                keep_shields.append(source_shields[1])
+            if s3 == 1:
+                keep_shields.append(source_shields[2])
+            print((s1,s2,s3,len(keep_shields)))
+            config['shields'] = keep_shields
+            turtle.toybox.write_config_json(config)
+            run_test(s1,s2,s3)
 
     env.close()
 
