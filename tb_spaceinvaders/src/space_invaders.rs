@@ -298,6 +298,7 @@ pub struct SpaceInvaders {
     start_lives: i32,
     pub enemy_protocol: FiringAI,
     pub jitter: f64,
+    pub shields: Vec<(i32, i32)>,
 }
 impl Default for SpaceInvaders {
     fn default() -> Self {
@@ -307,6 +308,11 @@ impl Default for SpaceInvaders {
             start_lives: screen::START_LIVES,
             enemy_protocol: FiringAI::TargetPlayer,
             jitter: 0.5,
+            shields: vec![
+                screen::SHIELD1_POS,
+                screen::SHIELD2_POS,
+                screen::SHIELD3_POS,
+            ],
         }
     }
 }
@@ -529,11 +535,11 @@ impl Enemy {
 }
 
 impl StateCore {
-    fn new(rand: random::Gen) -> StateCore {
+    fn new(config: &mut SpaceInvaders) -> StateCore {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
         let mut state = StateCore {
-            rand,
+            rand: random::Gen::new_child(&mut config.rand),
             life_display_timer: screen::NEW_LIFE_TIME,
             lives: 3,
             levels_completed: 0,
@@ -547,11 +553,11 @@ impl StateCore {
             ufo: Ufo::new(),
         };
 
-        state.reset_board();
+        state.reset_board(config);
         state
     }
 
-    fn reset_board(&mut self) {
+    fn reset_board(&mut self, config: &SpaceInvaders) {
         self.shields.clear();
         self.enemies.clear();
         self.life_display_timer = screen::NEW_LIFE_TIME;
@@ -560,11 +566,7 @@ impl StateCore {
         self.ship_laser = None;
         self.ufo = Ufo::new();
 
-        for &(x, y) in &[
-            screen::SHIELD1_POS,
-            screen::SHIELD2_POS,
-            screen::SHIELD3_POS,
-        ] {
+        for &(x, y) in config.shields.iter() {
             self.shields.push(SHIELD_SPRITE.translate(x, y))
         }
 
@@ -908,7 +910,7 @@ impl toybox_core::Simulation for SpaceInvaders {
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State {
             config: self.clone(),
-            state: StateCore::new(random::Gen::new_child(&mut self.rand)),
+            state: StateCore::new(self),
         })
     }
     /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/SpaceInvaders.cpp#L85)
@@ -967,7 +969,7 @@ impl toybox_core::State for State {
                 self.state.levels_completed += 1;
             }
 
-            self.state.reset_board();
+            self.state.reset_board(&self.config);
             return;
         }
         if self.state.ship.alive {

@@ -198,7 +198,7 @@ pub extern "C" fn state_to_json(state_ptr: *mut WrapState) -> *const c_char {
     };
 
     let json: String = state.to_json();
-    let cjson: CString = CString::new(json).expect("crap!");
+    let cjson: CString = CString::new(json).expect("Conversion to CString should succeed!");
     CString::into_raw(cjson)
 }
 
