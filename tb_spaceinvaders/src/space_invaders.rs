@@ -1153,6 +1153,19 @@ impl toybox_core::State for State {
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
+
+    fn query_json(&self, query: &str) -> String {
+        let _config = &self.config;
+        let state = &self.state;
+        match query {
+            "ship_xy" => serde_json::to_string(&(state.ship.x, state.ship.y)),
+            "ship_x" => serde_json::to_string(&state.ship.x),
+            "shield_count" => serde_json::to_string(&state.shields.len()),
+            "shields" => serde_json::to_string(&state.shields),
+            _ => Ok("{}".to_owned()),
+        }
+        .expect("No JSON serialization errors in query.")
+    }
 }
 
 #[cfg(test)]

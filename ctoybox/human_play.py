@@ -46,6 +46,8 @@ if __name__ == '__main__':
             player_input.button2 = key_state[K_x] or key_state[K_RSHIFT] or key_state[K_LSHIFT]
 
             tb.apply_action(player_input)
+            if args.game == 'space_invaders':
+                print("ship_x", tb.query_state_json('ship_x'))
             image = tb.get_rgb_frame()
             screen = pygame.display.get_surface()
             img = pygame.surfarray.make_surface(np.swapaxes(image,0,1))

@@ -200,6 +200,9 @@ _lib.simulator_is_legal_action.restype = ctypes.c_bool
 _lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.state_alloc.restype = ctypes.POINTER(WrapState)
 
+_lib.state_query_json.argtypes = [ctypes.POINTER(WrapState), ctypes.c_char_p]
+_lib.state_query_json.restype = ctypes.c_char_p
+
 _lib.state_apply_ale_action.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
 _lib.state_apply_ale_action.restype = ctypes.c_bool
 

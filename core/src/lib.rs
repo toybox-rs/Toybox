@@ -33,6 +33,8 @@ pub trait State {
     fn draw(&self) -> Vec<graphics::Drawable>;
     /// Any state can serialize to JSON String.
     fn to_json(&self) -> String;
+    /// Submit a query to this state object, returning a JSON String.
+    fn query_json(&self, query: &str) -> String;
 }
 
 /// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.
