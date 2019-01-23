@@ -77,6 +77,8 @@ pub struct Amidar {
     chase_score_bonus: i32,
     jump_time: i32,
     box_bonus: i32,
+    /// This should be false if you ever use a non-default board.
+    copy_no_score_bug: bool,
     enemies: Vec<MovementAI>,
 }
 
@@ -110,6 +112,7 @@ impl Default for Amidar {
             jump_time: 2 * 30 + 15, // 2.5 seconds
             render_images: true,
             box_bonus: 50,
+            copy_no_score_bug: true,
             enemies: (0..DEFAULT_ENEMY_ROUTES.len())
                 .map(|idx| MovementAI::EnemyLookupAI {
                     next: 0,
@@ -654,10 +657,12 @@ pub struct BoardUpdate {
     pub horizontal: i32,
     pub num_boxes: i32,
     pub triggers_chase: bool,
+    pub junctions: Option<(u32, u32)>,
 }
 impl BoardUpdate {
     fn new() -> BoardUpdate {
         BoardUpdate {
+            junctions: None,
             vertical: 0,
             horizontal: 0,
             num_boxes: 0,
@@ -665,7 +670,11 @@ impl BoardUpdate {
         }
     }
     fn happened(&self) -> bool {
-        self.vertical != 0 || self.horizontal != 0 || self.num_boxes != 0 || self.triggers_chase
+        self.junctions.is_some()
+            || self.vertical != 0
+            || self.horizontal != 0
+            || self.num_boxes != 0
+            || self.triggers_chase
     }
     fn into_option(self) -> Option<Self> {
         if self.happened() {
@@ -964,6 +973,7 @@ impl Board {
                     let (triggers_chase, boxes_painted) = self.check_box_painting(&t1, &t2);
                     score_change.num_boxes += boxes_painted;
                     score_change.triggers_chase = triggers_chase;
+                    score_change.junctions = Some((*start, *end));
                 }
             }
         }
@@ -1177,15 +1187,27 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         let pre_update_score: i32 = self.score();
+
+        // Move the player and determine whether the board changes.
         if let Some(score_change) =
             self.state
                 .player
                 .update(buttons, &mut self.state.board, None, &mut self.state.rand)
         {
-            self.state.score += score_change.horizontal;
-            // max 1 point for vertical, for some reason.
-            self.state.score += score_change.vertical.signum();
-            self.state.score += self.config.box_bonus * score_change.num_boxes;
+            // Don't award score for the first, semi-painted segment on a default Amidar board, but do paint it.
+            let mut allow_score_change = true;
+            if self.config.copy_no_score_bug {
+                let (start, end) = score_change.junctions.unwrap();
+                if start == 607 && end == 415 {
+                    allow_score_change = false;
+                }
+            }
+            if allow_score_change {
+                self.state.score += score_change.horizontal;
+                // max 1 point for vertical, for some reason.
+                self.state.score += score_change.vertical.signum();
+                self.state.score += self.config.box_bonus * score_change.num_boxes;
+            }
 
             if score_change.triggers_chase {
                 self.state.chase_timer = self.config.chase_time;
@@ -1405,6 +1427,11 @@ impl toybox_core::State for State {
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
+
+    fn query_json(&self, _query: &str) -> String {
+        // TODO
+        "".to_owned()
+    }
 }
 
 #[cfg(test)]
@@ -1473,6 +1500,7 @@ mod tests {
         };
         println!("{}", serde_json::to_string_pretty(&data).unwrap());
         let data = MovementAI::EnemyTargetPlayer {
+            vision_distance: 15,
             start: TilePoint::new(0, 0),
             start_dir: Direction::Up,
             dir: Direction::Up,

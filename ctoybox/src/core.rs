@@ -9,7 +9,7 @@ use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox_core::{AleAction, Input, State};
 
 #[no_mangle]
-pub extern "C" fn simulator_alloc(name: *const i8) -> *mut WrapSimulator {
+pub extern "C" fn simulator_alloc(name: *const c_char) -> *mut WrapSimulator {
     let name: &CStr = unsafe { CStr::from_ptr(name) };
     let name: &str = name.to_str().expect("bad utf-8!");
     let simulator = toybox::get_simulation_by_name(name).unwrap();
@@ -85,6 +85,22 @@ pub extern "C" fn state_free(ptr: *mut WrapState) {
     unsafe {
         Box::from_raw(ptr);
     }
+}
+
+/// Hopefully the last "query" cbinding we need to write.
+#[no_mangle]
+pub extern "C" fn state_query_json(ptr: *mut WrapState, query_str: *const c_char) -> *const c_char {
+    let query_str: &CStr = unsafe { CStr::from_ptr(query_str) };
+    let query_str: &str = query_str
+        .to_str()
+        .expect("Could not convert your query string to UTF-8!");
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let json_str = state.query_json(query_str);
+    let cjson: CString = CString::new(json_str).expect("Conversion to CString should succeed!");
+    CString::into_raw(cjson)
 }
 
 // Need this information to initialize the numpy array in python
@@ -198,12 +214,15 @@ pub extern "C" fn state_to_json(state_ptr: *mut WrapState) -> *const c_char {
     };
 
     let json: String = state.to_json();
-    let cjson: CString = CString::new(json).expect("crap!");
+    let cjson: CString = CString::new(json).expect("Conversion to CString should succeed!");
     CString::into_raw(cjson)
 }
 
 #[no_mangle]
-pub extern "C" fn state_from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mut WrapState {
+pub extern "C" fn state_from_json(
+    ptr: *mut WrapSimulator,
+    json_str: *const c_char,
+) -> *mut WrapState {
     let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
     let json_str: &str = json_str
         .to_str()
@@ -222,7 +241,7 @@ pub extern "C" fn state_from_json(ptr: *mut WrapSimulator, json_str: *const i8) 
 #[no_mangle]
 pub extern "C" fn simulator_from_json(
     ptr: *mut WrapSimulator,
-    json_str: *const i8,
+    json_str: *const c_char,
 ) -> *mut WrapSimulator {
     let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
     let json_str: &str = json_str

@@ -687,6 +687,11 @@ impl toybox_core::State for State {
     fn to_json(&self) -> String {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
+
+    fn query_json(&self, _query: &str) -> String {
+        // TODO
+        "".to_owned()
+    }
 }
 
 #[cfg(test)]

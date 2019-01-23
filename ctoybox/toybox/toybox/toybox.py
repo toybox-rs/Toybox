@@ -99,6 +99,10 @@ class State(object):
     def game_over(self):
         return self.lives() == 0
 
+    def query_json(self, query):
+        result = _lib.state_query_json(self.__state, json_str(query).encode('utf-8'))
+        return json.loads(result.decode('utf-8'))
+
     def breakout_brick_live_by_index(self, index):
         assert(self.game_name == 'breakout')
         return _lib.breakout_brick_live_by_index(self.__state, index)
@@ -289,8 +293,8 @@ class Toybox(object):
         # new_game replaces state!
         self.new_game()
 
-    def predicate_met(self, pred): 
-        return False
+    def query_state_json(self, query): 
+        return self.rstate.query_json(query)
 
     def __del__(self):
         if not self.deleted:
