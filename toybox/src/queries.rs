@@ -124,7 +124,9 @@ mod breakout_q_tests {
         let mut breakout = breakout::Breakout::default();
         let state = breakout.new_game();
 
-        let empty = state.query_json("channels", &serde_json::Value::Null).unwrap();
+        let empty = state
+            .query_json("channels", &serde_json::Value::Null)
+            .unwrap();
         assert_eq!(empty, "[]");
     }
 
