@@ -10,5 +10,7 @@ cargo build -p ctoybox
 cargo test -p ctoybox
 cargo fmt --all -- --check
 
+# required for gym env registration
+pip install pillow gym
 cd ctoybox && ./start_python test_games.py
 
