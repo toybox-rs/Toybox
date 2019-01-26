@@ -288,6 +288,9 @@ class Toybox(object):
     def game_over(self):
         return self.rstate.game_over()
 
+    def state_to_json(self):
+        return self.rstate.to_json()
+
     def to_state_json(self):
         return self.rstate.to_json()
 

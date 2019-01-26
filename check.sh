@@ -10,3 +10,5 @@ cargo build -p ctoybox
 cargo test -p ctoybox
 cargo fmt --all -- --check
 
+cd ctoybox && ./start_python test_games.py
+
