@@ -701,7 +701,8 @@ impl toybox_core::State for State {
                     Err(QueryError::BadInputArg)?
                 }
             }
-            "count_channels" | "channels" => serde_json::to_string(&state.count_channels())?,
+            "count_channels" => serde_json::to_string(&state.find_channels().len())?,
+            "channels" => serde_json::to_string(&state.find_channels())?,
             "num_columns" => serde_json::to_string(&screen::BRICKS_ACROSS)?,
             "num_rows" => serde_json::to_string(&screen::ROW_SCORES.len())?,
             _ => Err(QueryError::BadInputArg)?,
@@ -712,7 +713,7 @@ impl toybox_core::State for State {
 /// Define some queries on StateCore.
 impl StateCore {
     /// Returns a set of numbers corresponding to the stacks that are channels.
-    pub fn count_channels(&self) -> Vec<i32> {
+    pub fn find_channels(&self) -> Vec<i32> {
         let across = screen::BRICKS_ACROSS as i32;
         let down = screen::ROW_SCORES.len() as i32;
         let mut retval = Vec::new();

@@ -106,7 +106,7 @@ class State(object):
     def game_over(self):
         return self.lives() == 0
 
-    def query_json(self, query, args):
+    def query_json(self, query, args="null"):
         txt = rust_str(_lib.state_query_json(self.__state, json_str(query).encode('utf-8'), json_str(args).encode('utf-8')))
         try:
             out = json.loads(txt)
@@ -116,31 +116,27 @@ class State(object):
 
     def breakout_brick_live_by_index(self, index):
         assert(self.game_name == 'breakout')
-        return _lib.breakout_brick_live_by_index(self.__state, index)
+        return self.query_json('brick_live_by_index', json.dumps(index))
 
     def breakout_bricks_remaining(self):
         assert(self.game_name == 'breakout')
-        return _lib.breakout_bricks_remaining(self.__state)
+        return self.query_json('bricks_remaining')
     
     def breakout_channel_count(self):
         assert(self.game_name == 'breakout')
-        return len(self.breakout_channels())
+        return self.query_json('count_channels')
     
     def breakout_num_columns(self):
         assert(self.game_name == 'breakout')
-        return _lib.breakout_num_columns(self.__state)
+        return self.query_json('num_columns')
 
     def breakout_num_rows(self):
         assert(self.game_name == 'breakout')
-        return _lib.breakout_num_rows(self.__state)
+        return self.query_json('num_rows')
 
     def breakout_channels(self):
         assert(self.game_name == 'breakout')
-        NC = self.breakout_num_columns()
-        arr = np.zeros(NC, dtype='int32')
-        found = _lib.breakout_channels(self.__state, arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int32)), NC)
-        assert(found >= 0)
-        return arr.tolist()[:found]
+        return self.query_json('channels')
 
     def amidar_num_tiles_unpainted(self):
         assert(self.game_name == 'amidar')
