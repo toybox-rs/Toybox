@@ -685,6 +685,7 @@ impl toybox_core::State for State {
     }
 
     fn query_json(&self, query: &str, args: &serde_json::Value) -> Result<String, QueryError> {
+        let config = &self.config;
         let state = &self.state;
         Ok(match query {
             "bricks_remaining" => {
@@ -701,6 +702,7 @@ impl toybox_core::State for State {
             "channels" => serde_json::to_string(&state.find_channels())?,
             "num_columns" => serde_json::to_string(&screen::BRICKS_ACROSS)?,
             "num_rows" => serde_json::to_string(&screen::ROW_SCORES.len())?,
+            "config.ball_start_positions" => serde_json::to_string(&config.ball_start_positions)?,
             _ => Err(QueryError::NoSuchQuery)?,
         })
     }
