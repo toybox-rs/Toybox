@@ -18,8 +18,8 @@ cache:
 
 before_install:
   - sudo apt-get -y install python3-pip python3-dev
-  - pip3 install -U --upgrade pip
-  - pip3 install -U --only-binary=numpy gym pillow
+  - sudo pip3 install -U --upgrade pip
+  - sudo pip3 install -U --only-binary=numpy gym pillow
 
 before_script:
   - rustup component add rustfmt-preview
