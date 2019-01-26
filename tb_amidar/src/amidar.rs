@@ -1487,6 +1487,7 @@ impl toybox_core::State for State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use toybox_core::State;
 
     #[test]
     fn test_colors_unique_in_gray() {
@@ -1557,5 +1558,52 @@ mod tests {
             player_seen: None,
         };
         println!("{}", serde_json::to_string_pretty(&data).unwrap());
+    }
+
+    fn player_tile(state: &State) -> (i32, i32) {
+        serde_json::from_str(
+            &state
+                .query_json("player_tile", &serde_json::Value::Null)
+                .unwrap(),
+        )
+        .unwrap()
+    }
+    fn num_tiles_unpainted(state: &State) -> usize {
+        serde_json::from_str(
+            &state
+                .query_json("num_tiles_unpainted", &serde_json::Value::Null)
+                .unwrap(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_q_num_tiles_unpainted() {
+        let mut state = super::State::try_new(&Amidar::default()).unwrap();
+
+        let (px, py) = player_tile(&state);
+        let first = num_tiles_unpainted(&state);
+
+        let mut go_up = Input::default();
+        go_up.up = true;
+
+        // Move the user up (be a little robust to how long the animation takes.)
+        for _ in 0..5000 {
+            state.update_mut(go_up);
+            if state.score() > 0 {
+                // we must have painted something!
+                break;
+            }
+        }
+
+        let (nx, ny) = player_tile(&state);
+        if py == ny {
+            panic!("Player can't move upward!")
+        }
+        println!("Moved player to ({},{}) from ({},{})", nx, ny, px, py);
+
+        let painted_now = num_tiles_unpainted(&state);
+        println!("painted_now: {} ... before: {}", painted_now, first);
+        assert!(painted_now < first);
     }
 }

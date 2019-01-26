@@ -753,4 +753,37 @@ mod tests {
         assert_eq!(uniq_grays.len(), num_colors);
     }
 
+    #[test]
+    fn test_q_breakout_bricks_remaining() {
+        let mut breakout = breakout::Breakout::default();
+        let state = breakout.new_game();
+        let bricks_remaining = state
+            .query_json("bricks_remaining", &serde_json::Value::Null)
+            .unwrap()
+            .parse::<u32>()
+            .unwrap();
+        let num_columns = state
+            .query_json("num_columns", &serde_json::Value::Null)
+            .unwrap()
+            .parse::<u32>()
+            .unwrap();
+        let num_rows = state
+            .query_json("num_rows", &serde_json::Value::Null)
+            .unwrap()
+            .parse::<u32>()
+            .unwrap();
+
+        assert_eq!(bricks_remaining, num_columns * num_rows);
+    }
+
+    #[test]
+    fn test_q_breakout_channels() {
+        let mut breakout = breakout::Breakout::default();
+        let state = breakout.new_game();
+
+        let empty = state
+            .query_json("channels", &serde_json::Value::Null)
+            .unwrap();
+        assert_eq!(empty, "[]");
+    }
 }

@@ -3,7 +3,8 @@ use toybox_core::graphics::{load_digit_sprites, Color, Drawable, FixedSpriteData
 const SET: char = '1';
 const IGNORE: char = '.';
 pub const DIGIT_WIDTH: i32 = 24;
-pub const _DIGIT_HEIGHT: i32 = 12;
+#[cfg(test)]
+pub const DIGIT_HEIGHT: i32 = 12;
 
 lazy_static! {
     static ref DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(
