@@ -8,9 +8,8 @@ use toybox_core::random;
 use toybox_core::{AleAction, Input, QueryError};
 
 use serde_json;
-use std::any::Any;
 
-use rand::RngCore;
+use rand::seq::SliceRandom;
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (240, 160);
@@ -233,9 +232,6 @@ pub struct State {
 }
 
 impl toybox_core::Simulation for Breakout {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn reset_seed(&mut self, seed: u32) {
         self.rand.reset_seed(seed);
     }
@@ -331,13 +327,16 @@ impl toybox_core::Simulation for Breakout {
 
 impl State {
     fn start_ball(&mut self) {
-        let options = &self.config.ball_start_positions;
-        let index = (self.state.rand.next_u32() as usize) % options.len();
+        let option: &StartBall = self
+            .config
+            .ball_start_positions
+            .choose(&mut self.state.rand)
+            .unwrap();
 
-        let mut ball = Body2D::new_pos(options[index].x, options[index].y);
+        let mut ball = Body2D::new_pos(option.x, option.y);
         ball.velocity = Vec2D::from_polar(
             self.config.ball_speed_slow,
-            options[index].angle_degrees.to_radians(),
+            option.angle_degrees.to_radians(),
         );
         self.state.balls.push(ball);
     }
@@ -517,9 +516,6 @@ impl State {
 }
 
 impl toybox_core::State for State {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn lives(&self) -> i32 {
         self.state.lives
     }
@@ -739,6 +735,7 @@ impl StateCore {
 mod tests {
     use super::*;
     use std::collections::HashSet;
+    use toybox_core::Simulation;
 
     #[test]
     fn test_colors_unique_in_gray() {
@@ -755,7 +752,7 @@ mod tests {
 
     #[test]
     fn test_q_breakout_bricks_remaining() {
-        let mut breakout = breakout::Breakout::default();
+        let mut breakout = super::Breakout::default();
         let state = breakout.new_game();
         let bricks_remaining = state
             .query_json("bricks_remaining", &serde_json::Value::Null)
@@ -778,7 +775,7 @@ mod tests {
 
     #[test]
     fn test_q_breakout_channels() {
-        let mut breakout = breakout::Breakout::default();
+        let mut breakout = super::Breakout::default();
         let state = breakout.new_game();
 
         let empty = state

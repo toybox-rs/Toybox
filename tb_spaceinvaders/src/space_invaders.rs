@@ -3,7 +3,6 @@ use super::font::{draw_score, get_sprite, FontChoice};
 use firing_ai::{enemy_fire_lasers, FiringAI};
 use itertools::Itertools;
 use serde_json;
-use std::any::Any;
 use std::cmp::{max, min};
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
@@ -898,9 +897,6 @@ pub struct State {
 }
 
 impl toybox_core::Simulation for SpaceInvaders {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn reset_seed(&mut self, seed: u32) {
         self.rand.reset_seed(seed)
     }
@@ -946,9 +942,6 @@ impl toybox_core::Simulation for SpaceInvaders {
 }
 
 impl toybox_core::State for State {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn lives(&self) -> i32 {
         // If we have removed all enemies, set lives to 0 and end.
         if self.state.enemies.iter().all(|e: &Enemy| !e.alive) {

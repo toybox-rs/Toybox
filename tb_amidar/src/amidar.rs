@@ -1,6 +1,5 @@
 use super::digit_sprites::{draw_score, DIGIT_HEIGHT};
 use serde_json;
-use std::any::Any;
 use std::collections::{HashSet, VecDeque};
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
@@ -1119,9 +1118,6 @@ enum EnemyPlayerState {
 }
 
 impl toybox_core::Simulation for Amidar {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn reset_seed(&mut self, seed: u32) {
         self.rand.reset_seed(seed)
     }
@@ -1171,9 +1167,6 @@ impl toybox_core::Simulation for Amidar {
 }
 
 impl toybox_core::State for State {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn lives(&self) -> i32 {
         // If everything is painted, game is over. Set lives to 0.
         if self.state.board.boxes.iter().all(|b: &GridBox| b.painted) {
@@ -1542,6 +1535,9 @@ mod tests {
     #[test]
     fn test_load_png() {
         let img = &images::PLAYER_L1;
+        assert!(img.width() > 0);
+        assert!(img.height() > 0);
+        assert!(img.find_visible_color().is_some());
     }
 
     #[test]

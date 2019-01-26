@@ -15,8 +15,6 @@ pub use input::Input;
 mod direction;
 pub use direction::Direction;
 
-use std::any::Any;
-
 extern crate rand_core;
 
 /// This enum defines failure conditions for a query_json call.
@@ -35,8 +33,6 @@ impl From<serde_json::Error> for QueryError {
 
 /// This trait models a single frame state for a Simulation.
 pub trait State {
-    /// For dynamic casts.
-    fn as_any(&self) -> &Any;
     /// When < 0, this state should be replaced with a call to new_game() on the simulation.
     fn lives(&self) -> i32;
     /// Get the score from the game, i32 allows for negative scores.
@@ -53,8 +49,6 @@ pub trait State {
 
 /// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.
 pub trait Simulation {
-    /// For dynamic casts.
-    fn as_any(&self) -> &Any;
     /// Seed simulation.
     fn reset_seed(&mut self, seed: u32);
 

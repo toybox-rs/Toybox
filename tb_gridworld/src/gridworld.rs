@@ -2,7 +2,6 @@ use toybox_core::graphics::{Color, Drawable};
 use toybox_core::{AleAction, Direction, Input, QueryError};
 
 use serde_json;
-use std::any::Any;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -164,9 +163,6 @@ impl State {
 }
 
 impl toybox_core::Simulation for GridWorld {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn reset_seed(&mut self, _seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
         self.game_size
@@ -205,9 +201,6 @@ impl toybox_core::Simulation for GridWorld {
 }
 
 impl toybox_core::State for State {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn lives(&self) -> i32 {
         if self.game_over {
             1
