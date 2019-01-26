@@ -236,21 +236,6 @@ _lib.simulator_to_json.restype = ctypes.c_void_p
 _lib.simulator_from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.simulator_from_json.restype = ctypes.POINTER(WrapSimulator)
 
-_lib.breakout_brick_live_by_index.argtypes = [ctypes.POINTER(WrapState), ctypes.c_size_t]
-_lib.breakout_brick_live_by_index.restype = ctypes.c_bool
-
-_lib.breakout_bricks_remaining.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_bricks_remaining.restype = ctypes.c_int32
-
-_lib.breakout_num_rows.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_num_rows.restype = ctypes.c_int32
-
-_lib.breakout_num_columns.argtypes = [ctypes.POINTER(WrapState)]
-_lib.breakout_num_columns.restype = ctypes.c_int32
-
-_lib.breakout_channels.argtypes = [ctypes.POINTER(WrapState), ctypes.c_void_p, ctypes.c_size_t]
-_lib.breakout_channels.restype = ctypes.c_ssize_t
-
 _lib.amidar_num_tiles_unpainted.argtypes = [ctypes.POINTER(WrapState)]
 _lib.amidar_num_tiles_unpainted.restype = ctypes.c_int32
 

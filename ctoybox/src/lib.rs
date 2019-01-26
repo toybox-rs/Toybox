@@ -23,8 +23,5 @@ pub struct WrapState {
 mod qamidar;
 pub use qamidar::*;
 
-mod qbreakout;
-pub use qbreakout::*;
-
 mod core;
 pub use core::*;

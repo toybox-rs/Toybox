@@ -91,102 +91,41 @@ mod amidar_q_tests {
 }
 
 #[cfg(feature = "breakout")]
-pub mod breakout {
-    use super::super::breakout::{screen, State};
-
-    pub fn brick_live_by_index(state: &State, brick_index: usize) -> bool {
-        return state.state.bricks[brick_index].alive;
-    }
-
-    pub fn bricks_remaining(state: &State) -> i32 {
-        state.state.bricks.iter().filter(|b| b.alive).count() as i32
-    }
-
-    /// Returns a set of numbers corresponding to the stacks that are channels.
-    pub fn channels(state: &State) -> Vec<i32> {
-        let across = screen::BRICKS_ACROSS as i32;
-        let down = screen::ROW_SCORES.len() as i32;
-        let bricks = &state.state.bricks;
-        let mut retval = Vec::new();
-
-        for offset in 0..across {
-            let all_dead = (0..down)
-                .map(|row| {
-                    let i = row + offset * down;
-                    !bricks[i as usize].alive
-                })
-                .all(|c| c);
-            if all_dead {
-                retval.push(offset);
-                assert!(retval.len() <= (across as usize));
-            }
-        }
-        assert!(retval.len() <= (across as usize));
-        retval
-    }
-
-    /// TODO: this will someday be derived from state.config
-    pub fn num_columns(_state: &State) -> i32 {
-        screen::BRICKS_ACROSS as i32
-    }
-
-    /// TODO: this will someday be derived from state.config
-    pub fn num_rows(_state: &State) -> i32 {
-        screen::ROW_SCORES.len() as i32
-    }
-}
-
-#[cfg(feature = "breakout")]
 #[cfg(test)]
 mod breakout_q_tests {
     use super::super::breakout;
-    use super::breakout as q;
     use toybox_core::Simulation;
 
     #[test]
     fn test_q_breakout_bricks_remaining() {
         let mut breakout = breakout::Breakout::default();
         let state = breakout.new_game();
-        let state: &breakout::State = state.as_any().downcast_ref().unwrap();
+        let bricks_remaining = state
+            .query_json("bricks_remaining", &serde_json::Value::Null)
+            .unwrap()
+            .parse::<u32>()
+            .unwrap();
+        let num_columns = state
+            .query_json("num_columns", &serde_json::Value::Null)
+            .unwrap()
+            .parse::<u32>()
+            .unwrap();
+        let num_rows = state
+            .query_json("num_rows", &serde_json::Value::Null)
+            .unwrap()
+            .parse::<u32>()
+            .unwrap();
 
-        assert_eq!(
-            q::bricks_remaining(state),
-            q::num_columns(state) * q::num_rows(state)
-        );
+        assert_eq!(bricks_remaining, num_columns * num_rows);
     }
 
     #[test]
     fn test_q_breakout_channels() {
         let mut breakout = breakout::Breakout::default();
         let state = breakout.new_game();
-        let state: &breakout::State = state.as_any().downcast_ref().unwrap();
 
-        let empty = q::channels(state);
-        let expected: Vec<i32> = Vec::new();
-        assert_eq!(empty, expected);
-    }
-
-    #[test]
-    fn test_breakout_channel_layout_assumptions() {
-        let mut breakout = breakout::Breakout::default();
-        let state = breakout.new_game();
-        let state: &breakout::State = state.as_any().downcast_ref().unwrap();
-
-        let across = q::num_columns(state);
-        let down = q::num_rows(state);
-
-        let bricks = &state.state.bricks;
-        for offset in 0..across {
-            let xs: Vec<_> = (0..down)
-                .map(|row| {
-                    let i = row + offset * down;
-                    bricks[i as usize].position.x as i32
-                })
-                .collect();
-            for i in (1..down) {
-                assert_eq!(xs[(i - 1) as usize], xs[i as usize]);
-            }
-        }
+        let empty = state.query_json("channels", &serde_json::Value::Null).unwrap();
+        assert_eq!(empty, "[]");
     }
 
 }
