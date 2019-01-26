@@ -1428,9 +1428,59 @@ impl toybox_core::State for State {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn query_json(&self, _query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
-        // TODO
-        Err(QueryError::NoSuchQuery)
+    fn query_json(&self, query: &str, args: &serde_json::Value) -> Result<String, QueryError> {
+        let state = &self.state;
+        Ok(match query {
+            "num_tiles_unpainted" => {
+                let mut sum = 0;
+                for row in state.board.tiles.iter() {
+                    sum += row
+                        .iter()
+                        .filter(|t| t.walkable() && t.needs_paint())
+                        .count();
+                }
+                serde_json::to_string(&sum)?
+            }
+            "regular_mode" => {
+                serde_json::to_string(&(state.chase_timer == 0 && state.jump_timer == 0))?
+            }
+            "jump_mode" => serde_json::to_string(&(state.jump_timer > 0))?,
+            "chase_mode" => serde_json::to_string(&(state.chase_timer > 0))?,
+            "jumps_remaining" => serde_json::to_string(&(state.jumps > 0))?,
+            "num_enemies" => serde_json::to_string(&state.enemies.len())?,
+            "enemy_tiles" => {
+                let positions: Vec<(i32, i32)> = state
+                    .enemies
+                    .iter()
+                    .map(|e| {
+                        let tile = e.position.to_tile();
+                        (tile.tx, tile.ty)
+                    })
+                    .collect();
+                serde_json::to_string(&positions)?
+            }
+            "enemy_tile" => {
+                if let Some(index) = args.as_u64() {
+                    let tile = state.enemies[index as usize].position.to_tile();
+                    serde_json::to_string(&(tile.tx, tile.ty))?
+                } else {
+                    Err(QueryError::BadInputArg)?
+                }
+            }
+            "enemy_caught" => {
+                if let Some(index) = args.as_u64() {
+                    let status = state.enemies[index as usize].caught;
+                    serde_json::to_string(&status)?
+                } else {
+                    Err(QueryError::BadInputArg)?
+                }
+            }
+            "player_tile" => {
+                let tile = state.player.position.to_tile();
+                serde_json::to_string(&(tile.tx, tile.ty))?
+            }
+            _ => Err(QueryError::NoSuchQuery)?,
+        })
     }
 }
 

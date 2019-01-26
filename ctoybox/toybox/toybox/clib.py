@@ -235,36 +235,3 @@ _lib.simulator_to_json.restype = ctypes.c_void_p
 
 _lib.simulator_from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.simulator_from_json.restype = ctypes.POINTER(WrapSimulator)
-
-_lib.amidar_num_tiles_unpainted.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_num_tiles_unpainted.restype = ctypes.c_int32
-
-_lib.amidar_num_enemies.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_num_enemies.restype = ctypes.c_int32
-
-_lib.amidar_jumps_remaining.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_jumps_remaining.restype = ctypes.c_int32
-
-_lib.amidar_regular_mode.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_regular_mode.restype = ctypes.c_bool
-
-_lib.amidar_chase_mode.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_chase_mode.restype = ctypes.c_bool
-
-_lib.amidar_jump_mode.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_jump_mode.restype = ctypes.c_bool
-
-_lib.amidar_player_tile_x.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_player_tile_x.restype = ctypes.c_int32
-
-_lib.amidar_player_tile_y.argtypes = [ctypes.POINTER(WrapState)]
-_lib.amidar_player_tile_y.restype = ctypes.c_int32
-
-_lib.amidar_enemy_tile_x.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
-_lib.amidar_enemy_tile_x.restype = ctypes.c_int32
-
-_lib.amidar_enemy_tile_y.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
-_lib.amidar_enemy_tile_y.restype = ctypes.c_int32
-
-_lib.amidar_enemy_caught.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
-_lib.amidar_enemy_caught.restype = ctypes.c_bool

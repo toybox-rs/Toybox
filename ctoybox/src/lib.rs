@@ -20,8 +20,5 @@ pub struct WrapState {
     pub state: Box<toybox_core::State>,
 }
 
-mod qamidar;
-pub use qamidar::*;
-
 mod core;
 pub use core::*;

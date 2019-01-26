@@ -705,7 +705,7 @@ impl toybox_core::State for State {
             "channels" => serde_json::to_string(&state.find_channels())?,
             "num_columns" => serde_json::to_string(&screen::BRICKS_ACROSS)?,
             "num_rows" => serde_json::to_string(&screen::ROW_SCORES.len())?,
-            _ => Err(QueryError::BadInputArg)?,
+            _ => Err(QueryError::NoSuchQuery)?,
         })
     }
 }
