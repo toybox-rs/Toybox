@@ -416,14 +416,13 @@ impl MovementAI {
                             return maybe_horiz;
                         }
                     }
-                    return maybe_vert;
-                }
-                if maybe_horiz.is_some() {
-                    return maybe_horiz;
+                    maybe_vert
+                } else if maybe_horiz.is_some() {
+                    maybe_horiz
                 } else {
                     // Flip horiz
                     *horiz = horiz.opposite();
-                    return board.can_move(position, *horiz);
+                    board.can_move(position, *horiz)
                 }
             }
             &mut MovementAI::EnemyRandomMvmt { ref mut dir, .. } => {
@@ -1153,7 +1152,7 @@ impl toybox_core::Simulation for Amidar {
         let state: StateCore = serde_json::from_str(json_str)?;
         Ok(Box::new(State {
             config: self.clone(),
-            state: state,
+            state,
         }))
     }
 

@@ -222,7 +222,7 @@ impl toybox_core::State for State {
             let dest = (px + dx, py + dy);
 
             if self.walkable(dest.0, dest.1) {
-                self.player = dest.clone();
+                self.player = dest;
                 self.collect_reward(dest.0, dest.1);
             }
         }

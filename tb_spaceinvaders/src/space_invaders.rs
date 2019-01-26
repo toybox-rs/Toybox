@@ -303,7 +303,7 @@ impl Default for SpaceInvaders {
     fn default() -> Self {
         SpaceInvaders {
             rand: random::Gen::new_from_seed(17),
-            row_scores: screen::ENEMY_POINTS.iter().cloned().collect(),
+            row_scores: screen::ENEMY_POINTS.to_vec(),
             start_lives: screen::START_LIVES,
             enemy_protocol: FiringAI::TargetPlayer,
             jitter: 0.5,
@@ -519,7 +519,7 @@ impl Enemy {
             };
             self.orientation_init = !self.orientation_init;
             for (num_dead, speedup) in screen::ENEMY_SPEEDUPS {
-                if &num_killed >= num_dead {
+                if num_killed >= num_dead {
                     self.move_counter = *speedup;
                 }
             }

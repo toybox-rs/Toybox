@@ -129,7 +129,7 @@ impl Default for Breakout {
                 .cloned()
                 .map(|c| c.into())
                 .collect(),
-            row_scores: screen::ROW_SCORES.iter().cloned().collect(),
+            row_scores: screen::ROW_SCORES.to_vec(),
             start_lives: 5,
             ball_speed_row_depth: 3, // orange is 0..1..2..3
             ball_speed_slow: 2.0,
@@ -275,7 +275,7 @@ impl toybox_core::Simulation for Breakout {
                     bpos,
                     bsize.clone(),
                     score,
-                    color_tuple.into(),
+                    color_tuple,
                     depth as u32,
                 ));
             }
