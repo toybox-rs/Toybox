@@ -1,12 +1,18 @@
 use super::WrapSimulator;
 use super::WrapState;
 use libc::c_char;
+use serde_json;
 use std::boxed::Box;
 use std::ffi::{CStr, CString};
 use std::mem;
 use toybox;
 use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox_core::{AleAction, Input, State};
+
+#[no_mangle]
+pub extern "C" fn free_str(originally_from_rust: *mut c_char) {
+    let _will_drop: CString = unsafe { CString::from_raw(originally_from_rust) };
+}
 
 #[no_mangle]
 pub extern "C" fn simulator_alloc(name: *const c_char) -> *mut WrapSimulator {
@@ -89,16 +95,33 @@ pub extern "C" fn state_free(ptr: *mut WrapState) {
 
 /// Hopefully the last "query" cbinding we need to write.
 #[no_mangle]
-pub extern "C" fn state_query_json(ptr: *mut WrapState, query_str: *const c_char) -> *const c_char {
-    let query_str: &CStr = unsafe { CStr::from_ptr(query_str) };
-    let query_str: &str = query_str
-        .to_str()
-        .expect("Could not convert your query string to UTF-8!");
+pub extern "C" fn state_query_json(
+    ptr: *mut WrapState,
+    query_str: *const c_char,
+    args_json_str: *const c_char,
+) -> *const c_char {
+    // Validate state pointer.
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
     };
-    let json_str = state.query_json(query_str);
+    // Validate query string pointer.
+    let query_str: &CStr = unsafe { CStr::from_ptr(query_str) };
+    let query_str: &str = query_str
+        .to_str()
+        .expect("Could not convert your query string to UTF-8!");
+    // Validate args json string pointer.
+    let args_str: &CStr = unsafe { CStr::from_ptr(args_json_str) };
+    let args_str: &str = args_str
+        .to_str()
+        .expect("Could not convert your args json string to UTF-8!");
+    let args: serde_json::Value =
+        serde_json::from_str(args_str).expect("Could not convert your args string to JSON!");
+
+    let json_str = match state.query_json(query_str, &args) {
+        Ok(s) => s,
+        Err(qe) => format!("{:?}", qe),
+    };
     let cjson: CString = CString::new(json_str).expect("Conversion to CString should succeed!");
     CString::into_raw(cjson)
 }

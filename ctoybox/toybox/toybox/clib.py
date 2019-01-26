@@ -200,8 +200,11 @@ _lib.simulator_is_legal_action.restype = ctypes.c_bool
 _lib.state_alloc.argtypes = [ctypes.POINTER(WrapSimulator)]
 _lib.state_alloc.restype = ctypes.POINTER(WrapState)
 
-_lib.state_query_json.argtypes = [ctypes.POINTER(WrapState), ctypes.c_char_p]
-_lib.state_query_json.restype = ctypes.c_char_p
+_lib.free_str.argtypes = [ctypes.c_void_p]
+_lib.free_str.restype = None
+
+_lib.state_query_json.argtypes = [ctypes.POINTER(WrapState), ctypes.c_char_p, ctypes.c_char_p]
+_lib.state_query_json.restype = ctypes.c_void_p
 
 _lib.state_apply_ale_action.argtypes = [ctypes.POINTER(WrapState), ctypes.c_int32]
 _lib.state_apply_ale_action.restype = ctypes.c_bool
@@ -222,13 +225,13 @@ _lib.render_current_frame.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c
  #(frame_ptr, size, sim.get_simulator(), self.__state)
 
 _lib.state_to_json.argtypes = [ctypes.POINTER(WrapState)]
-_lib.state_to_json.restype = ctypes.c_char_p
+_lib.state_to_json.restype = ctypes.c_void_p
 
 _lib.state_from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.state_from_json.restype = ctypes.POINTER(WrapState)
 
 _lib.simulator_to_json.argtypes = [ctypes.POINTER(WrapSimulator)]
-_lib.simulator_to_json.restype = ctypes.c_char_p
+_lib.simulator_to_json.restype = ctypes.c_void_p
 
 _lib.simulator_from_json.argtypes = [ctypes.POINTER(WrapSimulator), ctypes.c_char_p]
 _lib.simulator_from_json.restype = ctypes.POINTER(WrapSimulator)

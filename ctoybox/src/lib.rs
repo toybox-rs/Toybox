@@ -3,6 +3,8 @@
 extern crate amidar;
 extern crate breakout;
 extern crate libc;
+extern crate serde;
+extern crate serde_json;
 extern crate toybox;
 extern crate toybox_core;
 

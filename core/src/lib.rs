@@ -19,6 +19,20 @@ use std::any::Any;
 
 extern crate rand_core;
 
+/// This enum defines failure conditions for a query_json call.
+#[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+pub enum QueryError {
+    NoSuchQuery,
+    BadInputArg,
+    InternalSerializationError(String),
+}
+
+impl From<serde_json::Error> for QueryError {
+    fn from(e: serde_json::Error) -> QueryError {
+        QueryError::InternalSerializationError(format!("{}", e))
+    }
+}
+
 /// This trait models a single frame state for a Simulation.
 pub trait State {
     /// For dynamic casts.
@@ -33,8 +47,8 @@ pub trait State {
     fn draw(&self) -> Vec<graphics::Drawable>;
     /// Any state can serialize to JSON String.
     fn to_json(&self) -> String;
-    /// Submit a query to this state object, returning a JSON String.
-    fn query_json(&self, query: &str) -> String;
+    /// Submit a query to this state object, returning a JSON String or error message.
+    fn query_json(&self, query: &str, args: &serde_json::Value) -> Result<String, QueryError>;
 }
 
 /// This trait models a simulation or game. It knows how to start a new game, and to declare its size before any gameplay starts.

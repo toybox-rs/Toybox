@@ -5,7 +5,7 @@ use std::collections::{HashSet, VecDeque};
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
 use toybox_core::random;
-use toybox_core::{AleAction, Direction, Input};
+use toybox_core::{AleAction, Direction, Input, QueryError};
 
 use rand::seq::SliceRandom;
 
@@ -1428,9 +1428,9 @@ impl toybox_core::State for State {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn query_json(&self, _query: &str) -> String {
+    fn query_json(&self, _query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
         // TODO
-        "".to_owned()
+        Err(QueryError::NoSuchQuery)
     }
 }
 

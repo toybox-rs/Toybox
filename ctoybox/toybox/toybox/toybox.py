@@ -9,6 +9,12 @@ import json
 
 from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
 
+def rust_str(result):
+    txt = ctypes.cast(result, ctypes.c_char_p).value.decode('UTF-8')
+    _lib.free_str(result)
+    return txt
+
+
 def json_str(js):
     if type(js) is dict:
         js = json.dumps(js)
@@ -60,7 +66,7 @@ class Simulator(object):
         return State(self, state=state)
 
     def to_json(self):
-        json_str = _lib.simulator_to_json(self.get_simulator()).decode('utf-8')
+        json_str = rust_str(_lib.simulator_to_json(self.get_simulator()))
         return json.loads(str(json_str))
 
     def from_json(self, config_js):
@@ -88,6 +94,7 @@ class State(object):
         self.__del__()
 
     def get_state(self):
+        assert(self.__state is not None)
         return self.__state
     
     def lives(self):
@@ -99,9 +106,13 @@ class State(object):
     def game_over(self):
         return self.lives() == 0
 
-    def query_json(self, query):
-        result = _lib.state_query_json(self.__state, json_str(query).encode('utf-8'))
-        return json.loads(result.decode('utf-8'))
+    def query_json(self, query, args):
+        txt = rust_str(_lib.state_query_json(self.__state, json_str(query).encode('utf-8'), json_str(args).encode('utf-8')))
+        try:
+            out = json.loads(txt)
+        except:
+            raise ValueError(txt)
+        return out
 
     def breakout_brick_live_by_index(self, index):
         assert(self.game_name == 'breakout')
@@ -210,7 +221,7 @@ class State(object):
         return np.reshape(frame, (h,w,1))
 
     def to_json(self):
-        json_str = _lib.state_to_json(self.__state).decode('utf-8')
+        json_str = rust_str(_lib.state_to_json(self.__state))
         return json.loads(str(json_str))
 
 class Toybox(object):
@@ -218,9 +229,10 @@ class Toybox(object):
         self.game_name = game_name
         self.frames_per_action = frameskip+1
         self.rsimulator = Simulator(game_name)
-        self.rstate = State(self.rsimulator)
+        self.rstate = self.rsimulator.new_game()
         self.grayscale = grayscale
         self.deleted = False
+        self.new_game()
 
     def new_game(self):
         old_state = self.rstate
@@ -293,8 +305,8 @@ class Toybox(object):
         # new_game replaces state!
         self.new_game()
 
-    def query_state_json(self, query): 
-        return self.rstate.query_json(query)
+    def query_state_json(self, query, args="null"): 
+        return self.rstate.query_json(query, args)
 
     def __del__(self):
         if not self.deleted:

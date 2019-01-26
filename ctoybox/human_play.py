@@ -12,6 +12,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='human_play for toybox')
     parser.add_argument('game', type=str, help='try one of amidar, breakout, space_invaders')
     parser.add_argument('--scale', type=int, default=2)
+    parser.add_argument('--query', type=str, default=None)
+    parser.add_argument('--query_args', type=str, default="null")
 
     args = parser.parse_args()
     print('Starting up: '+args.game)
@@ -20,6 +22,11 @@ if __name__ == '__main__':
     with Toybox(args.game) as tb:
         w = tb.get_width()
         h = tb.get_height()
+
+        config_json = tb.config_to_json()
+        print(config_json)
+        state_json = tb.to_state_json()
+        print(state_json)
 
         dim = (w*args.scale,h*args.scale)
 
@@ -46,8 +53,8 @@ if __name__ == '__main__':
             player_input.button2 = key_state[K_x] or key_state[K_RSHIFT] or key_state[K_LSHIFT]
 
             tb.apply_action(player_input)
-            if args.game == 'space_invaders':
-                print("ship_x", tb.query_state_json('ship_x'))
+            if args.query is not None:
+                print(args.query, tb.query_state_json(args.query, args.query_args))
             image = tb.get_rgb_frame()
             screen = pygame.display.get_surface()
             img = pygame.surfarray.make_surface(np.swapaxes(image,0,1))

@@ -5,7 +5,7 @@ use ordered_float::NotNan;
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable};
 use toybox_core::random;
-use toybox_core::{AleAction, Input};
+use toybox_core::{AleAction, Input, QueryError};
 
 use serde_json;
 use std::any::Any;
@@ -688,18 +688,24 @@ impl toybox_core::State for State {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn query_json(&self, query: &str) -> String {
+    fn query_json(&self, query: &str, args: &serde_json::Value) -> Result<String, QueryError> {
         let state = &self.state;
-        match query {
+        Ok(match query {
             "bricks_remaining" => {
-                serde_json::to_string(&state.bricks.iter().filter(|b| !b.completed()).count())
+                serde_json::to_string(&state.bricks.iter().filter(|b| !b.completed()).count())?
             }
-            "count_channels" | "channels" => serde_json::to_string(&state.count_channels()),
-            "num_columns" => serde_json::to_string(&screen::BRICKS_ACROSS),
-            "num_rows" => serde_json::to_string(&screen::ROW_SCORES.len()),
-            _ => Ok("{}".to_owned()),
-        }
-        .unwrap()
+            "brick_live_by_index" => {
+                if let Some(index) = args.as_u64() {
+                    serde_json::to_string(&!state.bricks[index as usize].completed())?
+                } else {
+                    Err(QueryError::BadInputArg)?
+                }
+            }
+            "count_channels" | "channels" => serde_json::to_string(&state.count_channels())?,
+            "num_columns" => serde_json::to_string(&screen::BRICKS_ACROSS)?,
+            "num_rows" => serde_json::to_string(&screen::ROW_SCORES.len())?,
+            _ => Err(QueryError::BadInputArg)?,
+        })
     }
 }
 

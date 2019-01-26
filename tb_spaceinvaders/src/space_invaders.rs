@@ -8,7 +8,7 @@ use std::cmp::{max, min};
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::random;
-use toybox_core::{AleAction, Direction, Input};
+use toybox_core::{AleAction, Direction, Input, QueryError};
 
 pub mod screen {
     pub const GAME_SIZE: (i32, i32) = (320, 210);
@@ -1154,17 +1154,16 @@ impl toybox_core::State for State {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn query_json(&self, query: &str) -> String {
+    fn query_json(&self, query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
         let _config = &self.config;
         let state = &self.state;
-        match query {
-            "ship_xy" => serde_json::to_string(&(state.ship.x, state.ship.y)),
-            "ship_x" => serde_json::to_string(&state.ship.x),
-            "shield_count" => serde_json::to_string(&state.shields.len()),
-            "shields" => serde_json::to_string(&state.shields),
-            _ => Ok("{}".to_owned()),
-        }
-        .expect("No JSON serialization errors in query.")
+        Ok(match query {
+            "ship_xy" => serde_json::to_string(&(state.ship.x, state.ship.y))?,
+            "ship_x" => serde_json::to_string(&state.ship.x)?,
+            "shield_count" => serde_json::to_string(&state.shields.len())?,
+            "shields" => serde_json::to_string(&state.shields)?,
+            _ => Err(QueryError::NoSuchQuery)?,
+        })
     }
 }
 

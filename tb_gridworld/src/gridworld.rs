@@ -1,5 +1,5 @@
 use toybox_core::graphics::{Color, Drawable};
-use toybox_core::{AleAction, Direction, Input};
+use toybox_core::{AleAction, Direction, Input, QueryError};
 
 use serde_json;
 use std::any::Any;
@@ -258,8 +258,7 @@ impl toybox_core::State for State {
         serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn query_json(&self, _query: &str) -> String {
-        // TODO
-        "".to_owned()
+    fn query_json(&self, _query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
+        Err(QueryError::NoSuchQuery)
     }
 }
