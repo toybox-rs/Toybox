@@ -519,7 +519,7 @@ impl Enemy {
             };
             self.orientation_init = !self.orientation_init;
             for (num_dead, speedup) in screen::ENEMY_SPEEDUPS {
-                if num_killed >= num_dead {
+                if num_killed >= *num_dead {
                     self.move_counter = *speedup;
                 }
             }
