@@ -25,6 +25,9 @@ for game in ['amidar', 'breakout', 'space_invaders']:
         state = tb.state_to_json()
         print(state)
 
+        actions = tb.get_legal_action_set()
+        print("legal_actions", actions)
+
         # setting a seed should work.
         tb.set_seed(1234)
 

@@ -47,6 +47,7 @@ def main(args):
   if args.game not in all_games:
     starts_with = [g for g in all_games if g.startswith(args.game[0])]
     print('%s not found; did you mean:\n%s' % (args.game, '\t'.join(starts_with)))
+    print(all_games)
     exit(0)
 
   actions = None
@@ -89,6 +90,6 @@ if __name__ == '__main__':
     type=bool,
     default=False
   )
-  
+
   args = parser.parse_args()
   main(args)

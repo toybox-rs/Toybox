@@ -71,6 +71,22 @@ pub extern "C" fn simulator_is_legal_action(ptr: *mut WrapSimulator, action: i32
     }
 }
 
+#[no_mangle]
+pub extern "C" fn simulator_actions(ptr: *mut WrapSimulator) -> *const c_char {
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let actions: Vec<i32> = simulator
+        .legal_action_set()
+        .into_iter()
+        .map(|a| a.to_int())
+        .collect();
+    let actions = serde_json::to_string(&actions).expect("Vector to JSON should be OK.");
+    let cjson: CString = CString::new(actions).expect("Conversion to CString should succeed!");
+    CString::into_raw(cjson)
+}
+
 // STATE ALLOC + FREE
 #[no_mangle]
 pub extern "C" fn state_alloc(ptr: *mut WrapSimulator) -> *mut WrapState {

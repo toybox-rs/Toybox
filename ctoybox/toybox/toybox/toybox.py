@@ -234,10 +234,13 @@ class Toybox(object):
         return self.rsimulator.get_frame_width()
 
     def get_legal_action_set(self):
-        MAX_ALE_ACTION = 17
-        # TODO, not hardcode 18?
         sim = self.rsimulator.get_simulator()
-        return [x for x in range(MAX_ALE_ACTION+1) if _lib.simulator_is_legal_action(sim, x)]
+        txt = rust_str(_lib.simulator_actions(sim))
+        try:
+            out = json.loads(txt)
+        except:
+            raise ValueError(txt)
+        return out
 
     def apply_ale_action(self, action_int):      
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
@@ -316,4 +319,5 @@ class Toybox(object):
 
 if __name__ == "__main__":
     with Toybox('amidar') as tb:
-        print(tb.to_json())
+        print(tb.config_to_json())
+        print(tb.state_to_json())
