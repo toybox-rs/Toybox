@@ -1,9 +1,6 @@
 sudo: required
-
 language: rust
-
-dist:
-  - "xenial"
+dist: xenial
 
 rust:
   - 1.31.0
