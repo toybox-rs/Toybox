@@ -12,6 +12,6 @@ if [ ! -e toybox-regress-models.zip ]; then
 fi
 
 # required for gym env registration
-pip3 install gym pillow
+pip3 install gym==0.10.5 atari_py pillow tensorflow opencv-python joblib mpi4py
 cd ctoybox && (./start_python test_games.py && ./regress.sh)
 
