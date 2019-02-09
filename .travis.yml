@@ -2,8 +2,8 @@ sudo: required
 
 language: rust
 
-python:
-  - "3.5"
+dist:
+  - "xenial"
 
 rust:
   - 1.31.0
