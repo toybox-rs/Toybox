@@ -2,6 +2,8 @@
 
 set -eu
 
+pip3 install --user gym==0.10.5 atari_py pillow tensorflow opencv-python joblib mpi4py
+
 cargo fmt --all -- --check
 cargo test
 cargo build --release
@@ -12,6 +14,5 @@ if [ ! -e toybox-regress-models.zip ]; then
 fi
 
 # required for gym env registration
-pip3 install gym==0.10.5 atari_py pillow tensorflow opencv-python joblib mpi4py
 cd ctoybox && (./start_python test_games.py && ./regress.sh)
 
