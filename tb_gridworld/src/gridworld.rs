@@ -168,7 +168,6 @@ impl toybox_core::Simulation for GridWorld {
         self.game_size
     }
 
-
     fn legal_action_set(&self) -> Vec<AleAction> {
         let mut actions = vec![
             AleAction::NOOP,
