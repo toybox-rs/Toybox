@@ -104,7 +104,7 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         assert(type(self._action_set)== list)
     
         clz = self.__class__.__name__
-        if clz == 'AmidarEnv' or cls == 'SpaceInvadersEnv':
+        if clz == 'AmidarEnv' or clz == 'SpaceInvadersEnv':
             ### See Github issue: jjfiv/toybox #72
             ### Code should be the same as the else case.
             self.toybox.apply_ale_action(action_index)
