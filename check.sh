@@ -2,8 +2,6 @@
 
 set -eu
 
-pip3 install --user gym==0.10.5 atari_py pillow tensorflow opencv-python joblib mpi4py
-
 cargo fmt --all -- --check
 cargo test
 cargo build --release
