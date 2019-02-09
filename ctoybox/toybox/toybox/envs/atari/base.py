@@ -43,7 +43,10 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.np_random = np_random
         self.ale = MockALE(toybox)
         utils.EzPickle.__init__(self, game, 'human', frameskip, repeat_action_probability)
-
+        
+        # By default, we don't need actions passed in:
+        if actions is None:
+            actions = toybox.get_legal_action_set()
         assert(actions is not None)
         self._action_set = actions
         self._obs_type = 'image'
@@ -61,10 +64,6 @@ class ToyboxBaseEnv(AtariEnv, ABC):
             high=self._pixel_high, 
             shape=self._dim, 
             dtype='uint8')
-    
-    @abstractmethod
-    def _action_to_input(self, action):
-        raise NotImplementedError
     
     def seed(self, seed=None):
         """
@@ -101,18 +100,16 @@ class ToyboxBaseEnv(AtariEnv, ABC):
     
         # Sometimes the action_index is a numpy integer...
         #print('Action index and type', action_index, type(action_index))
-        #assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
         assert(type(self._action_set)== list)
     
-        # Convert the input action (string or int) into the ctypes struct.
         clz = self.__class__.__name__
-        if clz == 'BreakoutEnv':
-            action = self._action_to_input(
-                self._action_set[int(action_index)])
-            self.toybox.apply_action(action)
+        if clz == 'AmidarEnv' or cls == 'SpaceInvadersEnv':
+            ### See Github issue: jjfiv/toybox #72
+            ### Code should be the same as the else case.
+            self.toybox.apply_ale_action(action_index)
         else:
-            self.toybox.apply_ale_action(action_index)    
+            self.toybox.apply_ale_action(self._action_set[action_index])
         obs = self._get_obs()
         
         

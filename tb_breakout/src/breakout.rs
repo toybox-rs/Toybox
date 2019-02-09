@@ -240,13 +240,16 @@ impl toybox_core::Simulation for Breakout {
     }
 
     /// Sync with [ALE Impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/Breakout.cpp#L80)
+    /// Note, leaving a call to sort in this impl to remind users that these vecs are ordered!
     fn legal_action_set(&self) -> Vec<AleAction> {
-        vec![
+        let mut actions = vec![
             AleAction::NOOP,
             AleAction::FIRE,
             AleAction::LEFT,
             AleAction::RIGHT,
-        ]
+        ];
+        actions.sort();
+        actions
     }
 
     /// Create a new game of breakout.

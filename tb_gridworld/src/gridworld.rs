@@ -168,14 +168,17 @@ impl toybox_core::Simulation for GridWorld {
         self.game_size
     }
 
+
     fn legal_action_set(&self) -> Vec<AleAction> {
-        vec![
+        let mut actions = vec![
             AleAction::NOOP,
             AleAction::LEFT,
             AleAction::RIGHT,
             AleAction::UP,
             AleAction::DOWN,
-        ]
+        ];
+        actions.sort();
+        actions
     }
 
     fn new_game(&mut self) -> Box<toybox_core::State> {

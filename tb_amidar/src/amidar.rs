@@ -1130,8 +1130,9 @@ impl toybox_core::Simulation for Amidar {
         serde_json::to_string(self).expect("Amidar should be JSON serializable!")
     }
     /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/Amidar.cpp#L80)
+    /// Note, leaving a call to sort in this impl to remind users that these vecs are ordered!
     fn legal_action_set(&self) -> Vec<AleAction> {
-        vec![
+        let mut actions = vec![
             AleAction::NOOP,
             AleAction::FIRE,
             AleAction::UP,
@@ -1142,7 +1143,9 @@ impl toybox_core::Simulation for Amidar {
             AleAction::RIGHTFIRE,
             AleAction::LEFTFIRE,
             AleAction::DOWNFIRE,
-        ]
+        ];
+        actions.sort();
+        actions
     }
 
     fn new_state_from_json(

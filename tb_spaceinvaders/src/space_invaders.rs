@@ -910,15 +910,18 @@ impl toybox_core::Simulation for SpaceInvaders {
         })
     }
     /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/SpaceInvaders.cpp#L85)
+    /// Note, leaving a call to sort in this impl to remind users that these vecs are ordered!
     fn legal_action_set(&self) -> Vec<AleAction> {
-        vec![
+        let mut actions = vec![
             AleAction::NOOP,
             AleAction::RIGHT,
             AleAction::RIGHTFIRE,
             AleAction::FIRE,
             AleAction::LEFT,
             AleAction::LEFTFIRE,
-        ]
+        ];
+        actions.sort();
+        actions
     }
     fn new_state_from_json(
         &self,
