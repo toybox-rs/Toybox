@@ -11,6 +11,7 @@ platform = platform.system()
 lib_env_var = 'LIBCTOYBOX'
 lib_dylib = 'libctoybox.dylib'
 lib_so = 'libctoybox.so'
+lib_dll = 'ctoybox.dll'
 
 
 if platform == 'Darwin':
@@ -35,6 +36,11 @@ if platform == 'Darwin':
 
 elif platform == 'Linux':
     _lib_path = lib_so
+
+elif platform == 'Windows':
+    _lib_prefix = os.environ[lib_env_var] if lib_env_var in os.environ else '..'
+    _lib_path_release = os.path.sep.join([_lib_prefix, 'target', 'release', lib_dll])
+    _lib_path = _lib_path_release
     
 else:
     raise Exception('Unsupported platform: %s' % platform)
