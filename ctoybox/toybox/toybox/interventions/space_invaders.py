@@ -1,4 +1,6 @@
-# Define a custom intervention on the space invaders' targeting.
+from .base import Interventions
 
-def customEnemyMovemetn():
+class SpaceInvadersInterventions(Interventions):
+
+  # define interventions here
   pass
