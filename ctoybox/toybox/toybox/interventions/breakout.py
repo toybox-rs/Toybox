@@ -1,81 +1,60 @@
 """An API for interventions on breakout."""
 
-class BreakoutInterventions(Interventions):
+class BreakoutInterventions(Intervention):
 
     def breakout_brick_live_by_index(self, index):
-        assert(self.game_name == 'breakout')
-        return self.query_json('brick_live_by_index', json.dumps(index))
+        return self.tb.rstate.query_json('brick_live_by_index', json.dumps(index))
 
     def breakout_bricks_remaining(self):
-        assert(self.game_name == 'breakout')
-        return self.query_json('bricks_remaining')
+        return self.tb.rstate.query_json('bricks_remaining')
     
     def breakout_channel_count(self):
-        assert(self.game_name == 'breakout')
-        return self.query_json('count_channels')
+        return self.tb.rstate.query_json('count_channels')
     
     def breakout_num_columns(self):
-        assert(self.game_name == 'breakout')
-        return self.query_json('num_columns')
+        return self.tb.rstate.query_json('num_columns')
 
     def breakout_num_rows(self):
-        assert(self.game_name == 'breakout')
-        return self.query_json('num_rows')
+        return self.tb.rstate.query_json('num_rows')
 
     def breakout_channels(self):
-        assert(self.game_name == 'breakout')
-        return self.query_json('channels')
+        return self.tb.rstate.query_json('channels')
 
 
-    @checktoybox
-    def get_bricks():
-        return _toybox_json['bricks']      
+    def get_bricks(self):
+        return self.state['bricks']
 
 
-    @checktoybox
-    def get_brick(i):
-        return _toybox_json['bricks'][i]
+    def brick_alive(self, i):
+        return self.state['bricks'][i]
 
 
-    @checktoybox
-    def num_bricks():
-        assert(_toybox_json)
-        return len(_toybox_json['bricks'])
+    def num_bricks(self):
+        return len(self.state['bricks'])
 
 
-    @checktoybox
-    def remove_brick(index):
-        assert(_toybox_json)
-        _toybox_json['bricks'][index]['alive'] = False
+    def set_brick(self, index, alive=True):
+        self.state['bricks'][index]['alive'] = alive
 
 
-    @checktoybox
-    def add_brick(index):
-        _toybox_json['bricks'][index]['alive'] = True
-
-
-    @checktoybox
-    def find_brick(pred):
-        for i, b in enumerate(_toybox_json['bricks']):
+    def find_brick(self, pred):
+        for i, b in enumerate(self.state['bricks']):
             if pred(b):
                 return i, b
         raise ValueError('No bricks that satisfy the input predicate found.')
 
 
-    @checktoybox
-    def num_rows():
-        return len(_toybox_json['config']['row_scores'])
+    def num_rows(self):
+        return len(self.config['row_scores'])
 
 
-    @checktoybox
-    def num_columns():
+    def num_columns(self):
         rows = num_rows(_toybox)
         bricks = num_bricks(_toybox)
         return bricks // rows
 
 
-    @checktoybox
-    def get_stacks():
+    def get_stacks(self):
         """Returns a list of lists. Each element returned is a list of indices, corresponding to a potential channel."""
         ncols = num_columns(_toybox)
         nrows = num_rows(_toybox)
@@ -89,14 +68,12 @@ class BreakoutInterventions(Interventions):
 
 
 
-    @checktoybox
-    def is_channel(intlist):
+    def is_channel(self, intlist):
         bricks = get_bricks(_toybox)
         return is_stack(intlist) and all([not is_alive(bricks[i]) for i in intlist])
 
 
-    @checktoybox
-    def find_channel():
+    def find_channel(self):
         stacks = get_stacks(_toybox)
         for i, stack in enumerate(stacks):
             if is_channel(_toybox, stack):
@@ -104,14 +81,13 @@ class BreakoutInterventions(Interventions):
         raise ValueError('No channels found.')
 
 
-    @checktoybox
-    def add_channel(intlist):
+    def add_channel(self, intlist):
         assert(is_stack(intlist))
         for i in intlist:
             remove_brick(_toybox, i)
 
 
-    def is_stack(intlist):
+    def is_stack(self, intlist):
         ncols = num_columns(_toybox)
         nrows = num_rows(_toybox)
         offset = intlist[0] % ncols
@@ -123,10 +99,22 @@ class BreakoutInterventions(Interventions):
         return True 
 
 
-    def is_alive(brick):
-        return brick['alive']
+# Intervention tests
+    # remove and assert that the brick is gone
+    # reset and assert that the brick is present
+    # assert number of bricks 
+    # assert rows, columns, stacks
+    # assert channel present, channel not present 
+    # assert can find channel 
+    # assert is stack
+
+    # ball position
+    # ball speed
+    # paddle position
+    # paddle speed
+    # all the constants!
 
 
-    def get_json():
+    def get_json(self):
         assert(_toybox_json)
         return _toybox_json
