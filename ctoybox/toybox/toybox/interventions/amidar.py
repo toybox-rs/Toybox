@@ -1,6 +1,13 @@
-# Methods on amidar intervention
+from toybox.interventions.base import *
+import json
+"""An API for interventions on Amidar."""
 
 class AmidarIntervention(Intervention):
+
+    def __init__(self, tb, game_name='amidar'):
+        # check that the simulation in tb matches the game name.
+        Intervention.__init__(self, tb, game_name)
+
 
     def amidar_num_tiles_unpainted(self):
         return self.query_json('num_tiles_unpainted')
@@ -32,3 +39,15 @@ class AmidarIntervention(Intervention):
     def amidar_any_enemy_caught(self, eid):
         num_enemies = self.amidar_num_enemies()
         return any(self.amidar_enemy_caught(eid) for eid in range(num_enemies))
+
+if __name__ == "__main__":
+  with Toybox('amidar') as tb:
+    state = tb.to_state_json()
+    config = tb.config_to_json()
+
+    # save a sample starting state and config
+    with open('toybox/toybox/interventions/defaults/amidar_state_default.json', 'w') as outfile:
+        json.dump(state, outfile)
+
+    with open('toybox/toybox/interventions/defaults/amidar_config_default.json', 'w') as outfile:
+        json.dump(config, outfile)
