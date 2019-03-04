@@ -1,6 +1,6 @@
 from toybox.interventions.base import *
 import json
-"""An API for interventions on breakout."""
+"""An API for interventions on Breakout."""
 
 class BreakoutIntervention(Intervention):
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     state = tb.to_state_json()
     config = tb.config_to_json()
 
-    # save the 
+    # save a sample starting state and config
     with open('toybox/toybox/interventions/defaults/breakout_state_default.json', 'w') as outfile:
         json.dump(state, outfile)
 
