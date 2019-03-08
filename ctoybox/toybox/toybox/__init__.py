@@ -1,26 +1,32 @@
-from gym.envs.registration import register
 import toybox.toybox as toybox
 import toybox.envs as envs
 import toybox.interventions as interventions
 import toybox.sample_tests as sample_tests
 
-# Updated to use v4 to be analogous with the ALE versioning
-register(
-    id='BreakoutToyboxNoFrameskip-v4',
-    entry_point='toybox.envs.atari:BreakoutEnv',
-    nondeterministic=True
-)
+try: 
+    from gym.envs.registration import register
 
-register(
-    id='AmidarToyboxNoFrameskip-v4',
-    entry_point='toybox.envs.atari:AmidarEnv',
-    nondeterministic=False
-)
+    # Updated to use v4 to be analogous with the    ALE versioning
+    register(
+        id='BreakoutToyboxNoFrameskip-v4',
+        entry_point='toybox.envs.   atari:BreakoutEnv',
+        nondeterministic=True
+    )
 
-register(
-    id='SpaceInvadersToyboxNoFrameskip-v4',
-    entry_point='toybox.envs.atari:SpaceInvadersEnv',
-    nondeterministic=False
-)
+    register(
+        id='AmidarToyboxNoFrameskip-v4',
+        entry_point='toybox.envs.atari:AmidarEnv',
+        nondeterministic=False
+    )
 
-print("Loaded Toybox environments.")
+    register(
+        id='SpaceInvadersToyboxNoFrameskip-v4',
+        entry_point='toybox.envs.   atari:SpaceInvadersEnv',
+        nondeterministic=False
+    )
+
+    print("Registered Toybox environments with gym.")
+
+except:
+    # ModuleNotFoundError only in 3.6 and above
+    print("Loaded Toybox environments.")
