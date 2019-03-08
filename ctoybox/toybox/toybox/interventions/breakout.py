@@ -171,16 +171,24 @@ class BreakoutIntervention(Intervention):
 
 
 if __name__ == "__main__":
+  import argparse 
+
+  parser = argparse.ArgumentParser(description='test Amidar interventions')
+  parser.add_argument('--partial_config', type=str, default="null")
+  parser.add_argument('--save_json', type=bool, default=False)
+  args = parser.parse_args()
+
   with Toybox('breakout') as tb:
     state = tb.to_state_json()
     config = tb.config_to_json()
 
-    # save a sample starting state and config
-    with open('toybox/toybox/interventions/defaults/breakout_state_default.json', 'w') as outfile:
-        json.dump(state, outfile)
+    if args.save_json:
+        # save a sample starting state and config
+        with open('toybox/toybox/interventions/defaults/breakout_state_default.json', 'w') as outfile:
+            json.dump(state, outfile)
 
-    with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
-        json.dump(config, outfile)
+        with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
+            json.dump(config, outfile)
     
     # remove and assert that the brick is gone
     with BreakoutIntervention(tb) as intervention:

@@ -18,12 +18,10 @@ class AmidarIntervention(Intervention):
         #return self.query_json('player_tile')
 
     def num_enemies(self):
-        pass
-        #return self.query_json('num_enemies')
+        return len(self.state['enemies'])
 
     def jumps_remaining(self):
-        pass
-        #return self.query_json('jumps_remaining')
+        return self.state['jumps']
 
     def regular_mode(self):
         pass
@@ -68,13 +66,22 @@ class AmidarIntervention(Intervention):
 
 
 if __name__ == "__main__":
-  with Toybox('amidar') as tb:
-    state = tb.to_state_json()
-    config = tb.config_to_json()
+    import argparse 
 
-    # save a sample starting state and config
-    with open('toybox/toybox/interventions/defaults/amidar_state_default.json', 'w') as outfile:
-        json.dump(state, outfile)
+    parser = argparse.ArgumentParser(description='test Amidar interventions')
+    parser.add_argument('--partial_config', type=str, default="null")
+    parser.add_argument('--save_json', type=bool, default=False)
 
-    with open('toybox/toybox/interventions/defaults/amidar_config_default.json', 'w') as outfile:
-        json.dump(config, outfile)
+    args = parser.parse_args()
+
+    with Toybox('amidar') as tb:
+        state = tb.to_state_json()
+        config = tb.config_to_json()
+
+    if args.save_json:
+        # save a sample starting state and config
+        with open('toybox/toybox/interventions/defaults/amidar_state_default.json', 'w') as outfile:
+            json.dump(state, outfile)
+
+        with open('toybox/toybox/interventions/defaults/amidar_config_default.json', 'w') as outfile:
+            json.dump(config, outfile)
