@@ -11,7 +11,7 @@ pub struct TileConfig {
     /// Is this tile walkable by the agent?
     pub walkable: bool,
     /// Is this a terminal/goal tile?
-    pub goal: bool,
+    pub terminal: bool,
     /// What color should this tile be?
     pub color: Color,
 }
@@ -21,7 +21,7 @@ impl TileConfig {
         TileConfig {
             reward: 0,
             walkable: false,
-            goal: false,
+            terminal: false,
             color: Color::black(),
         }
     }
@@ -29,7 +29,7 @@ impl TileConfig {
         TileConfig {
             reward: 0,
             walkable: true,
-            goal: false,
+            terminal: false,
             color: Color::white(),
         }
     }
@@ -37,7 +37,7 @@ impl TileConfig {
         TileConfig {
             reward: 1,
             walkable: true,
-            goal: false,
+            terminal: false,
             color: Color::rgb(255, 255, 0),
         }
     }
@@ -45,7 +45,7 @@ impl TileConfig {
         TileConfig {
             reward: 10,
             walkable: true,
-            goal: true,
+            terminal: true,
             color: Color::rgb(0, 255, 0),
         }
     }
@@ -53,7 +53,7 @@ impl TileConfig {
         TileConfig {
             reward: -10,
             walkable: true,
-            goal: true,
+            terminal: true,
             color: Color::rgb(255, 0, 0),
         }
     }
@@ -105,6 +105,7 @@ impl Default for GridWorld {
 pub struct State {
     pub game_over: bool,
     pub score: i32,
+    pub step: usize,
     pub reward_becomes: usize,
     pub tiles: Vec<TileConfig>,
     pub grid: Vec<Vec<usize>>,
@@ -138,6 +139,7 @@ impl State {
 
         State {
             game_over: false,
+            step: 0,
             score: 0,
             reward_becomes: char_to_index[&config.reward_becomes],
             tiles,
@@ -158,6 +160,9 @@ impl State {
     }
     fn walkable(&self, tx: i32, ty: i32) -> bool {
         self.get_tile(tx, ty).map(|t| t.walkable).unwrap_or(false)
+    }
+    fn terminal(&self, tx: i32, ty: i32) -> bool {
+        self.get_tile(tx, ty).map(|t| t.terminal).unwrap_or(false)
     }
     fn collect_reward(&mut self, tx: i32, ty: i32) -> i32 {
         let y = ty as usize;
@@ -214,9 +219,9 @@ impl toybox_core::Simulation for GridWorld {
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
         if self.game_over {
-            1
-        } else {
             0
+        } else {
+            1
         }
     }
     fn score(&self) -> i32 {
@@ -227,6 +232,7 @@ impl toybox_core::State for State {
         if buttons.is_empty() {
             return;
         }
+        self.step += 1;
         if let Some(dir) = Direction::from_input(buttons) {
             let (dx, dy) = dir.delta();
             let (px, py) = self.player;
@@ -234,6 +240,10 @@ impl toybox_core::State for State {
 
             if self.walkable(dest.0, dest.1) {
                 self.player = dest;
+                // check terminal before "collect_reward" which removes the reward from the map.
+                if self.terminal(dest.0, dest.1) {
+                    self.game_over = true;
+                }
                 self.collect_reward(dest.0, dest.1);
             }
         }
@@ -262,7 +272,17 @@ impl toybox_core::State for State {
         serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn query_json(&self, _query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
-        Err(QueryError::NoSuchQuery)
+    fn query_json(&self, query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
+        Ok(match query {
+            "xy" => {
+                let (px, py) = self.player;
+                serde_json::to_string(&(px, py))?
+            }
+            "xyt" => {
+                let (px, py) = self.player;
+                serde_json::to_string(&(px, py, self.step))?
+            }
+            _ => Err(QueryError::NoSuchQuery)?,
+        })
     }
 }

@@ -40,6 +40,9 @@ if __name__ == '__main__':
 
         quit = False
         while not quit:
+            # close human_play on game over
+            if tb.game_over():
+                break
             for event in pygame.event.get():
                 if event.type == QUIT:
                     quit = True
