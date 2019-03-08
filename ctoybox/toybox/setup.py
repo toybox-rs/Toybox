@@ -10,8 +10,8 @@ def build_native(spec):
 
     spec.add_cffi_module(
         module_path='toybox._native',
-        dylib=lambda: build.find_dylib('ctoybox', in_path='../../target/release'),
-        header_filename=lambda: build.find_header('ctoybox.h', in_path='../../target'),
+        dylib=lambda: build.find_dylib('ctoybox', in_path='target/release'),
+        header_filename=lambda: build.find_header('ctoybox.h', in_path='target'),
         rtld_flags=['NOW', 'NODELETE']
     )
 
