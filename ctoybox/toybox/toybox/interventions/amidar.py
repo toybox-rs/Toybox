@@ -9,36 +9,53 @@ class AmidarIntervention(Intervention):
         Intervention.__init__(self, tb, game_name)
 
 
-    def amidar_num_tiles_unpainted(self):
+    def num_tiles_unpainted(self):
         return self.query_json('num_tiles_unpainted')
         
-    def amidar_player_tile(self):
+    def player_tile(self):
         return self.query_json('player_tile')
 
-    def amidar_num_enemies(self):
+    def num_enemies(self):
         return self.query_json('num_enemies')
 
-    def amidar_jumps_remaining(self):
+    def jumps_remaining(self):
         return self.query_json('jumps_remaining')
 
-    def amidar_regular_mode(self):
+    def regular_mode(self):
         return self.query_json('regular_mode')
 
-    def amidar_jump_mode(self):
+    def jump_mode(self):
         return self.query_json('jump_mode')
 
-    def amidar_chase_mode(self):
+    def chase_mode(self):
         return self.query_json('chase_mode')
 
-    def amidar_enemy_tiles(self):
+    def enemy_tiles(self):
         return self.query_json('enemy_tiles')
 
-    def amidar_enemy_caught(self, eid):
+    def enemy_caught(self, eid):
         return self.query_json('enemy_caught', eid)
 
-    def amidar_any_enemy_caught(self, eid):
+    def any_enemy_caught(self, eid):
         num_enemies = self.amidar_num_enemies()
         return any(self.amidar_enemy_caught(eid) for eid in range(num_enemies))
+
+    # paint/unpaint tiles
+    # paint/unpaint rectangles 
+        # consider logic for tiles, rectangles both filled
+    # move player to tile, (x,y)
+    # move enemy(ies) to tile, (x,y)
+    # begin jump mode
+    # begin chase mode
+    # begin regular mode
+    # set, return enemy protocol 
+    # get, set score
+        # consider logic for score calculation
+    # add/remove enemy
+    # set number of jumps
+    # set number of lives
+    # random start state?
+
 
 if __name__ == "__main__":
   with Toybox('amidar') as tb:
