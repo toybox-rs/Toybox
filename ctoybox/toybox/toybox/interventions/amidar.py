@@ -10,35 +10,45 @@ class AmidarIntervention(Intervention):
 
 
     def num_tiles_unpainted(self):
-        return self.query_json('num_tiles_unpainted')
+        pass
+        #return self.query_json('num_tiles_unpainted')
         
     def player_tile(self):
-        return self.query_json('player_tile')
+        pass
+        #return self.query_json('player_tile')
 
     def num_enemies(self):
-        return self.query_json('num_enemies')
+        pass
+        #return self.query_json('num_enemies')
 
     def jumps_remaining(self):
-        return self.query_json('jumps_remaining')
+        pass
+        #return self.query_json('jumps_remaining')
 
     def regular_mode(self):
-        return self.query_json('regular_mode')
+        pass
+        #return self.query_json('regular_mode')
 
     def jump_mode(self):
-        return self.query_json('jump_mode')
+        pass
+        #return self.query_json('jump_mode')
 
     def chase_mode(self):
-        return self.query_json('chase_mode')
+        pass
+        #return self.query_json('chase_mode')
 
     def enemy_tiles(self):
-        return self.query_json('enemy_tiles')
+        pass
+        #return self.query_json('enemy_tiles')
 
     def enemy_caught(self, eid):
-        return self.query_json('enemy_caught', eid)
+        pass
+        #return self.query_json('enemy_caught', eid)
 
     def any_enemy_caught(self, eid):
-        num_enemies = self.amidar_num_enemies()
-        return any(self.amidar_enemy_caught(eid) for eid in range(num_enemies))
+        pass
+        #num_enemies = self.amidar_num_enemies()
+        #return any(self.amidar_enemy_caught(eid) for eid in range(num_enemies))
 
     # paint/unpaint tiles
     # paint/unpaint rectangles 
