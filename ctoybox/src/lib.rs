@@ -22,3 +22,5 @@ pub struct WrapState {
 
 mod core;
 pub use core::*;
+
+pub struct Input;
