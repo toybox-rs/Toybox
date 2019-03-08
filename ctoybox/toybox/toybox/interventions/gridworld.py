@@ -8,11 +8,6 @@ class GridWorldIntervention(Intervention):
         # check that the simulation in tb matches the game name.
         Intervention.__init__(self, tb, game_name)
 
-    def set_world(self, fname): 
-        with open(fname) as f:
-            data = json.load(f)
-            for k in data.keys(): 
-                self.config[k] = data[k]
 
 
 if __name__ == "__main__":
@@ -32,6 +27,6 @@ if __name__ == "__main__":
 
         with GridWorldIntervention(tb) as intervention:
             gridfile = "../tb_gridworld/sample_grids/wall_unreachable.txt"
-            intervention.set_world(gridfile)
+            intervention.set_partial_config(gridfile)
 
         print(tb.config_to_json())
