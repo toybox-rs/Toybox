@@ -21,4 +21,4 @@ version = "*"
 path = "../core"
 
 [build-dependencies]
-cbindgen = "0.4"
+cbindgen = "0.5"
