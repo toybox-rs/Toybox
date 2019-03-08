@@ -16,3 +16,8 @@ openai-old
 openai-old.DS_Store
 Cargo.lock
 .DS_Store
+ctoybox/*.model.data-00000-of-00001
+ctoybox/*.model.index
+ctoybox/*.model.meta
+ctoybox/checkpoint
+ctoybox/*.model

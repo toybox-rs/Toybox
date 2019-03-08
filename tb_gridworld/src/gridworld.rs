@@ -49,6 +49,14 @@ impl TileConfig {
             color: Color::rgb(0, 255, 0),
         }
     }
+    fn death() -> TileConfig {
+        TileConfig {
+            reward: -10,
+            walkable: true,
+            goal: true,
+            color: Color::rgb(255, 0, 0),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -68,6 +76,7 @@ impl Default for GridWorld {
         tiles.insert('0', TileConfig::floor());
         tiles.insert('R', TileConfig::reward());
         tiles.insert('G', TileConfig::goal());
+        tiles.insert('D', TileConfig::death());
 
         let grid = vec![
             "111111111".to_owned(),
@@ -75,7 +84,7 @@ impl Default for GridWorld {
             "101111101".to_owned(),
             "100010001".to_owned(),
             "10001R111".to_owned(),
-            "1000100G1".to_owned(),
+            "100D100G1".to_owned(),
             "111111111".to_owned(),
         ];
 

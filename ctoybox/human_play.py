@@ -6,12 +6,14 @@ import pygame
 import pygame.key
 from pygame.locals import *
 import pygame.surfarray
+import json
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='human_play for toybox')
     parser.add_argument('game', type=str, help='try one of amidar, breakout, space_invaders')
     parser.add_argument('--scale', type=int, default=2)
+    parser.add_argument('--fps', type=int, default=32)
     parser.add_argument('--query', type=str, default=None)
     parser.add_argument('--query_args', type=str, default="null")
 
@@ -24,15 +26,17 @@ if __name__ == '__main__':
         h = tb.get_height()
 
         config_json = tb.config_to_json()
-        print(config_json)
+        with open('human_play_config.json', 'w') as fp:
+            print(json.dumps(config_json, indent=4, sort_keys=True), file=fp)
         state_json = tb.to_state_json()
-        print(state_json)
+        with open('human_play_state.json', 'w') as fp:
+            print(json.dumps(state_json, indent=4, sort_keys=True), file=fp)
 
         dim = (w*args.scale,h*args.scale)
 
         pygame.display.set_mode(dim)
         clock = pygame.time.Clock()
-        FPS = 32
+        FPS = args.fps
 
         quit = False
         while not quit:
