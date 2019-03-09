@@ -63,6 +63,7 @@ pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_ene
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amidar {
     pub rand: random::Gen,
+    board: Vec<String>,
     bg_color: Color,
     player_color: Color,
     unpainted_color: Color,
@@ -77,7 +78,7 @@ pub struct Amidar {
     jump_time: i32,
     box_bonus: i32,
     /// This should be false if you ever use a non-default board.
-    copy_no_score_bug: bool,
+    default_board_bugs: bool,
     enemies: Vec<MovementAI>,
 }
 
@@ -98,6 +99,7 @@ impl Default for Amidar {
     fn default() -> Self {
         Amidar {
             rand: random::Gen::new_from_seed(13),
+            board: AMIDAR_BOARD.lines().map(|s| s.to_owned()).collect(),
             bg_color: Color::black(),
             player_color: Color::rgb(255, 255, 153),
             unpainted_color: Color::rgb(148, 0, 211),
@@ -111,7 +113,7 @@ impl Default for Amidar {
             jump_time: 2 * 30 + 15, // 2.5 seconds
             render_images: true,
             box_bonus: 50,
-            copy_no_score_bug: true,
+            default_board_bugs: true,
             enemies: (0..DEFAULT_ENEMY_ROUTES.len())
                 .map(|idx| MovementAI::EnemyLookupAI {
                     next: 0,
@@ -625,7 +627,13 @@ impl Mob {
 }
 
 lazy_static! {
-    static ref DEFAULT_BOARD: Board = Board::try_new().unwrap();
+    static ref DEFAULT_BOARD: Board = Board::try_new(
+        &AMIDAR_BOARD
+            .lines()
+            .map(|s| s.to_owned())
+            .collect::<Vec<_>>()
+    )
+    .unwrap();
     static ref DEFAULT_ENEMY_ROUTES: Vec<Vec<u32>> = AMIDAR_ENEMY_POSITIONS_DATA
         .lines()
         .map(|enemy_route| {
@@ -687,9 +695,9 @@ impl Board {
     pub fn fast_new() -> Board {
         DEFAULT_BOARD.clone()
     }
-    fn try_new() -> Result<Board, String> {
+    fn try_new(lines: &[String]) -> Result<Board, String> {
         let mut tiles = Vec::new();
-        for line in AMIDAR_BOARD.lines() {
+        for line in lines {
             // Rust will aggregate errors in collect for us if we give it a type-hint.
             let row: Result<Vec<_>, _> = line.chars().map(Tile::new_from_char).collect();
             // Exit function if row is errorful.
@@ -1037,7 +1045,7 @@ pub struct State {
 
 impl State {
     pub fn try_new(config: &Amidar) -> Result<State, String> {
-        let board = Board::fast_new();
+        let board = Board::try_new(&config.board)?;
         let mut config = config.clone();
 
         let enemies = config
@@ -1072,12 +1080,16 @@ impl State {
         self.state
             .player
             .reset(&self.state.player_start, &self.state.board);
-        self.state.player.history.push_front(
-            self.state
-                .board
-                .get_junction_id(&TilePoint::new(31, 18))
-                .unwrap(),
-        );
+        // On the default board, we imagine starting from below the initial place.
+        // This way going up paints the first segment.
+        if self.config.default_board_bugs {
+            self.state.player.history.push_front(
+                self.state
+                    .board
+                    .get_junction_id(&TilePoint::new(31, 18))
+                    .unwrap(),
+            );
+        }
         for enemy in &mut self.state.enemies {
             enemy.reset(&self.state.player_start, &self.state.board);
         }
@@ -1191,7 +1203,7 @@ impl toybox_core::State for State {
         {
             // Don't award score for the first, semi-painted segment on a default Amidar board, but do paint it.
             let mut allow_score_change = true;
-            if self.config.copy_no_score_bug {
+            if self.config.default_board_bugs {
                 let (start, end) = score_change.junctions.unwrap();
                 if start == 607 && end == 415 {
                     allow_score_change = false;
