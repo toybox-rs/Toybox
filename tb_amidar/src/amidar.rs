@@ -64,6 +64,7 @@ pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_ene
 pub struct Amidar {
     pub rand: random::Gen,
     board: Vec<String>,
+    pub player_start: TilePoint,
     bg_color: Color,
     player_color: Color,
     unpainted_color: Color,
@@ -100,6 +101,7 @@ impl Default for Amidar {
         Amidar {
             rand: random::Gen::new_from_seed(13),
             board: AMIDAR_BOARD.lines().map(|s| s.to_owned()).collect(),
+            player_start: TilePoint::new(31, 15),
             bg_color: Color::black(),
             player_color: Color::rgb(255, 255, 153),
             unpainted_color: Color::rgb(148, 0, 211),
@@ -1033,7 +1035,6 @@ pub struct StateCore {
     pub chase_timer: i32,
     pub jump_timer: i32,
     pub player: Mob,
-    pub player_start: TilePoint,
     pub enemies: Vec<Mob>,
     pub board: Board,
 }
@@ -1053,8 +1054,7 @@ impl State {
             .iter()
             .map(|ai| board.make_enemy(ai.clone()))
             .collect();
-        let player_start = TilePoint::new(31, 15);
-        let player = Mob::new_player(player_start.to_world());
+        let player = Mob::new_player(config.player_start.to_world());
 
         let core = StateCore {
             rand: random::Gen::new_child(&mut config.rand),
@@ -1064,7 +1064,6 @@ impl State {
             jumps: config.start_jumps,
             jump_timer: 0,
             player,
-            player_start,
             enemies,
             board,
         };
@@ -1079,7 +1078,7 @@ impl State {
     pub fn reset(&mut self) {
         self.state
             .player
-            .reset(&self.state.player_start, &self.state.board);
+            .reset(&self.config.player_start, &self.state.board);
         // On the default board, we imagine starting from below the initial place.
         // This way going up paints the first segment.
         if self.config.default_board_bugs {
@@ -1091,7 +1090,7 @@ impl State {
             );
         }
         for enemy in &mut self.state.enemies {
-            enemy.reset(&self.state.player_start, &self.state.board);
+            enemy.reset(&self.config.player_start, &self.state.board);
         }
     }
     pub fn board_size(&self) -> WorldPoint {
