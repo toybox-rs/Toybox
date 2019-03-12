@@ -14,8 +14,7 @@ class AmidarIntervention(Intervention):
         #return self.query_json('num_tiles_unpainted')
         
     def player_tile(self):
-        pass
-        #return self.query_json('player_tile')
+        return self.state['player']['position']
 
     def num_enemies(self):
         return len(self.state['enemies'])
@@ -24,29 +23,22 @@ class AmidarIntervention(Intervention):
         return self.state['jumps']
 
     def regular_mode(self):
-        pass
-        #return self.query_json('regular_mode')
+        return self.state['jump_timer'] == 0 and self.state['chase_timer'] == 0
 
     def jump_mode(self):
-        pass
-        #return self.query_json('jump_mode')
+        return self.state['jump_timer'] > 0
 
     def chase_mode(self):
-        pass
-        #return self.query_json('chase_mode')
+        self.state['chase_timer'] > 0
 
     def enemy_tiles(self):
-        pass
-        #return self.query_json('enemy_tiles')
+        return [self.state['enemies'][i]['position'] for i in range(len(self.state['enemies']))]
 
     def enemy_caught(self, eid):
-        pass
-        #return self.query_json('enemy_caught', eid)
+        return self.state['enemies'][eid]['caught']
 
     def any_enemy_caught(self, eid):
-        pass
-        #num_enemies = self.amidar_num_enemies()
-        #return any(self.amidar_enemy_caught(eid) for eid in range(num_enemies))
+        return any([self.state['enemies'][i]['caught'] for i in range(len(self.state['enemies']))])
 
     # paint/unpaint tiles
     # paint/unpaint rectangles 
