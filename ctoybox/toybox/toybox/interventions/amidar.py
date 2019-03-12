@@ -29,7 +29,7 @@ class AmidarIntervention(Intervention):
         return self.state['jump_timer'] > 0
 
     def chase_mode(self):
-        self.state['chase_timer'] > 0
+        return self.state['chase_timer'] > 0
 
     def enemy_tiles(self):
         return [self.state['enemies'][i]['position'] for i in range(len(self.state['enemies']))]
