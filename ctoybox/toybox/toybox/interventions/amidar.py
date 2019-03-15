@@ -78,8 +78,8 @@ class AmidarIntervention(Intervention):
             tx_right = box['bottom_right']['tx']
             ty_right = box['bottom_right']['ty']
 
-            for i in range(tx_left, tx_right): 
-                for j in range(ty_left, ty_right):
+            for i in range(tx_left, tx_right+1): 
+                for j in range(ty_left, ty_right+1):
                     if self.state['board']['tiles'][i][j] != "Empty": 
                         self.state['board']['tiles'][i][j] = "Painted"
 
@@ -99,8 +99,8 @@ class AmidarIntervention(Intervention):
                 ty_right = box['bottom_right']['ty']
 
                 all_painted = True
-                for i in range(tx_left, tx_right): 
-                    for j in range(ty_left, ty_right):
+                for i in range(tx_left, tx_right+1): 
+                    for j in range(ty_left, ty_right+1):
                         if self.state['board']['tiles'][i][j] != "Empty": 
                             all_painted &= if self.state['board']['tiles'][i][j] == "Painted"
                         if not all_painted: 
@@ -141,15 +141,16 @@ class AmidarIntervention(Intervention):
             set_enemy_tile(eid, pos_list[i])
 
 
-    def set_mode(self, mode_id='regular'): 
+    def set_mode(self, mode_id='regular', set_time=None): 
         assert mode_id in ['jump', 'chase', 'regular']
 
         if mode_id == 'jump': 
-            pass
+            self.state['jump_timer'] = self.config['jump_time'] if set_time is None else set_time
         elif mode_id == 'chase': 
-            pass
+            self.state['chase_timer'] = self.config['chase_time'] if set_time is None else set_time
         else: #mode_id == 'regular' 
-            pass
+            self.state['jump_timer'] = 0
+            self.state['chase_timer'] = 0
 
 
     def get_enemy_protocol(self, eid): 
@@ -235,7 +236,7 @@ class AmidarIntervention(Intervention):
         tile = self.state['board']['tiles'][tid['tx']][tid['ty']]
 
         assert tile != "Empty"
-        selected = True
+        selected = False
         dirs = ["Up", "Down", "Left", "Right"]
 
         d = None
@@ -311,9 +312,6 @@ class AmidarIntervention(Intervention):
         assert n > 0 
         self.state['lives'] = n
 
-    # begin jump mode
-    # begin chase mode
-    # begin regular mode
     # set enemy protocol 
     # get, set score
         # consider logic for score calculation

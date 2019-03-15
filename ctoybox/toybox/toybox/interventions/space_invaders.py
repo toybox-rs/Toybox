@@ -16,12 +16,13 @@ class SpaceInvadersIntervention(Intervention):
     # move player
     # shift enemies +- x, +- y
     # add/remove shields
+    # alter shield shape
     # add/remove mothership 
     # change ship speed
     # make enemy/enemies take more than one hit
     # get/set lives
     # alter enemy_shot_delay
-    # custon enemy firing pattern
+    # custom enemy firing pattern
 
 
 if __name__ == "__main__":
