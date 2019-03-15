@@ -21,7 +21,8 @@ except:
 
 
 def rust_str(result):
-    txt = ffi.cast("char *", result).value.decode('UTF-8')
+    txt = ffi.cast("char *", result) #.value.decode('UTF-8')
+    txt = ffi.string(txt).decode('UTF-8')
     _lib.free_str(result)
     return txt
 
