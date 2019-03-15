@@ -7,14 +7,21 @@ import platform
 import time
 import json
 
-#from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
-#from toybox.clib import Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
-from toybox._native import ffi, lib
+try:
+    # This is for pip install
+    from toybox._native import ffi, lib
+    _lib = lib 
 
-_lib = lib 
+except:
+    # deprecated
+    from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
+    from toybox.clib import Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
+
+
+
 
 def rust_str(result):
-    txt = ctypes.cast(result, ctypes.c_char_p).value.decode('UTF-8')
+    txt = ffi.cast("char *", result).value.decode('UTF-8')
     _lib.free_str(result)
     return txt
 
