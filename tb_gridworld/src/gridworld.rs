@@ -61,7 +61,6 @@ impl TileConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GridWorld {
-    pub game_size: (i32, i32),
     pub grid: Vec<String>,
     pub tiles: HashMap<char, TileConfig>,
     pub reward_becomes: char,
@@ -88,10 +87,7 @@ impl Default for GridWorld {
             "111111111".to_owned(),
         ];
 
-        let width = grid[0].len() as i32;
-        let height = grid.len() as i32;
         GridWorld {
-            game_size: (width, height),
             player_color: Color::rgb(255, 0, 0),
             player_start: (2, 4),
             reward_becomes: '0',
@@ -113,6 +109,7 @@ pub struct State {
     pub player_color: Color,
 }
 impl State {
+    /// Compute the size of the grid for our own usage here.
     fn size(&self) -> (i32, i32) {
         let height = self.grid.len() as i32;
         let width = self.grid[0].len() as i32;
@@ -178,8 +175,12 @@ impl State {
 
 impl toybox_core::Simulation for GridWorld {
     fn reset_seed(&mut self, _seed: u32) {}
+
+    /// Compute the size of the grid for determining how big the world should be.
     fn game_size(&self) -> (i32, i32) {
-        self.game_size
+        let height = self.grid.len() as i32;
+        let width = self.grid[0].len() as i32;
+        (width, height)
     }
 
     fn legal_action_set(&self) -> Vec<AleAction> {
