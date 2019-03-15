@@ -12,6 +12,42 @@ class SpaceInvadersIntervention(Intervention):
     def customEnemyMovement():
         pass
 
+    def set_player_location(self, pos): 
+        pass
+
+    def shift_enemies(self, shift_vecto):
+        pass
+
+    def add_shield(self): 
+        pass
+
+    def remove_shield(self): 
+        pass
+
+    def set_shield_shape(self, sid, shape_mat):
+        pass
+
+    def set_mothership(self, visible, loc=None): 
+        pass
+
+    def set_player_speed(self, s): 
+        pass
+
+    def set_player_death_hit(self, n): 
+        pass
+
+    def set_enemy_death_hits(self, eids, n): 
+        pass
+
+    def lives_remaining(self): 
+        return self.state['lives']
+
+    def set_lives_remaining(self, n): 
+        self.state['lives'] = n
+
+    def set_enemy_shot_delay(self, eids, t): 
+        pass
+
 
     # move player
     # shift enemies +- x, +- y
@@ -20,7 +56,6 @@ class SpaceInvadersIntervention(Intervention):
     # add/remove mothership 
     # change ship speed
     # make enemy/enemies take more than one hit
-    # get/set lives
     # alter enemy_shot_delay
     # custom enemy firing pattern
 
