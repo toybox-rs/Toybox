@@ -7,7 +7,11 @@ import platform
 import time
 import json
 
-from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
+#from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
+#from toybox.clib import Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
+from toybox._native import ffi, lib
+
+_lib = lib 
 
 def rust_str(result):
     txt = ctypes.cast(result, ctypes.c_char_p).value.decode('UTF-8')

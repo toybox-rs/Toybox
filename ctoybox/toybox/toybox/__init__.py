@@ -9,7 +9,7 @@ try:
     # Updated to use v4 to be analogous with the    ALE versioning
     register(
         id='BreakoutToyboxNoFrameskip-v4',
-        entry_point='toybox.envs.   atari:BreakoutEnv',
+        entry_point='toybox.envs.atari:BreakoutEnv',
         nondeterministic=True
     )
 
@@ -21,7 +21,7 @@ try:
 
     register(
         id='SpaceInvadersToyboxNoFrameskip-v4',
-        entry_point='toybox.envs.   atari:SpaceInvadersEnv',
+        entry_point='toybox.envs.atari:SpaceInvadersEnv',
         nondeterministic=False
     )
 
