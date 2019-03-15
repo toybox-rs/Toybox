@@ -1,5 +1,7 @@
 from abc import ABC
 from toybox.toybox import Toybox
+
+import json
 """ Contains the base class for interventions. 
 
 To make interventions for a new game, subclass Intervention."""
@@ -11,6 +13,7 @@ class Intervention(ABC):
     self.toybox = tb
     self.state = None
     self.config = None
+    self.dirty_config = False
     self.game_name = game_name
 
     assert tb.game_name == game_name
@@ -27,10 +30,25 @@ class Intervention(ABC):
     # commit the JSON
 
     self.toybox.write_config_json(self.config)
-    self.toybox.write_state_json(self.state)
+    if self.dirty_config: 
+      self.toybox.new_game()
+    else: 
+      self.toybox.write_state_json(self.state)
 
     self.state = None
     self.config = None
+
+
+  def set_partial_config(self, fname): 
+    import os
+
+    if os.path.isfile(fname): 
+      with open(fname) as f:
+          data = json.load(f)
+          for k in data.keys(): 
+            if k in self.config.keys():
+              self.config[k] = data[k]
+              self.dirty_config = True
 
 
 if __name__ == "__main__":

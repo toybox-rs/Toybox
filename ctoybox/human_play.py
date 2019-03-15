@@ -1,5 +1,7 @@
 import toybox, sys
 from toybox.toybox import Toybox, Input
+from toybox.interventions.base import *
+
 import numpy as np
 import argparse
 import pygame
@@ -9,6 +11,7 @@ import pygame.surfarray
 import json
 
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='human_play for toybox')
     parser.add_argument('game', type=str, help='try one of amidar, breakout, space_invaders')
@@ -16,12 +19,17 @@ if __name__ == '__main__':
     parser.add_argument('--fps', type=int, default=32)
     parser.add_argument('--query', type=str, default=None)
     parser.add_argument('--query_args', type=str, default="null")
+    parser.add_argument('--partial_config', type=str, default="null")
 
     args = parser.parse_args()
     print('Starting up: '+args.game)
     pygame.init()
 
     with Toybox(args.game) as tb:
+        if args.partial_config != "null":    
+            with Intervention(tb, args.game) as intervention:
+                intervention.set_partial_config(args.partial_config)
+
         w = tb.get_width()
         h = tb.get_height()
 
