@@ -13,9 +13,21 @@ class SpaceInvadersIntervention(Intervention):
         pass
 
 
+    # move player
+    # shift enemies +- x, +- y
+    # add/remove shields
+    # alter shield shape
+    # add/remove mothership 
+    # change ship speed
+    # make enemy/enemies take more than one hit
+    # get/set lives
+    # alter enemy_shot_delay
+    # custom enemy firing pattern
+
+
 if __name__ == "__main__":
   import argparse 
-  parser = argparse.ArgumentParser(description='test Amidar interventions')
+  parser = argparse.ArgumentParser(description='test Space Invaders interventions')
   parser.add_argument('--partial_config', type=str, default="null")
   parser.add_argument('--save_json', type=bool, default=False)
 

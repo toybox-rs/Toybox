@@ -1437,6 +1437,16 @@ impl toybox_core::State for State {
     fn query_json(&self, query: &str, args: &serde_json::Value) -> Result<String, QueryError> {
         let state = &self.state;
         Ok(match query {
+            "world_to_tile" => {
+                let world_pt: WorldPoint = serde_json::from_value(args.clone())?;
+                let tile = world_pt.to_tile();
+                serde_json::to_string(&(tile.tx, tile.ty))?
+            }
+            "tile_to_world" => {
+                let tile_pt: TilePoint = serde_json::from_value(args.clone())?;
+                let world = tile_pt.to_world();
+                serde_json::to_string(&(world.x, world.y))?
+            }
             "num_tiles_unpainted" => {
                 let mut sum = 0;
                 for row in state.board.tiles.iter() {

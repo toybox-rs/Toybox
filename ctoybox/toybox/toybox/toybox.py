@@ -161,8 +161,6 @@ class Simulator(object):
         # sim should be a pointer
         self.game_name = game_name
         self.__sim = sim 
-        self.__width = lib.simulator_frame_width(sim)
-        self.__height = lib.simulator_frame_height(sim)
         self.deleted = False
 
     def __del__(self):
@@ -181,10 +179,10 @@ class Simulator(object):
         lib.simulator_seed(self.__sim, value)
 
     def get_frame_width(self):
-        return self.__width
+        return lib.simulator_frame_width(self.__sim)
 
     def get_frame_height(self):
-        return self.__height
+        return lib.simulator_frame_height(self.__sim)
 
     def get_simulator(self):
         return self.__sim
