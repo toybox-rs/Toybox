@@ -215,16 +215,17 @@ pub extern "C" fn state_apply_ale_action(state_ptr: *mut WrapState, input: i32) 
 }
 
 #[no_mangle]
-pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
+pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *const c_char) {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
     };
-    let input = unsafe {
+    let input_str = unsafe {
         assert!(!input_ptr.is_null());
-        &mut *input_ptr
+        CStr::from_ptr(input_ptr).to_str().expect("Could not convert input json str to UTF-8")
     };
-    state.update_mut(*input);
+    let input : Input = serde_json::from_str(input_str).expect("Could not convert input to JSON");
+    state.update_mut(input);
 }
 
 #[no_mangle]

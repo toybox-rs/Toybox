@@ -1,5 +1,4 @@
 from collections import deque
-import ctypes
 import numpy as np
 from PIL import Image
 import os
@@ -8,28 +7,149 @@ import time
 import json
 
 try:
-    # This is for pip install
     from toybox._native import ffi, lib
-    _lib = lib 
+except ModuleNotFoundError:
+    print('Global setup not found...trying local development install...')
+    platform = platform.system() 
+    lib_env_var = 'LIBCTOYBOX'
+    lib_dylib = 'libctoybox.dylib'
+    lib_so = 'libctoybox.so'
 
-except:
-    # deprecated
-    from toybox.clib import _lib, Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
-    from toybox.clib import Input, NOOP, LEFT, RIGHT, UP, DOWN, BUTTON1, BUTTON2
+    _lib_prefix = os.environ[lib_env_var] if lib_env_var in os.environ else '..'
+
+    if platform == 'Darwin':
+        _lib_path_debug   = os.path.sep.join([_lib_prefix, 'target', 'debug', lib_dylib])
+        _lib_path_release = os.path.sep.join([_lib_prefix, 'target', 'release', lib_dylib])
+        print('Looking for toybox lib in\n\t%s\nor\n\t%s' % (
+            _lib_path_debug,
+            _lib_path_release
+        ))
+
+        _lib_ts_release = os.stat(_lib_path_release).st_birthtime \
+            if os.path.exists(_lib_path_release) else 0
+        _lib_ts_debug   = os.stat(_lib_path_debug).st_birthtime \
+            if os.path.exists(_lib_path_debug) else 0
+
+        if (not (_lib_ts_debug or _lib_ts_release)):
+            raise OSError('%s not found on this machine' % lib_dylib)
+
+        _lib_path = _lib_path_debug if _lib_ts_debug > _lib_ts_release else _lib_path_release
+        print(_lib_path)
+
+    elif platform == 'Linux':
+        _lib_path = lib_so
+
+    else:
+        raise Exception('Unsupported platform for development: %s' % platform)
+    
+    try:
+        from cffi import FFI 
+        ffi = FFI()
+        with open(os.sep.join([_lib_prefix, 'target', 'ctoybox.h']), 'r') as f:
+            # directives not supported!
+            header = '\n'.join([line for line in f.readlines() if not line.startswith('#')])
+            ffi.cdef(header)
+        lib = ffi.dlopen(_lib_path)
+    except Exception:
+        raise Exception('Could not load libopenai from path %s. ' % _lib_path 
+        + """If you are on OSX, this may be due the relative path being different 
+        from `target/(target|release)/libopenai.dylib. If you are on Linux, try
+        prefixing your call with `LD_LIBRARY_PATH=/path/to/library`.""")
 
 
+class Input():
+    """An input object represents a game controller having left, right, up, down, and two buttons.
+
+    ALE mapping:
+            ALE_ACTION_MEANING = {
+            0 : "NOOP",
+            1 : "FIRE",
+            2 : "UP",
+            3 : "RIGHT",
+            4 : "LEFT",
+            5 : "DOWN",
+            6 : "UPRIGHT",
+            7 : "UPLEFT",
+            8 : "DOWNRIGHT",
+            9 : "DOWNLEFT",
+            10 : "UPFIRE",
+            11 : "RIGHTFIRE",
+            12 : "LEFTFIRE",
+            13 : "DOWNFIRE",
+            14 : "UPRIGHTFIRE",
+            15 : "UPLEFTFIRE",
+            16 : "DOWNRIGHTFIRE",
+            17 : "DOWNLEFTFIRE",
+        }
+    """
+
+    _LEFT = "left"
+    _RIGHT = "right"
+    _UP = "up"
+    _DOWN = "down"
+    _BUTTON1 = "button1"
+    _BUTTON2 = "button2"
+    _NOOP = "noop"
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.left = False
+        self.right = False
+        self.up = False
+        self.down = False
+        self.button1 = False
+        self.button2 = False
+
+    def __str__(self):
+        return self.__dict__.__str__()
+
+    def __repr__(self):
+        return self.__dict__.__str__()
+
+    def set_input(self, input_dir, button=_NOOP):
+        input_dir = input_dir.lower()
+        button = button.lower()
+
+        # reset all directions
+        if   input_dir == Input._NOOP:
+            pass
+        elif input_dir == Input._LEFT:
+            self.left = True
+        elif input_dir == Input._RIGHT:
+            self.right = True
+        elif input_dir == Input._UP:
+            self.up = True
+        elif input_dir == Input._DOWN:
+            self.down = True
+        else:
+            print('input_dir:', input_dir)
+            assert False
+
+        # reset buttons
+        if   button == Input._NOOP:
+            pass
+        elif button == Input._BUTTON1:
+            self.button1 = True
+        elif button == Input._BUTTON2:
+            self.button2 = True
+        else:
+            assert False
 
 
 def rust_str(result):
     txt = ffi.cast("char *", result) #.value.decode('UTF-8')
     txt = ffi.string(txt).decode('UTF-8')
-    _lib.free_str(result)
+    lib.free_str(result)
     return txt
 
 
 def json_str(js):
     if type(js) is dict:
         js = json.dumps(js)
+    elif type(js) is Input:
+        js = json.dumps(js.__dict__)
     elif type(js) is not str:
         raise ValueError('Unknown json type: %s (only str and dict supported)' % type(js))
     return js
@@ -37,19 +157,19 @@ def json_str(js):
 class Simulator(object):
     def __init__(self, game_name, sim=None):
         if sim is None:
-            sim = _lib.simulator_alloc(game_name.encode('utf-8'))
+            sim = lib.simulator_alloc(game_name.encode('utf-8'))
         # sim should be a pointer
         #self.__sim = ctypes.pointer(ctypes.c_int(sim))
         self.game_name = game_name
         self.__sim = sim 
-        self.__width = _lib.simulator_frame_width(sim)
-        self.__height = _lib.simulator_frame_height(sim)
+        self.__width = lib.simulator_frame_width(sim)
+        self.__height = lib.simulator_frame_height(sim)
         self.deleted = False
 
     def __del__(self):
         if not self.deleted:
             self.deleted = True
-            _lib.simulator_free(self.__sim)
+            lib.simulator_free(self.__sim)
             self.__sim = None
 
     def __enter__(self):
@@ -59,7 +179,7 @@ class Simulator(object):
         self.__del__()
     
     def set_seed(self, value):
-        _lib.simulator_seed(self.__sim, value)
+        lib.simulator_seed(self.__sim, value)
 
     def get_frame_width(self):
         return self.__width
@@ -74,22 +194,22 @@ class Simulator(object):
         return State(self)
 
     def state_from_json(self, js):
-        state = _lib.state_from_json(self.get_simulator(), json_str(js).encode('utf-8'))
+        state = lib.state_from_json(self.get_simulator(), json_str(js).encode('utf-8'))
         return State(self, state=state)
 
     def to_json(self):
-        json_str = rust_str(_lib.simulator_to_json(self.get_simulator()))
+        json_str = rust_str(lib.simulator_to_json(self.get_simulator()))
         return json.loads(str(json_str))
 
     def from_json(self, config_js):
         old_sim = self.__sim
-        self.__sim = _lib.simulator_from_json(self.get_simulator(), json_str(config_js).encode('utf-8'))
+        self.__sim = lib.simulator_from_json(self.get_simulator(), json_str(config_js).encode('utf-8'))
         del old_sim
 
 
 class State(object):
     def __init__(self, sim, state=None):
-        self.__state = state or _lib.state_alloc(sim.get_simulator())
+        self.__state = state or lib.state_alloc(sim.get_simulator())
         self.game_name = sim.game_name
         self.deleted = False
 
@@ -99,7 +219,7 @@ class State(object):
     def __del__(self):
         if not self.deleted:
             self.deleted = True
-            _lib.state_free(self.__state)
+            lib.state_free(self.__state)
             self.__state = None
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -110,16 +230,16 @@ class State(object):
         return self.__state
     
     def lives(self):
-        return _lib.state_lives(self.__state)
+        return lib.state_lives(self.__state)
 
     def score(self):
-        return _lib.state_score(self.__state)
+        return lib.state_score(self.__state)
 
     def game_over(self):
         return self.lives() == 0
 
     def query_json(self, query, args="null"):
-        txt = rust_str(_lib.state_query_json(self.__state, json_str(query).encode('utf-8'), json_str(args).encode('utf-8')))
+        txt = rust_str(lib.state_query_json(self.__state, json_str(query).encode('utf-8'), json_str(args).encode('utf-8')))
         try:
             out = json.loads(txt)
         except:
@@ -139,7 +259,7 @@ class State(object):
         size = h * w  * rgba
         frame = np.zeros(size, dtype='uint8')
         frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-        _lib.render_current_frame(frame_ptr, size, False, sim.get_simulator(), self.__state)
+        lib.render_current_frame(frame_ptr, size, False, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,rgba))
 
     def render_frame_rgb(self, sim):
@@ -152,11 +272,11 @@ class State(object):
         size = h * w 
         frame = np.zeros(size, dtype='uint8')
         frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
-        _lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
+        lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,1))
 
     def to_json(self):
-        json_str = rust_str(_lib.state_to_json(self.__state))
+        json_str = rust_str(lib.state_to_json(self.__state))
         return json.loads(str(json_str))
 
 class Toybox(object):
@@ -182,23 +302,28 @@ class Toybox(object):
 
     def get_legal_action_set(self):
         sim = self.rsimulator.get_simulator()
-        txt = rust_str(_lib.simulator_actions(sim))
+        txt = rust_str(lib.simulator_actions(sim))
         try:
             out = json.loads(txt)
         except:
             raise ValueError(txt)
         return out
 
-    def apply_ale_action(self, action_int):      
+    def apply_ale_action(self, action_int):
+        """Takes an integer corresponding to an action, as specified in ALE and applies the action k times, where k is the sticky action constant stored in self.frames_per_action.
+        """      
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
-            if not _lib.state_apply_ale_action(self.rstate.get_state(), action_int):
+            if not lib.state_apply_ale_action(self.rstate.get_state(), action_int):
                 raise ValueError("Expected to apply action, but failed: {0}".format(action_int))
 
     def apply_action(self, action_input_obj):
+        """Takes an Input 
+        """
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
-            _lib.state_apply_action(self.rstate.get_state(), ctypes.byref(action_input_obj))
+            lib.state_apply_action(self.rstate.get_state(), 
+                                   ffi.new("char []", json_str(action_input_obj).encode('UTF-8') ))
     
     def get_state(self):
         return self.rstate.render_frame(self.rsimulator, self.grayscale)
