@@ -17,7 +17,7 @@ def build_native(spec):
 
 setup(
     name='toybox',
-    version='0.0.1',
+    version='0.1.0',
     packages=['toybox', 'toybox.envs', 'toybox.interventions', 'toybox.sample_tests'],
     zip_safe=False,
     platforms='any',

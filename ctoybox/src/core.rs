@@ -224,7 +224,7 @@ pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *cons
         assert!(!input_ptr.is_null());
         CStr::from_ptr(input_ptr)
             .to_str()
-            .expect("Could not convert input json str to UTF-8")
+            .expect("Could not create input from UTF-8")
     };
     let input: Input = serde_json::from_str(input_str).expect("Could not convert input to JSON");
     state.update_mut(input);

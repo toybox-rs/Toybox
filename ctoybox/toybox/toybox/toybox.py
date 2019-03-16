@@ -52,9 +52,9 @@ except:
             ffi.cdef(header)
         lib = ffi.dlopen(_lib_path)
     except Exception:
-        raise Exception('Could not load libopenai from path %s. ' % _lib_path 
+        raise Exception('Could not load libctoybox from path %s. ' % _lib_path 
         + """If you are on OSX, this may be due the relative path being different 
-        from `target/(target|release)/libopenai.dylib. If you are on Linux, try
+        from `target/(target|release)/libctoybox.dylib. If you are on Linux, try
         prefixing your call with `LD_LIBRARY_PATH=/path/to/library`.""")
 
 

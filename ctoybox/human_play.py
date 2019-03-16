@@ -61,6 +61,8 @@ if __name__ == '__main__':
             key_state = pygame.key.get_pressed()
             player_input = Input()
 
+            # Explicitly casting to bools because in some versions, the RHS gets converted
+            # to ints, causing problems when we load into the associated rust structs.
             player_input.left = bool(key_state[K_LEFT] or key_state[K_a])
             player_input.right = bool(key_state[K_RIGHT] or key_state[K_d])
             player_input.up = bool(key_state[K_UP] or key_state[K_w])
