@@ -8,7 +8,8 @@ import json
 
 try:
     from toybox._native import ffi, lib
-except ModuleNotFoundError:
+except:
+    # should be ModuleNotFoundError, but this is not available on the version of python on travis
     print('Global setup not found...trying local development install...')
     platform = platform.system() 
     lib_env_var = 'LIBCTOYBOX'
