@@ -220,13 +220,14 @@ pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *cons
         assert!(!state_ptr.is_null());
         &mut *state_ptr
     };
-    let input_str = unsafe {
+    let input_ptr = unsafe {
         assert!(!input_ptr.is_null());
         CStr::from_ptr(input_ptr)
-            .to_str()
-            .expect("Could not create input from UTF-8")
     };
-    let input: Input = serde_json::from_str(input_str).expect("Could not convert input to JSON");
+    let input_str = input_ptr
+            .to_str()
+            .expect("Could not create input string from pointer");
+    let input: Input = serde_json::from_str(input_str).expect("Could not input string to Input");
     state.update_mut(input);
 }
 
