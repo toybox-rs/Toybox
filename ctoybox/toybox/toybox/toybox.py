@@ -159,7 +159,6 @@ class Simulator(object):
         if sim is None:
             sim = lib.simulator_alloc(game_name.encode('utf-8'))
         # sim should be a pointer
-        #self.__sim = ctypes.pointer(ctypes.c_int(sim))
         self.game_name = game_name
         self.__sim = sim 
         self.__width = lib.simulator_frame_width(sim)
@@ -258,7 +257,6 @@ class State(object):
         rgba = 4
         size = h * w  * rgba
         frame = np.zeros(size, dtype='uint8')
-        # frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         frame_ptr = ffi.cast("uint8_t *", frame.ctypes.data)
         lib.render_current_frame(frame_ptr, size, False, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,rgba))
@@ -272,7 +270,6 @@ class State(object):
         w = sim.get_frame_width()
         size = h * w 
         frame = np.zeros(size, dtype='uint8')
-        # frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
         frame_ptr = ffi.cast("uint8_t *", frame.ctypes.data)
         lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,1))
