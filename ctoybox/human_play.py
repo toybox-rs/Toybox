@@ -60,13 +60,14 @@ if __name__ == '__main__':
                     break
             key_state = pygame.key.get_pressed()
             player_input = Input()
-            player_input.left = key_state[K_LEFT] or key_state[K_a]
-            player_input.right = key_state[K_RIGHT] or key_state[K_d]
-            player_input.up = key_state[K_UP] or key_state[K_w]
-            player_input.down = key_state[K_DOWN] or key_state[K_s]
-            player_input.button1 = key_state[K_z] or key_state[K_SPACE]
-            player_input.button2 = key_state[K_x] or key_state[K_RSHIFT] or key_state[K_LSHIFT]
 
+            player_input.left = bool(key_state[K_LEFT] or key_state[K_a])
+            player_input.right = bool(key_state[K_RIGHT] or key_state[K_d])
+            player_input.up = bool(key_state[K_UP] or key_state[K_w])
+            player_input.down = bool(key_state[K_DOWN] or key_state[K_s])
+            player_input.button1 = bool(key_state[K_z] or key_state[K_SPACE])
+            player_input.button2 = bool(key_state[K_x] or key_state[K_RSHIFT] or key_state[K_LSHIFT])
+                        
             tb.apply_action(player_input)
             if args.query is not None:
                 print(args.query, tb.query_state_json(args.query, args.query_args))

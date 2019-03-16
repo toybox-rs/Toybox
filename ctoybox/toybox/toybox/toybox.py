@@ -95,7 +95,7 @@ class Input():
         self.reset()
 
     def reset(self):
-        self.left = False
+        self.left : bool = False
         self.right = False
         self.up = False
         self.down = False
@@ -258,7 +258,8 @@ class State(object):
         rgba = 4
         size = h * w  * rgba
         frame = np.zeros(size, dtype='uint8')
-        frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        # frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        frame_ptr = ffi.cast("uint8_t *", frame.ctypes.data)
         lib.render_current_frame(frame_ptr, size, False, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,rgba))
 
@@ -271,7 +272,8 @@ class State(object):
         w = sim.get_frame_width()
         size = h * w 
         frame = np.zeros(size, dtype='uint8')
-        frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        # frame_ptr = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+        frame_ptr = ffi.cast("uint8_t *", frame.ctypes.data)
         lib.render_current_frame(frame_ptr, size, True, sim.get_simulator(), self.__state)
         return np.reshape(frame, (h,w,1))
 
@@ -322,8 +324,10 @@ class Toybox(object):
         """
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
+            js = json_str(action_input_obj).encode('UTF-8') 
+            print("INPUT JSON", js)
             lib.state_apply_action(self.rstate.get_state(), 
-                                   ffi.new("char []", json_str(action_input_obj).encode('UTF-8') ))
+                                   ffi.new("char []", js))
     
     def get_state(self):
         return self.rstate.render_frame(self.rsimulator, self.grayscale)
