@@ -95,7 +95,7 @@ class Input():
         self.reset()
 
     def reset(self):
-        self.left : bool = False
+        self.left = False
         self.right = False
         self.up = False
         self.down = False
