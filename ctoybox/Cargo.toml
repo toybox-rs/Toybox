@@ -2,6 +2,7 @@
 name = "ctoybox"
 version = "0.1.0"
 authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
+build = "build.rs"
 
 [lib]
 name = "ctoybox"
@@ -19,3 +20,5 @@ toybox = {path = "../toybox", version="*"}
 version = "*"
 path = "../core"
 
+[build-dependencies]
+cbindgen = "0.5"
