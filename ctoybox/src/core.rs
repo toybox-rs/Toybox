@@ -1,6 +1,6 @@
 use super::WrapSimulator;
 use super::WrapState;
-use libc::c_char;
+use libc::{c_char, c_void};
 use serde_json;
 use std::boxed::Box;
 use std::ffi::{CStr, CString};
@@ -215,16 +215,20 @@ pub extern "C" fn state_apply_ale_action(state_ptr: *mut WrapState, input: i32) 
 }
 
 #[no_mangle]
-pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
+pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *const c_char) {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
     };
-    let input = unsafe {
+    let input_ptr = unsafe {
         assert!(!input_ptr.is_null());
-        &mut *input_ptr
+        CStr::from_ptr(input_ptr)
     };
-    state.update_mut(*input);
+    let input_str = input_ptr
+        .to_str()
+        .expect("Could not create input string from pointer");
+    let input: Input = serde_json::from_str(input_str).expect("Could not input string to Input");
+    state.update_mut(input);
 }
 
 #[no_mangle]
@@ -246,7 +250,7 @@ pub extern "C" fn state_score(state_ptr: *mut WrapState) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn state_to_json(state_ptr: *mut WrapState) -> *const c_char {
+pub extern "C" fn state_to_json(state_ptr: *mut WrapState) -> *mut c_void {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
@@ -254,7 +258,7 @@ pub extern "C" fn state_to_json(state_ptr: *mut WrapState) -> *const c_char {
 
     let json: String = state.to_json();
     let cjson: CString = CString::new(json).expect("Conversion to CString should succeed!");
-    CString::into_raw(cjson)
+    CString::into_raw(cjson) as *mut c_void
 }
 
 #[no_mangle]

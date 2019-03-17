@@ -1,17 +1,16 @@
-from toybox.toybox import NOOP, UP, RIGHT, LEFT, DOWN, BUTTON1
-from toybox.clib import Input
+from toybox.toybox import Input
 
-NOOP_STR = NOOP.upper() 
+NOOP_STR = Input._NOOP.upper() 
 FIRE_STR = "FIRE"
-UP_STR = UP.upper()
-RIGHT_STR = RIGHT.upper()
-LEFT_STR = LEFT.upper()
-DOWN_STR = DOWN.upper()
+UP_STR = Input._UP.upper()
+RIGHT_STR = Input._RIGHT.upper()
+LEFT_STR = Input._LEFT.upper()
+DOWN_STR = Input._DOWN.upper()
 UPFIRE_STR = "UPFIRE"
 RIGHTFIRE_STR = "RIGHTFIRE"
 LEFTFIRE_STR = "LEFTFIRE"
 DOWNFIRE_STR = "DOWNFIRE"
-BUTTON1_STR = BUTTON1.upper()
+BUTTON1_STR = Input._BUTTON1.upper()
 
 # Copied from, and required by, baselines
 ACTION_MEANING = {

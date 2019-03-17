@@ -2,4 +2,5 @@ tensorflow
 gym[atari]
 tensorboard
 pygame
+cffi
 
