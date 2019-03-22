@@ -6,7 +6,9 @@ import pygame
 import pygame.key
 from pygame.locals import *
 import pygame.surfarray
+import json
 
+AMIDAR_TILE_TO_WORLD = 64
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='human_play for toybox')
@@ -24,9 +26,28 @@ if __name__ == '__main__':
         h = tb.get_height()
 
         config_json = tb.config_to_json()
-        print(config_json)
+        with open('config.json', 'w') as cf:
+            print(json.dumps(config_json, indent=3), file=cf)
         state_json = tb.to_state_json()
-        print(state_json)
+        with open('start-state.json', 'w') as sf:
+            print(json.dumps(state_json, indent=3), file=sf)
+        
+        board_tiles = state_json['board']['tiles']
+        print(len(board_tiles))
+        print(len(board_tiles[0]))
+
+        state_json['board']['tiles'] = board_tiles[:14]
+        state_json['player']['position']['y'] //= 2;
+        state_json['player']['history'] = []
+        state_json['player_start']['ty'] //= 2;
+
+        config_json['start_lives'] = 0
+        state_json['lives'] = 0
+
+        config_json['render_images'] = False
+        tb.write_config_json(config_json);
+        tb.write_state_json(state_json);
+
 
         dim = (w*args.scale,h*args.scale)
 
@@ -53,6 +74,12 @@ if __name__ == '__main__':
             player_input.button2 = key_state[K_x] or key_state[K_RSHIFT] or key_state[K_LSHIFT]
 
             tb.apply_action(player_input)
+
+
+            state_json = tb.to_state_json()
+            print(state_json['player']['position'])
+            sys.stdout.flush();
+
             if args.query is not None:
                 print(args.query, tb.query_state_json(args.query, args.query_args))
             image = tb.get_rgb_frame()
