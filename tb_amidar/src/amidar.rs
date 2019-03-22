@@ -81,6 +81,7 @@ pub struct Amidar {
     /// This should be false if you ever use a non-default board.
     default_board_bugs: bool,
     enemies: Vec<MovementAI>,
+    level: i32
 }
 
 impl Amidar {
@@ -122,6 +123,7 @@ impl Default for Amidar {
                     default_route_index: idx as u32,
                 })
                 .collect(),
+            level: 1
         }
     }
 }
@@ -1024,6 +1026,19 @@ impl Board {
         }
         Tile::Empty
     }
+
+    pub fn board_complete(&self) -> bool {
+        // if this is too slow, we can store a private variable for the number of 
+        // unpainted tiles
+        for row in &self.tiles {
+            for tile in &row {
+                if !tile.painted {
+                    return false 
+                }
+            }
+        }
+        return true
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1278,12 +1293,20 @@ impl toybox_core::State for State {
             }
         }
 
+        // If dead, reset. If alive, check to see if we have advanced to the next level.
         if dead {
             self.state.jumps = self.config.start_jumps;
             self.state.lives -= 1;
             self.state.score = pre_update_score;
             self.reset();
+        } else {
+            if self.state.board.board_complete() {
+                self.level += 1;
+                self.state.jumps = self.config.start_jumps;
+                self.reset();
+            }
         }
+    
     }
 
     fn draw(&self) -> Vec<Drawable> {
