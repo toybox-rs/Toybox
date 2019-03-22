@@ -11,6 +11,10 @@ Finally, compile the R code using `cargo build --release`.
 
 ## Using OpenAI Gym baselines right now
 
+There are several environment variables that need to be set in order to run Toybox. We keep these in the executable `start_python`. You may need to update them if your paths differ significantly from ours. 
+
+__All examples will use `start_python`, rather than `python` or `python3`.__
+
 In this directory, checkout the baselines repo.
 
     git clone https://github.com/openai/baselines.git
