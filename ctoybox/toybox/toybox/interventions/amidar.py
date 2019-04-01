@@ -9,19 +9,25 @@ class AmidarIntervention(Intervention):
         # check that the simulation in tb matches the game name.
         Intervention.__init__(self, tb, game_name)
 
-    def check_position(pdict, ls): 
-        # check that pdict is a dictionary containing the keys in list ls
-        assert isinstance(pdict, dict)
-        assert all([k in pdict.keys() for k in ls])
 
-    def check_tile_position(tdict): 
-        assert check_position(tdict, ['tx', 'ty'])
+    def check_tile_position(self, tdict): 
+        assert Intervention.check_position(self, tdict, ['tx', 'ty'])
+        return True
         # check that the tile is a non-empty tile (i.e., is paintable and walkable)
+
+
+    def check_is_tile(self, tile_pos): 
+        assert self.check_tile_position(tile_pos)
+        assert tile_pos['ty'] >= 0 and tile_pos['ty'] < len(self.state['board']['tiles'])
+        assert tile_pos['tx'] >= 0 and tile_pos['tx'] < len(self.state['board']['tiles'][tile_pos['ty']])
+
+        return self.state['board']['tiles'][tile_pos['ty']][tile_pos['tx']] != "Empty"
+
 
     def num_tiles_unpainted(self):
         total_unpainted = 0
-        for i in range(len(self.state['board'])): 
-            total_unpainted += sum([tile == "Unpainted" for tile in self.state['board'][i]])
+        for i in range(len(self.state['board']['tiles'])): 
+            total_unpainted += sum([tile != "Painted" and tile != "Empty" for tile in self.state['board']['tiles'][i]])
 
         return total_unpainted
 
@@ -54,13 +60,12 @@ class AmidarIntervention(Intervention):
         return any([self.state['enemies'][i]['caught'] for i in range(len(self.state['enemies']))])
 
 
-    def set_tile(self, tid, paint=True):
+    def set_tile_paint(self, tid, paint=True):
         tiles = self.state['board']['tiles']
-        assert tiles[tid['tx']][tid['ty']] != "Empty"
-        assert check_position(tid, ['tx', 'ty'])
+        assert self.check_is_tile(tid)
 
         label = "Painted" if paint else "Unpainted"
-        self.state['board']['tiles'][tid['tx']][tid['ty']] = label
+        self.state['board']['tiles'][tid['ty']][tid['tx']] = label
 
 
     def set_box(self, bid, paint=True, include_tiles=True, allow_chase=True): 
@@ -102,7 +107,7 @@ class AmidarIntervention(Intervention):
                 for i in range(tx_left, tx_right+1): 
                     for j in range(ty_left, ty_right+1):
                         if self.state['board']['tiles'][i][j] != "Empty": 
-                            all_painted &= if self.state['board']['tiles'][i][j] == "Painted"
+                            all_painted &= self.state['board']['tiles'][i][j] == "Painted"
                         if not all_painted: 
                             continue_check = False
                             break
@@ -161,19 +166,19 @@ class AmidarIntervention(Intervention):
         return [self.state['enemies'][eid]['ai'] for eid in eids]
 
 
-    def set_enemy_protocol(self, eid, protocol='EnemyAmidarMvmt', kwargs**):
+    def set_enemy_protocol(self, eid, protocol='EnemyAmidarMvmt', **kwargs):
         enemy = self.state['enemies'][eid]
         
         enemy['ai'] = {}
         enemy['ai'][protocol] = get_default_protocol(protocol, kwargs)
 
 
-    def get_default_protocol(self, protocol, e_pos, kwargs**): 
+    def get_default_protocol(self, protocol, e_pos, **kwargs): 
         assert protocol in ['EnemyLookupAI', 'EnemyPerimeterAI', 'EnemyAmidarMvmt', 'EnemyTargetPlayer', 'EnemyRandomMvmt']
         protocol_ai = {}
 
         if protocol == 'EnemyLookupAI': 
-            protocol_ai['default_route_index'] = eid %% 5 if 'default_route_index' not in kwargs.keys() else kwargs['default_route_index']
+            protocol_ai['default_route_index'] = eid % 5 if 'default_route_index' not in kwargs.keys() else kwargs['default_route_index']
             protocol_ai['next'] = 0 if 'next' not in kwargs.keys() else kwargs['next']
 
         # add start position
@@ -200,7 +205,7 @@ class AmidarIntervention(Intervention):
             # for now, just assume the first step after setting is False
             protocol_ai['player_seen'] = False if 'player_seen' not in kwargs.keys() else kwargs['player_seen']
 
-        if protocol == 'EnemyAmidarMvmt'
+        if protocol == 'EnemyAmidarMvmt':
             protocol_ai['vert'] = random.choice(["Up", "Down"]) if 'vert' not in kwargs.keys() else kwargs['vert']
             protocol_ai['horiz']= random.choice(["Left", "Right"]) if 'horiz' not in kwargs.keys() else kwargs['horiz']
             protocol_ai['start_vert'] = random.choice(["Up", "Down"]) if 'start_vert' not in kwargs.keys() else kwargs['start_vert']
@@ -278,7 +283,7 @@ class AmidarIntervention(Intervention):
             self.set_enemy_protocol[eid, protocols[i]] 
 
 
-    def add_enemy(self, pos, ai='EnemyLookupAI', kwargs**): 
+    def add_enemy(self, pos, ai='EnemyLookupAI', **kwargs): 
         new_e = {}
 
         # append kwargs, fill in with defaults
@@ -291,7 +296,7 @@ class AmidarIntervention(Intervention):
         new_e['position'] = pos
         self.state['enemies'].append(new_e)        
 
-        self.set_enemy_protocol(-1, ai, kwargs**)        
+        self.set_enemy_protocol(-1, ai, **kwargs)        
 
 
     def remove_enemy(self, eid):
@@ -308,7 +313,7 @@ class AmidarIntervention(Intervention):
         self.state['jumps'] = n
 
 
-    def set n_lives(self, n):
+    def set_n_lives(self, n):
         assert n > 0 
         self.state['lives'] = n
 
@@ -328,6 +333,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='test Amidar interventions')
     parser.add_argument('--partial_config', type=str, default="null")
     parser.add_argument('--save_json', type=bool, default=False)
+    parser.add_argument('--save_tile_images', type=bool, default=False)
+
+    pre_img_path = "pre_img.jpg"
+    post_img_path = "post_img.jpg"
 
     args = parser.parse_args()
 
@@ -335,10 +344,115 @@ if __name__ == "__main__":
         state = tb.to_state_json()
         config = tb.config_to_json()
 
-    if args.save_json:
-        # save a sample starting state and config
-        with open('toybox/toybox/interventions/defaults/amidar_state_default.json', 'w') as outfile:
-            json.dump(state, outfile)
+        if args.save_json:
+            # save a sample starting state and config
+            with open('toybox/toybox/interventions/defaults/amidar_state_default.json', 'w') as outfile:
+                json.dump(state, outfile)
 
-        with open('toybox/toybox/interventions/defaults/amidar_config_default.json', 'w') as outfile:
-            json.dump(config, outfile)
+            with open('toybox/toybox/interventions/defaults/amidar_config_default.json', 'w') as outfile:
+                json.dump(config, outfile)
+
+         # num tiles unpainted
+        with AmidarIntervention(tb) as intervention:
+            tiles_unpainted = intervention.num_tiles_unpainted()
+        #assert tiles_unpainted == 356
+
+        if args.save_tile_images: 
+            for ty in range(len(state['board']['tiles'])):
+                for tx in range(len(state['board']['tiles'][ty])):
+                    tile_pos = {'tx':tx, 'ty':ty}
+
+                    with AmidarIntervention(tb) as intervention:
+                        is_tile = intervention.check_is_tile(tile_pos)
+
+                    if is_tile:
+                        with AmidarIntervention(tb) as intervention:
+                                intervention.set_tile_paint(tile_pos)
+
+                        fname = 'tile_tx_'+str(tx)+'_ty_'+str(ty)+'.jpg'
+                        print(fname)
+                        tb.save_frame_image(fname, grayscale=False)
+
+                        with AmidarIntervention(tb) as intervention: 
+                            intervention.set_tile_paint(tile_pos, False)
+
+       
+
+        # test painting
+        tile_pos = {'tx':0, 'ty':0}
+        with AmidarIntervention(tb) as intervention:
+            intervention.set_tile_paint(tile_pos)
+        with AmidarIntervention(tb) as intervention:
+            assert intervention.state['board']['tiles'][tile_pos['ty']][tile_pos['tx']] == "Painted"
+
+        # test unpainting
+        tile_pos = {'tx':0, 'ty':0}
+        with AmidarIntervention(tb) as intervention:
+            intervention.set_tile_paint(tile_pos, False)
+        with AmidarIntervention(tb) as intervention:
+            # note that this tile was originally a ChaseMarker but that case is not handled 
+            # by these intervention functions
+            assert intervention.state['board']['tiles'][tile_pos['ty']][tile_pos['tx']] == "Unpainted"
+
+        # get number of enemies
+        with AmidarIntervention(tb) as intervention: 
+            n_enemies = intervention.num_enemies()
+        assert n_enemies == 5
+
+        # remove enemy
+        # add enemy
+
+
+        # check number of jumps
+        with AmidarIntervention(tb) as intervention: 
+            n_jumps = intervention.jumps_remaining()
+        assert n_jumps == 4
+
+        # set number of jumps
+        with AmidarIntervention(tb) as intervention:
+            intervention.set_n_jumps(5)
+        with AmidarIntervention(tb) as intervention:
+            n_jumps = intervention.jumps_remaining()
+        assert n_jumps == 5
+
+
+        # check number of lives
+        # set number of lives
+
+        # check jump mode
+        with AmidarIntervention(tb) as intervention:
+            intervention.set_mode('jump')
+        with AmidarIntervention(tb) as intervention:
+            jump_timer = intervention.state['jump_timer']
+        assert jump_timer > 0
+
+
+
+        #tb.save_frame_image(pre_img_path)
+        #with AmidarIntervention(tb) as intervention: 
+        #    pass
+        #tb.save_frame_image(post_img_path, grayscale=False)
+
+
+        # player_tile
+        # regular_mode
+        # jump_mode
+        # chase_mode
+        # enemy_tiles
+        # enemy caught
+        # any_enemy_caught
+        # set box
+        # check chase condition
+        # chase react
+        # set player tile
+        # set enemy tile
+        # set enemy tiles
+        # set mode
+        # get enemy protocol 
+        # get enemy protocols 
+        # set_enemy_protocol
+        # get_default_protocol (one for each of 5)
+        # get random tile ID
+        # get random position 
+        # get random direction for tile
+        # set enemy protocols 
