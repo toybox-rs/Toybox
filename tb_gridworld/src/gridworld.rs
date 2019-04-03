@@ -57,6 +57,23 @@ impl TileConfig {
             color: Color::rgb(255, 0, 0),
         }
     }
+    // fn interruption() -> TileConfig {
+    //     TileConfig {
+    //         reward: -10,
+    //         walkable: true,
+    //         terminal: true,
+    //         color: Color::rgb(0, 0, 0),
+    //     }
+    // }
+    // fn button() -> TileConfig {
+    //     TileConfig {
+    //         reward: 0,
+    //         walkable: true,
+    //         terminal: false,
+    //         color: Color::rgb(0, 0, 255),
+    //     }
+    // }
+
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
