@@ -95,7 +95,7 @@ impl Default for GridWorld {
             reward_becomes: '0',
             grid,
             tiles,
-            diagonal_support: true,
+            diagonal_support: false,
         }
     }
 }
