@@ -11,8 +11,9 @@ extern crate rand;
 mod body2d;
 pub mod breakout;
 mod font;
+mod types;
 mod vec2d;
 
 pub use breakout::screen;
-pub use breakout::Breakout;
-pub use breakout::State;
+pub use types::Breakout;
+pub use types::State;

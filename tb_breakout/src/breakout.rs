@@ -9,6 +9,8 @@ use toybox_core::{AleAction, Input, QueryError};
 
 use serde_json;
 
+use types::*;
+
 use rand::seq::SliceRandom;
 
 pub mod screen {
@@ -65,38 +67,6 @@ pub mod screen {
     pub const BALL_SPEED_START: f64 = 2.0;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StartBall {
-    x: f64,
-    y: f64,
-    angle_degrees: f64,
-}
-impl StartBall {
-    fn new(x: f64, y: f64, angle_degrees: f64) -> StartBall {
-        StartBall {
-            x,
-            y,
-            angle_degrees,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Breakout {
-    pub rand: random::Gen,
-    bg_color: Color,
-    frame_color: Color,
-    paddle_color: Color,
-    ball_color: Color,
-    row_colors: Vec<Color>,
-    row_scores: Vec<i32>,
-    start_lives: i32,
-    ball_speed_row_depth: u32,
-    ball_speed_slow: f64,
-    ball_speed_fast: f64,
-    ball_start_positions: Vec<StartBall>,
-    paddle_discrete_segments: Option<i32>,
-}
 impl Breakout {
     #[cfg(test)]
     fn unique_colors(&self) -> Vec<&Color> {
@@ -112,6 +82,7 @@ impl Breakout {
         Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into())
     }
 }
+
 impl Default for Breakout {
     fn default() -> Self {
         let (w, h) = screen::GAME_SIZE;
@@ -143,29 +114,6 @@ impl Default for Breakout {
             paddle_discrete_segments: Some(5),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[repr(C)]
-pub struct Brick {
-    // Logical y-coordinates of this brick; used for analysis.
-    pub row: i32,
-    // Logical x-coordinates of this brick; used for analysis.
-    pub col: i32,
-    /// Brick position describes the upper-left of the brick.
-    pub position: Vec2D,
-    /// Brick size is the width and height of the brick.
-    pub size: Vec2D,
-    /// This is the number of points for a brick.
-    pub points: i32,
-    /// This starts as true and moves to false when hit.
-    pub alive: bool,
-    /// What color is this brick.
-    pub color: Color,
-    /// How deep is this brick? Will trigger speedup?
-    pub depth: u32,
-    /// Destructible: if false, never let this brick die.
-    pub destructible: bool,
 }
 
 impl Brick {
@@ -206,29 +154,6 @@ impl Brick {
             && point.y >= self.position.y
             && point.y <= (self.position.y + self.size.y)
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[repr(C)]
-pub struct StateCore {
-    pub rand: random::Gen,
-    pub lives: i32,
-    pub is_dead: bool,
-    pub points: i32,
-    /// ball position describes the center of the ball.
-    pub balls: Vec<Body2D>,
-    pub ball_radius: f64,
-    /// paddle position describes the center of the paddle.
-    pub paddle: Body2D,
-    pub paddle_width: f64,
-    pub paddle_speed: f64,
-    pub bricks: Vec<Brick>,
-    pub reset: bool,
-}
-
-pub struct State {
-    pub config: Breakout,
-    pub state: StateCore,
 }
 
 impl toybox_core::Simulation for Breakout {
