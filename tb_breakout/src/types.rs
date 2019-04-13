@@ -25,6 +25,8 @@ impl StartBall {
     }
 }
 
+/// This struct represents all the static data needed to create a new game of Breakout.
+/// The data in this struct represents the Toybox config for this game.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Breakout {
     /// Random number generator used to seed new games. The randomness in breakout is derived from the starting ball configurations.
@@ -104,7 +106,10 @@ pub struct StateCore {
     pub reset: bool,
 }
 
+/// The breakout game's true state has both the configuration that launched the game and information about the current frame.
 pub struct State {
+    /// This contains information about the game that does not change during gameplay, but is referenced, read-only.
     pub config: Breakout,
+    /// This contains information about the current snapshot of game state.
     pub state: StateCore,
 }

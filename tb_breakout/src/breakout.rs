@@ -13,9 +13,13 @@ use types::*;
 
 use rand::seq::SliceRandom;
 
-pub mod screen {
+/// This module contains constants derived from observation and measurement of the Atari 2600 game.
+mod screen {
+    /// This is the size of the screen.
     pub const GAME_SIZE: (i32, i32) = (240, 160);
+    /// This is the y-offset of the gray frame that surrounds the board.
     pub const FRAME_OFFSET: i32 = 13;
+    /// This is the thickness of the gray frame that surrounds the board.
     pub const FRAME_THICKNESS: i32 = 12;
     pub const FRAME_SUPPORT_WIDTH: i32 = 12;
 
@@ -38,18 +42,28 @@ pub mod screen {
     pub const BOARD_BOTTOM_Y: i32 = FRAME_OFFSET + FRAME_LEFT_HEIGHT;
 
     // Atari manual refers to orange, yellow, green, aqua, blue... not what images show.
+    /// This is the RGB color of the red bricks.
     pub const RED: (u8, u8, u8) = (200, 72, 72);
+    /// This is the RGB color of the dark-orange bricks.
     pub const DARK_ORANGE: (u8, u8, u8) = (198, 108, 58);
+    /// This is the RGB color of the orange bricks.
     pub const ORANGE: (u8, u8, u8) = (180, 122, 48);
+    /// This is the RGB color of the yellow bricks.
     pub const YELLOW: (u8, u8, u8) = (162, 162, 42);
+    /// This is the RGB color of the green bricks.
     pub const GREEN: (u8, u8, u8) = (72, 160, 72);
+    /// This is the RGB color of the blue bricks.
     pub const BLUE: (u8, u8, u8) = (66, 72, 200);
 
+    /// This is the point value of the rows of bricks, from top to bottom.
     pub const ROW_SCORES: &[i32] = &[7, 7, 4, 4, 1, 1];
+    /// This is the color of the rows of bricks, from top to bottom.
     pub const ROW_COLORS: &[&(u8, u8, u8)] = &[&RED, &DARK_ORANGE, &ORANGE, &YELLOW, &GREEN, &BLUE];
 
     // Atari colors have paddle, ball, and red all being the same.
+    /// The color of the paddle in the atari-py version.
     pub const PADDLE_COLOR: (u8, u8, u8) = (200, 72, 72);
+    /// The color of the ball in the atari-py version.
     pub const BALL_COLOR: (u8, u8, u8) = (200, 72, 72);
 
     pub const ROOF_SPACING: i32 = 18;
