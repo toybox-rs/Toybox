@@ -34,8 +34,6 @@ mod screen {
 
     pub const FRAME_COLOR: (u8, u8, u8) = (144, 144, 144);
 
-    pub const SCORE_CHAR_SIZE: (i32, i32) = (18, 7);
-
     pub const BOARD_LEFT_X: i32 = FRAME_SUPPORT_WIDTH;
     pub const BOARD_RIGHT_X: i32 = GAME_SIZE.0 - FRAME_SUPPORT_WIDTH;
     pub const BOARD_TOP_Y: i32 = FRAME_OFFSET + FRAME_THICKNESS;
@@ -78,7 +76,6 @@ mod screen {
 
     pub const BALL_ANGLE_MIN: f64 = 30.0;
     pub const BALL_ANGLE_RANGE: f64 = 120.0;
-    pub const BALL_SPEED_START: f64 = 2.0;
 }
 
 impl Breakout {
@@ -653,7 +650,7 @@ impl toybox_core::State for State {
 /// Define some queries on StateCore.
 impl StateCore {
     /// Returns a set of numbers corresponding to the stacks that are channels.
-    pub fn find_channels(&self) -> Vec<i32> {
+    fn find_channels(&self) -> Vec<i32> {
         let across = screen::BRICKS_ACROSS as i32;
         let down = screen::ROW_SCORES.len() as i32;
         let mut retval = Vec::new();

@@ -80,6 +80,7 @@ pub struct Brick {
     pub destructible: bool,
 }
 
+/// This struct contains the per-frame snapshot of mutable state in a Breakout game.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StateCore {
     /// This random number generator is used to select the starting position and angle of the ball.
