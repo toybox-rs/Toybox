@@ -1,5 +1,6 @@
 use super::destruction;
 use super::font::{draw_score, get_sprite, FontChoice};
+use super::types::*;
 use firing_ai::{enemy_fire_lasers, FiringAI};
 use itertools::Itertools;
 use serde_json;
@@ -20,6 +21,7 @@ pub mod screen {
     pub const SCORE_RIGHT_X_POS: i32 = 168;
     pub const SCORE_Y_POS: i32 = 8;
     pub const SHIP_SIZE: (i32, i32) = (16, 10);
+    #[cfg(test)]
     pub const SHIELD_SIZE: (i32, i32) = (16, 18);
     pub const SHIELD1_POS: (i32, i32) = (84, 157);
     pub const SHIELD2_POS: (i32, i32) = (148, 157);
@@ -55,7 +57,6 @@ pub mod screen {
 
     pub const LASER_SIZE_W: i32 = 2;
     pub const LASER_SIZE_H1: i32 = 11;
-    pub const LASER_SIZE_H2: i32 = 8;
 
     // Colors:
     pub const LEFT_GAME_DOT_COLOR: (u8, u8, u8) = (64, 124, 64);
@@ -290,15 +291,6 @@ lazy_static! {
             .expect("Shield sprite should be included!");
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SpaceInvaders {
-    pub rand: random::Gen,
-    row_scores: Vec<i32>,
-    start_lives: i32,
-    pub enemy_protocol: FiringAI,
-    pub jitter: f64,
-    pub shields: Vec<(i32, i32)>,
-}
 impl Default for SpaceInvaders {
     fn default() -> Self {
         SpaceInvaders {
@@ -314,34 +306,6 @@ impl Default for SpaceInvaders {
             ],
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Player {
-    pub x: i32,
-    pub y: i32,
-    pub w: i32,
-    pub h: i32,
-    /// Speed of movenet.
-    pub speed: i32,
-    pub color: Color,
-    pub alive: bool,
-    death_counter: Option<i32>,
-    death_hit_1: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Laser {
-    pub x: i32,
-    pub y: i32,
-    pub w: i32,
-    pub h: i32,
-    /// Laser timing (visible / not-visible) based on this.
-    pub t: i32,
-    /// Lasers have a direction.
-    pub movement: Direction,
-    pub speed: i32,
-    pub color: Color,
 }
 
 impl Player {
@@ -388,38 +352,6 @@ impl Laser {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct StateCore {
-    pub rand: random::Gen,
-    pub life_display_timer: i32,
-    pub lives: i32,
-    pub levels_completed: i32,
-    pub score: i32,
-    /// Ship is a rectangular actor (logically).
-    pub ship: Player,
-    /// Emulate the fact that Atari could only have one laser at a time (and it "recharges" faster if you hit the front row...)
-    pub ship_laser: Option<Laser>,
-    /// Shields are destructible, so we need to track their pixels...
-    pub shields: Vec<SpriteData>,
-    /// Enemies are rectangular actors (logically speaking).
-    pub enemies: Vec<Enemy>,
-    /// Enemy shot delay:
-    pub enemy_shot_delay: i32,
-    /// Enemy lasers are actors as well.
-    pub enemy_lasers: Vec<Laser>,
-
-    /// Mothership
-    pub ufo: Ufo,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Ufo {
-    pub x: i32,
-    pub y: i32,
-    appearance_counter: Option<i32>,
-    death_counter: Option<i32>,
-}
-
 impl Ufo {
     fn new() -> Ufo {
         Ufo {
@@ -449,23 +381,6 @@ impl Ufo {
         self.death_counter = None;
     }
 }
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct Enemy {
-    x: i32,
-    y: i32,
-    row: i32,
-    col: i32,
-    id: u32,
-    alive: bool,
-    points: i32,
-    death_counter: Option<i32>,
-    move_counter: i32,
-    move_right: bool,
-    move_down: bool,
-    orientation_init: bool,
-}
-
 impl Enemy {
     fn new(x: i32, y: i32, row: i32, col: i32, id: u32) -> Enemy {
         Enemy {
@@ -534,6 +449,7 @@ impl Enemy {
 }
 
 impl StateCore {
+    /// Constructor based on configuration object.
     fn new(config: &mut SpaceInvaders) -> StateCore {
         let player_start_x = screen::SHIP_LIMIT_X1;
         let player_start_y = screen::SKY_TO_GROUND - screen::SHIP_SIZE.1;
@@ -785,6 +701,7 @@ impl StateCore {
         }
     }
 
+    /// Determine the closest enemy for firing patterns; returns an index to avoid the borrow-checker.
     pub fn closest_enemy_id(&self) -> u32 {
         let playerx = &self.ship.x;
         let mut dist = screen::GAME_SIZE.0;
@@ -889,11 +806,6 @@ impl StateCore {
         let lost = self.has_lost();
         game_over || won || lost
     }
-}
-
-pub struct State {
-    pub config: SpaceInvaders,
-    pub state: StateCore,
 }
 
 impl toybox_core::Simulation for SpaceInvaders {

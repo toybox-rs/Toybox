@@ -12,7 +12,14 @@ mod destruction;
 mod firing_ai;
 mod font;
 mod space_invaders;
+mod types;
 
-pub use space_invaders::screen;
-pub use space_invaders::SpaceInvaders;
-pub use space_invaders::State;
+// All types are essentially "public" API.
+pub use firing_ai::FiringAI;
+pub use types::Enemy;
+pub use types::Laser;
+pub use types::Player;
+pub use types::SpaceInvaders;
+pub use types::State;
+pub use types::StateCore;
+pub use types::Ufo;
