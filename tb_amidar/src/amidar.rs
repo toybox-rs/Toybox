@@ -25,17 +25,26 @@ pub mod screen {
 }
 pub mod raw_images {
     pub const PLAYER_L1: &[u8] = include_bytes!("resources/amidar/player_l1.png");
+    pub const PLAYER_L2: &[u8] = include_bytes!("resources/amidar/player_l2.png");
     pub const ENEMY_L1: &[u8] = include_bytes!("resources/amidar/enemy_l1.png");
+    pub const ENEMY_L2: &[u8] = include_bytes!("resources/amidar/enemy_l2.png");
     pub const ENEMY_CHASE_L1: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
+    pub const ENEMY_CHASE_L2: &[u8] = include_bytes!("resources/amidar/enemy_chase_l2.png");
     pub const PAINTED_BOX_BAR: &[u8] = include_bytes!("resources/amidar/painted_box_bar.png");
+
     pub const BLOCK_TILE_PAINTED_L1: &[u8] =
         include_bytes!("resources/amidar/block_tile_painted_l1.png");
+    pub const BLOCK_TILE_PAINTED_L2: &[u8] =
+        include_bytes!("resources/amidar/block_tile_painted_l2.png");
     pub const BLOCK_TILE_UNPAINTED_L1: &[u8] =
         include_bytes!("resources/amidar/block_tile_unpainted_l1.png");
+    pub const BLOCK_TILE_UNPAINTED_L2: &[u8] =
+        include_bytes!("resources/amidar/block_tile_unpainted_l2.png");
 }
 pub mod images {
     use super::*;
     lazy_static! {
+        // Level 1 images
         pub static ref PLAYER_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::PLAYER_L1);
         pub static ref ENEMY_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L1);
@@ -43,12 +52,29 @@ pub mod images {
         pub static ref ENEMY_CHASE_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L1);
         pub static ref ENEMY_CAUGHT_L1: FixedSpriteData = ENEMY_CHASE_L1.make_black_version();
-        pub static ref PAINTED_BOX_BAR: FixedSpriteData =
-            FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
         pub static ref BLOCK_TILE_PAINTED_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L1);
         pub static ref BLOCK_TILE_UNPAINTED_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L1);
+
+
+        // Level 2 images
+        pub static ref PLAYER_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PLAYER_L2);
+        pub static ref ENEMY_L2: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L2);
+        pub static ref ENEMY_JUMP_L2: FixedSpriteData = ENEMY_L2.make_black_version();
+        pub static ref ENEMY_CHASE_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L2);
+        pub static ref ENEMY_CAUGHT_L2: FixedSpriteData = ENEMY_CHASE_L2.make_black_version();
+        pub static ref BLOCK_TILE_PAINTED_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L2);
+        pub static ref BLOCK_TILE_UNPAINTED_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L2);
+
+
+        pub static ref PAINTED_BOX_BAR: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
+
     }
 }
 
@@ -81,7 +107,7 @@ pub struct Amidar {
     /// This should be false if you ever use a non-default board.
     default_board_bugs: bool,
     enemies: Vec<MovementAI>,
-    level: i32
+    level: i32,
 }
 
 impl Amidar {
@@ -123,7 +149,7 @@ impl Default for Amidar {
                     default_route_index: idx as u32,
                 })
                 .collect(),
-            level: 1
+            level: 1,
         }
     }
 }
@@ -1028,16 +1054,16 @@ impl Board {
     }
 
     pub fn board_complete(&self) -> bool {
-        // if this is too slow, we can store a private variable for the number of 
+        // if this is too slow, we can store a private variable for the number of
         // unpainted tiles
         for row in &self.tiles {
-            for tile in &row {
-                if !tile.painted {
-                    return false 
+            for tile in row {
+                if tile.needs_paint() {
+                    return false;
                 }
             }
         }
-        return true
+        return true;
     }
 }
 
@@ -1052,6 +1078,7 @@ pub struct StateCore {
     pub player: Mob,
     pub enemies: Vec<Mob>,
     pub board: Board,
+    pub level: i32,
 }
 
 pub struct State {
@@ -1078,6 +1105,7 @@ impl State {
             chase_timer: 0,
             jumps: config.start_jumps,
             jump_timer: 0,
+            level: 1,
             player,
             enemies,
             board,
@@ -1197,11 +1225,12 @@ impl toybox_core::Simulation for Amidar {
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
         // If everything is painted, game is over. Set lives to 0.
-        if self.state.board.boxes.iter().all(|b: &GridBox| b.painted) {
-            0
-        } else {
-            self.state.lives
-        }
+        // if self.state.board.boxes.iter().all(|b: &GridBox| b.painted) {
+        //     0
+        // } else {
+        //     self.state.lives
+        // }
+        self.state.lives
     }
     fn score(&self) -> i32 {
         self.state.score
@@ -1219,6 +1248,7 @@ impl toybox_core::State for State {
             let mut allow_score_change = true;
             if self.config.default_board_bugs {
                 let (start, end) = score_change.junctions.unwrap();
+                // Locations of the first, semi-painted segment.
                 if start == 607 && end == 415 {
                     allow_score_change = false;
                 }
@@ -1301,12 +1331,11 @@ impl toybox_core::State for State {
             self.reset();
         } else {
             if self.state.board.board_complete() {
-                self.level += 1;
-                self.state.jumps = self.config.start_jumps;
                 self.reset();
-            }
+                self.state.level += 1;
+                self.state.board = Board::fast_new();
+            } 
         }
-    
     }
 
     fn draw(&self) -> Vec<Drawable> {
@@ -1326,8 +1355,16 @@ impl toybox_core::State for State {
 
                 if self.config.render_images {
                     let tile_sprite: &FixedSpriteData = match tile {
-                        &Tile::Painted => &images::BLOCK_TILE_PAINTED_L1,
-                        &Tile::Unpainted | &Tile::ChaseMarker => &images::BLOCK_TILE_UNPAINTED_L1,
+                        &Tile::Painted => match self.state.level % 2 {
+                            1 => &images::BLOCK_TILE_PAINTED_L1,
+                            0 => &images::BLOCK_TILE_PAINTED_L2,
+                            _ => unreachable!(),
+                        },
+                        &Tile::Unpainted | &Tile::ChaseMarker => match self.state.level % 2 {
+                            1 => &images::BLOCK_TILE_UNPAINTED_L1,
+                            0 => &images::BLOCK_TILE_UNPAINTED_L2,
+                            _ => unreachable!(),
+                        },
                         &Tile::Empty => continue,
                     };
                     output.push(Drawable::sprite(
@@ -1388,11 +1425,16 @@ impl toybox_core::State for State {
 
         let (player_x, player_y) = self.state.player.position.to_screen().pixels();
         let (player_w, player_h) = screen::PLAYER_SIZE;
+        let player_sprite = match self.state.level % 2 {
+            1 => images::PLAYER_L1.clone(),
+            0 => images::PLAYER_L2.clone(),
+            _ => unreachable!(),
+        };
         if self.config.render_images {
             output.push(Drawable::sprite(
                 offset_x + player_x - 1,
                 offset_y + player_y - 1,
-                images::PLAYER_L1.clone(),
+                player_sprite,
             ))
         } else {
             output.push(Drawable::rect(
@@ -1414,14 +1456,30 @@ impl toybox_core::State for State {
                     offset_y + y - 1,
                     if self.state.chase_timer > 0 {
                         if enemy.caught {
-                            images::ENEMY_CAUGHT_L1.clone()
+                            match self.state.level % 2 {
+                                1 => images::ENEMY_CAUGHT_L1.clone(),
+                                0 => images::ENEMY_CAUGHT_L2.clone(),
+                                _ => unreachable!(),
+                            }
                         } else {
-                            images::ENEMY_CHASE_L1.clone()
+                            match self.state.level % 2 {
+                                1 => images::ENEMY_CHASE_L1.clone(),
+                                0 => images::ENEMY_CHASE_L2.clone(),
+                                _ => unreachable!(),
+                            }
                         }
                     } else if self.state.jump_timer > 0 {
-                        images::ENEMY_JUMP_L1.clone()
+                        match self.state.level % 2 {
+                            1 => images::ENEMY_JUMP_L1.clone(),
+                            0 => images::ENEMY_JUMP_L2.clone(),
+                            _ => unreachable!(),
+                        }
                     } else {
-                        images::ENEMY_L1.clone()
+                        match self.state.level % 2 {
+                            1 => images::ENEMY_L1.clone(),
+                            0 => images::ENEMY_L2.clone(),
+                            _ => unreachable!(),
+                        }
                     },
                 ))
             } else {
@@ -1647,5 +1705,17 @@ mod tests {
         let painted_now = num_tiles_unpainted(&state);
         println!("painted_now: {} ... before: {}", painted_now, first);
         assert!(painted_now < first);
+    }
+
+    #[test]
+    fn test_level_2() {
+        let mut state = super::State::try_new(&Amidar::default()).unwrap();
+        // paint all tiles except the last
+        let mut tiles = state.state.board.tiles;
+        let len = tiles.len();
+        for i in 0..(len - 2) {
+            tiles[i] = Tile::Painted;
+        }
+        // finish this
     }
 }

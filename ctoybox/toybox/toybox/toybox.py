@@ -321,7 +321,7 @@ class Toybox(object):
         # implement frameskip(k) by sending the action (k+1) times every time we have an action.
         for _ in range(self.frames_per_action):
             js = json_str(action_input_obj).encode('UTF-8') 
-            print("INPUT JSON", js)
+            # print("INPUT JSON", js)
             lib.state_apply_action(self.rstate.get_state(), 
                                    ffi.new("char []", js))
     
