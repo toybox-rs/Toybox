@@ -66,6 +66,8 @@ pub struct GridWorld {
     pub reward_becomes: char,
     pub player_color: Color,
     pub player_start: (i32, i32),
+    /// Does this world support diagonal movement?
+    pub diagonal_support: bool,
 }
 
 impl Default for GridWorld {
@@ -93,12 +95,19 @@ impl Default for GridWorld {
             reward_becomes: '0',
             grid,
             tiles,
+            diagonal_support: false,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
+    pub config: GridWorld,
+    pub state: StateCore,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateCore {
     pub game_over: bool,
     pub score: i32,
     pub step: usize,
@@ -106,16 +115,16 @@ pub struct State {
     pub tiles: Vec<TileConfig>,
     pub grid: Vec<Vec<usize>>,
     pub player: (i32, i32),
-    pub player_color: Color,
 }
-impl State {
+
+impl StateCore {
     /// Compute the size of the grid for our own usage here.
     fn size(&self) -> (i32, i32) {
         let height = self.grid.len() as i32;
         let width = self.grid[0].len() as i32;
         (width, height)
     }
-    fn from_config(config: &GridWorld) -> State {
+    fn from_config(config: &GridWorld) -> StateCore {
         let mut tiles = Vec::new();
         let mut grid = Vec::new();
 
@@ -134,14 +143,13 @@ impl State {
             grid.push(grid_row);
         }
 
-        State {
+        StateCore {
             game_over: false,
             step: 0,
             score: 0,
             reward_becomes: char_to_index[&config.reward_becomes],
             tiles,
             grid,
-            player_color: config.player_color,
             player: config.player_start,
         }
     }
@@ -161,6 +169,31 @@ impl State {
     fn terminal(&self, tx: i32, ty: i32) -> bool {
         self.get_tile(tx, ty).map(|t| t.terminal).unwrap_or(false)
     }
+    /// Take a step if the destination is walkable.
+    fn walk_once(&mut self, dx: i32, dy: i32) {
+        let (px, py) = self.player;
+        let dest = (px + dx, py + dy);
+        if self.walkable(dest.0, dest.1) {
+            self.arrive(dest.0, dest.1)
+        }
+    }
+
+    /// Can move up and left (Northwest?)
+    /// No No Yes Yes Yes
+    /// XX .X ..  .X  ..
+    /// X@ X@ X@  .@  .@
+    ///
+    /// Or in words: you can move diagonally if the destination is free AND you are not blocked on both vertical and horizontal roads.
+    fn walk_diagonal(&mut self, dx: i32, dy: i32) {
+        let (px, py) = self.player;
+
+        if self.walkable(px + dx, py + dy)
+            && (self.walkable(px + dx, py) || self.walkable(px, py + dy))
+        {
+            self.arrive(px + dx, py + dy)
+        }
+    }
+
     fn collect_reward(&mut self, tx: i32, ty: i32) -> i32 {
         let y = ty as usize;
         let x = tx as usize;
@@ -170,6 +203,17 @@ impl State {
             self.grid[y][x] = self.reward_becomes;
         }
         reward
+    }
+    /// Move to a new location.
+    fn arrive(&mut self, x: i32, y: i32) {
+        self.player = (x, y);
+
+        // check terminal before "collect_reward" which removes the reward from the map.
+        if self.terminal(x, y) {
+            self.game_over = true;
+        }
+
+        self.collect_reward(x, y);
     }
 }
 
@@ -196,7 +240,10 @@ impl toybox_core::Simulation for GridWorld {
     }
 
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::from_config(&self))
+        Box::new(State {
+            state: StateCore::from_config(&self),
+            config: self.clone(),
+        })
     }
 
     fn new_state_from_json(
@@ -217,35 +264,71 @@ impl toybox_core::Simulation for GridWorld {
     }
 }
 
+/// Enumeration that supports diagonal movement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+enum DiagonalDir {
+    NE,
+    N,
+    NW,
+    E,
+    W,
+    SE,
+    S,
+    SW,
+}
+impl DiagonalDir {
+    /// Read an input struct and turn it into a diagonal direction.
+    fn from_input(buttons: Input) -> Option<DiagonalDir> {
+        match (buttons.left, buttons.up, buttons.right, buttons.down) {
+            (true, false, false, false) => Some(DiagonalDir::W),
+            (true, true, false, false) => Some(DiagonalDir::NW),
+            (false, true, false, false) => Some(DiagonalDir::N),
+            (false, true, true, false) => Some(DiagonalDir::NE),
+            (false, false, true, false) => Some(DiagonalDir::E),
+            (false, false, true, true) => Some(DiagonalDir::SE),
+            (false, false, false, true) => Some(DiagonalDir::S),
+            (true, false, false, true) => Some(DiagonalDir::SW),
+            _ => None,
+        }
+    }
+}
+
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
-        if self.game_over {
+        if self.state.game_over {
             0
         } else {
             1
         }
     }
     fn score(&self) -> i32 {
-        self.score
+        self.state.score
     }
+
     fn update_mut(&mut self, buttons: Input) {
         // Must take an action in GridWorld.
         if buttons.is_empty() {
             return;
         }
-        self.step += 1;
-        if let Some(dir) = Direction::from_input(buttons) {
-            let (dx, dy) = dir.delta();
-            let (px, py) = self.player;
-            let dest = (px + dx, py + dy);
+        self.state.step += 1;
 
-            if self.walkable(dest.0, dest.1) {
-                self.player = dest;
-                // check terminal before "collect_reward" which removes the reward from the map.
-                if self.terminal(dest.0, dest.1) {
-                    self.game_over = true;
+        if self.config.diagonal_support {
+            if let Some(ddir) = DiagonalDir::from_input(buttons) {
+                match ddir {
+                    DiagonalDir::N => self.state.walk_once(0, -1),
+                    DiagonalDir::S => self.state.walk_once(0, 1),
+                    DiagonalDir::E => self.state.walk_once(1, 0),
+                    DiagonalDir::W => self.state.walk_once(-1, 0),
+                    DiagonalDir::NW => self.state.walk_diagonal(-1, -1),
+                    DiagonalDir::NE => self.state.walk_diagonal(1, -1),
+                    DiagonalDir::SW => self.state.walk_diagonal(-1, 1),
+                    DiagonalDir::SE => self.state.walk_diagonal(1, 1),
                 }
-                self.collect_reward(dest.0, dest.1);
+            }
+        } else {
+            if let Some(dir) = Direction::from_input(buttons) {
+                let (dx, dy) = dir.delta();
+                self.state.walk_once(dx, dy);
             }
         }
     }
@@ -253,16 +336,17 @@ impl toybox_core::State for State {
         let mut output = Vec::new();
         output.push(Drawable::Clear(Color::black()));
 
-        for (y, row) in self.grid.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
-                let tile = &self.tiles[*cell];
+        let (width, height) = self.state.size();
+        for y in 0..height {
+            for x in 0..width {
+                let tile = self.state.get_tile(x, y).expect("Tile type should exist!");
                 output.push(Drawable::rect(tile.color, x as i32, y as i32, 1, 1));
             }
         }
         output.push(Drawable::rect(
-            self.player_color,
-            self.player.0,
-            self.player.1,
+            self.config.player_color,
+            self.state.player.0,
+            self.state.player.1,
             1,
             1,
         ));
@@ -276,12 +360,12 @@ impl toybox_core::State for State {
     fn query_json(&self, query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
         Ok(match query {
             "xy" => {
-                let (px, py) = self.player;
+                let (px, py) = self.state.player;
                 serde_json::to_string(&(px, py))?
             }
             "xyt" => {
-                let (px, py) = self.player;
-                serde_json::to_string(&(px, py, self.step))?
+                let (px, py) = self.state.player;
+                serde_json::to_string(&(px, py, self.state.step))?
             }
             _ => Err(QueryError::NoSuchQuery)?,
         })
