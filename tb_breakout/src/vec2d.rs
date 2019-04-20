@@ -2,7 +2,9 @@
 /// We use f64 for internal representations but we can get integer coordinates upon request for drawing.
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Vec2D {
+    /// The x-coordinate of this vector.
     pub x: f64,
+    /// The y-coordinate of this vector.
     pub y: f64,
 }
 
@@ -20,9 +22,12 @@ impl Vec2D {
         Vec2D::new(r * theta.cos(), r * theta.sin())
     }
 
+    /// The magnitude of the vector.
     pub fn magnitude(&self) -> f64 {
         (self.x * self.x + self.y * self.y).sqrt()
     }
+
+    /// The squared magnitude of this vector; cheaper than magnitude if you just want to know which vector is biggest.
     pub fn magnitude_squared(&self) -> f64 {
         (self.x * self.x + self.y * self.y)
     }
@@ -32,16 +37,23 @@ impl Vec2D {
         self.y.atan2(self.x)
     }
 
+    /// Move a vector by another and produce a new vector.
     pub fn translate(&self, by: &Vec2D) -> Vec2D {
         Vec2D::new(self.x + by.x, self.y + by.y)
     }
+
+    /// Move a vector by another; modifying it.
     pub fn translate_mut(&mut self, by: &Vec2D) {
         self.x += by.x;
         self.y += by.y;
     }
+
+    /// Scale a vector by a constant, producing a new vector.
     pub fn scale(&self, by: f64) -> Vec2D {
         Vec2D::new(self.x * by, self.y * by)
     }
+
+    /// Scale a vector by a constant, modifying it.
     pub fn scale_mut(&mut self, by: f64) {
         self.x *= by;
         self.y *= by;
@@ -56,13 +68,19 @@ impl Vec2D {
 // For operator overloading.
 use std::ops::{Add, AddAssign};
 
+/// Support using the plus operator on vectors.
 impl Add for Vec2D {
     type Output = Vec2D;
+
+    /// This defers to translate; producing a new vector from the sum of two others.
     fn add(self, other: Vec2D) -> Vec2D {
         self.translate(&other)
     }
 }
+
+/// Support using the += operator on vectors.
 impl AddAssign for Vec2D {
+    /// This defers to translate_mut; translating a vector by another.
     fn add_assign(&mut self, other: Vec2D) {
         self.translate_mut(&other)
     }
