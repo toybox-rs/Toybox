@@ -1,4 +1,5 @@
-algs="deepq acer acktr a2c ppo2"
+set -e
+algs="ppo2 acktr a2c"
 work1=/mnt/nfs/work1/jensen/etosch/issta
 logs=$work1/logs
 
@@ -6,9 +7,8 @@ mkdir -p $logs
 
 partition="titanx-long"
 
-
-envs="AmidarToyboxNoFrameskip-v4 SpaceInvadersToyboxNoFrameskip-v4"
-timesteps="1e7 5e7"
+envs="BreakoutToyboxNoFrameskip-v4"
+timesteps="5e7"
 weights=0
 seeds=`cat training_seeds`
 
@@ -56,6 +56,7 @@ OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python -m baselines.run --alg=$a
 		    echo "$cmd"
 		    echo "$cmd" > $dest
 		    sbatch -p $partition --gres=gpu:1 $dest
+		    sleep 10
 	        done;
 	    done;
         done;
