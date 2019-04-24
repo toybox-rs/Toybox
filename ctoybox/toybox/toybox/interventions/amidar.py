@@ -3,6 +3,8 @@ import random
 import json
 """An API for interventions on Amidar."""
 
+mvmt_protocols = ['EnemyLookupAI', 'EnemyPerimeterAI', 'EnemyAmidarMvmt', 'EnemyTargetPlayer', 'EnemyRandomMvmt']
+
 class AmidarIntervention(Intervention):
 
     def __init__(self, tb, game_name='amidar'):
@@ -10,25 +12,31 @@ class AmidarIntervention(Intervention):
         Intervention.__init__(self, tb, game_name)
 
     ### helper functions ###
-    def check_tile_position(self, tdict): 
-        assert Intervention.check_position(self, tdict, ['tx', 'ty'])
-        return True
+    def check_tile_position(self, tdict):
         # check that the tile is a non-empty tile (i.e., is paintable and walkable)
+        walkable = self.check_is_tile(tdict)
+        # assertion will stop the script if not met; different behavior from check_is_tile
+        assert walkable
+        return True
 
 
     def check_is_tile(self, tile_pos): 
-        assert self.check_tile_position(tile_pos)
-        assert tile_pos['ty'] >= 0 and tile_pos['ty'] < len(self.state['board']['tiles'])
-        assert tile_pos['tx'] >= 0 and tile_pos['tx'] < len(self.state['board']['tiles'][tile_pos['ty']])
-
-        return self.state['board']['tiles'][tile_pos['ty']][tile_pos['tx']] != "Empty"
+        assert Intervention.check_position(self, tile_pos, ['tx', 'ty'])
+        # check the bounds of the position tile
+        in_bounds = tile_pos['ty'] >= 0 and tile_pos['ty'] < len(self.state['board']['tiles'])
+        in_bounds = in_bounds and (tile_pos['tx'] >= 0 and tile_pos['tx'] < len(self.state['board']['tiles'][tile_pos['ty']]))
+        if not in_bounds: 
+            return False
+        # make sure tile is walkable
+        walkable = self.state['board']['tiles'][tile_pos['ty']][tile_pos['tx']] != "Empty"
+        return in_bounds and walkable
 
     def get_random_tile_id(self): 
         tile = {}
 
-        tx = random.choice(range(len(self.state['board']['tiles'])))
-        which_tiles = [i for i in range(len(self.state['board']['tiles'][tx])) if self.state['board']['tiles'][tx][i] != "Empty"]
-        ty = random.choice(which_tiles)
+        ty = random.choice(range(len(self.state['board']['tiles'])))
+        which_tiles = [i for i in range(len(self.state['board']['tiles'][ty])) if self.state['board']['tiles'][ty][i] != "Empty"]
+        tx = random.choice(which_tiles)
 
         tile['tx'] = tx
         tile['ty'] = ty
@@ -37,13 +45,37 @@ class AmidarIntervention(Intervention):
 
 
     def get_random_position(self):
+        # grab random tile
         rand_tile = self.get_random_tile_id()
-
+    
         # convert random tile to x,y location 
-        pos = {}
-        # pos['x'] = rand_tile['x'].to_grid_location()
-        # pos['y'] = rand_tile['y'].to_grid_location()
+        x, y = self.tile_to_world(rand_tile['tx'], rand_tile['ty'])
 
+        # return in dictionary
+        pos = {}
+        pos['x'] = x
+        pos['y'] = y
+
+        return pos
+
+
+    def world_to_tile(self, x, y): 
+        worldpoint = {'x': x, 'y': y}
+        (tx, ty) = self.toybox.query_state_json("world_to_tile", worldpoint)
+
+        tile = {}
+        tile['tx'] = tx
+        tile['ty'] = ty
+        return tile
+
+
+    def tile_to_world(self, tx, ty): 
+        tilepoint = {'tx': tx, 'ty': ty}
+        (x, y) = self.toybox.query_state_json("tile_to_world", tilepoint)
+
+        pos = {}
+        pos['x'] = x
+        pos['y'] = y
         return pos
 
 
@@ -149,14 +181,21 @@ class AmidarIntervention(Intervention):
 
 
     def set_player_tile(self, pos):
-        assert Intervention.check_position(pos, ['x','y'])
+        # check the input formatting
+        assert Intervention.check_position(self, pos, ['x','y'])
 
+        # get tile for new position
+        # check that this is a walkable, valid tile
+        tile = self.world_to_tile(pos)
+        assert self.check_tile_position(tile)
+
+        # now set the position
         self.state['player']['position']['x'] = pos['x']
         self.state['player']['position']['y'] = pos['y']
 
 
     def set_enemy_tile(self, eid, pos):
-        assert Intervention.check_position(pos, ['x', 'y'])
+        assert Intervention.check_position(self, pos, ['x', 'y'])
 
         self.state['enemies'][eid]['position']['x'] = pos['x']
         self.state['enemies'][eid]['position']['y'] = pos['y']
@@ -191,12 +230,14 @@ class AmidarIntervention(Intervention):
 
     def set_enemy_protocol(self, eid, protocol='EnemyAmidarMvmt', **kwargs):
         assert 'ai' in self.state['enemies'][eid].keys()
-        self.state['enemies'][eid]['ai'] = {}
-        self.state['enemies'][eid]['ai'][protocol] = get_default_protocol(protocol, eid, enemy['position'], kwargs)
+
+        new_protocol = {}
+        new_protocol[protocol] = self.get_default_protocol(protocol, eid, self.state['enemies'][eid]['position'], **kwargs)
+        self.state['enemies'][eid]['ai'] = new_protocol
 
 
     def get_default_protocol(self, protocol, eid, e_pos, **kwargs): 
-        assert protocol in ['EnemyLookupAI', 'EnemyPerimeterAI', 'EnemyAmidarMvmt', 'EnemyTargetPlayer', 'EnemyRandomMvmt']
+        assert protocol in mvmt_protocols
         protocol_ai = {}
 
         if protocol == 'EnemyLookupAI': 
@@ -206,39 +247,40 @@ class AmidarIntervention(Intervention):
         # add start position
         if protocol in ['EnemyPerimeterAI', 'EnemyRandomMvmt', 'EnemyTargetPlayer', 'EnemyAmidarMvmt']: 
             if 'start' in kwargs.keys(): 
-                assert Intervention.check_position(kwargs['start'], ['tx', 'ty'])
+                assert Intervention.check_position(self, kwargs['start'], ['tx', 'ty'])
                 protocol_ai['start'] = kwargs['start']
             else:
-                protocol_ai['start'] = get_random_position()
+                protocol_ai['start'] = self.get_random_tile_id()
 
         # add current direction and start direction
         if protocol in ['EnemyRandomMvmt', 'EnemyTargetPlayer']:
             # choose a valid starting direction 
-            protocol_ai['start_dir'] = get_random_dir_for_tile(protocol_ai['start']) if 'start_dir' not in kwargs.keys() else kwargs['start_dir']
+            protocol_ai['start_dir'] = self.get_random_dir_for_tile(protocol_ai['start']) if 'start_dir' not in kwargs.keys() else kwargs['start_dir']
 
             # choose a valid direction to move in
-            assert Intervention.check_position(e_pos, ['tx']['ty'])
-            protocol_ai['dir'] = get_random_dir_for_tile(e_pos) if 'dir' not in kwargs.keys() else kwargs['dir']
+            e_tile = self.world_to_tile(e_pos['x'], e_pos['y'])
+            assert self.check_tile_position(e_tile)
+            protocol_ai['dir'] = self.get_random_dir_for_tile(e_tile) if 'dir' not in kwargs.keys() else kwargs['dir']
 
         if protocol == 'EnemyTargetPlayer':
             protocol_ai['vision_distance'] = 15 if 'vision_distance' not in kwargs.keys() else kwargs['vision_distance']
 
             # should have some (Rust?) check to see if enemies move toward the player on the first step after changing protocol
-            # for now, just assume for the first step after setting that 'player_seen' is False
-            protocol_ai['player_seen'] = False if 'player_seen' not in kwargs.keys() else kwargs['player_seen']
+            # for now, just assume for the first step after setting that 'player_seen' is None
+            protocol_ai['player_seen'] = None if 'player_seen' not in kwargs.keys() else kwargs['player_seen']
 
         if protocol == 'EnemyAmidarMvmt':
             protocol_ai['vert'] = random.choice(["Up", "Down"]) if 'vert' not in kwargs.keys() else kwargs['vert']
             protocol_ai['horiz']= random.choice(["Left", "Right"]) if 'horiz' not in kwargs.keys() else kwargs['horiz']
             protocol_ai['start_vert'] = random.choice(["Up", "Down"]) if 'start_vert' not in kwargs.keys() else kwargs['start_vert']
             protocol_ai['start_horiz'] = random.choice(["Up", "Down"]) if 'start_horiz' not in kwargs.keys() else kwargs['start_horiz']
-           
+
         return protocol_ai
 
 
     def get_random_dir_for_tile(self, tid):
-        assert Intervention.check_position(tid, ['tx', 'ty']) 
-        tile = self.state['board']['tiles'][tid['tx']][tid['ty']]
+        assert self.check_tile_position(tid) 
+        tile = self.state['board']['tiles'][tid['ty']][tid['tx']]
 
         assert tile != "Empty"
         selected = False
@@ -252,7 +294,7 @@ class AmidarIntervention(Intervention):
 
             if d is not None: 
                 dirs.remove(d)
-                if dirs.empty(): 
+                if not dirs: 
                     d = None
 
             d = random.choice(dirs)
@@ -262,14 +304,14 @@ class AmidarIntervention(Intervention):
                 next_tid['ty'] = next_tid['ty'] + 1
             elif d == "Left": 
                 next_tid['tx'] = next_tid['tx'] - 1
-            else: # d == "Right"
+            elif d == "Right":
                 next_tid['tx'] = next_tid['tx'] + 1
 
-            selected = not selected and check_tile_position(next_tid, ['tx', 'ty'])
+            if d is not None: 
+                selected = not selected and self.check_is_tile(next_tid)
 
         if d is None:
             raise Exception("No valid direction from this tile:\t\tTile tx:"+str(tid['tx'])+", ty"+str(tid['ty']))
-
         return d
 
 
@@ -375,7 +417,6 @@ if __name__ == "__main__":
                                 intervention.set_tile_paint(tile_pos)
 
                         fname = 'tile_tx_'+str(tx)+'_ty_'+str(ty)+'.jpg'
-                        print(fname)
                         tb.save_frame_image(fname, grayscale=False)
 
                         with AmidarIntervention(tb) as intervention: 
@@ -418,7 +459,7 @@ if __name__ == "__main__":
         assert n_enemies == 4
 
 
-        # add enemy
+        # add enemy with 'EnemyLookupAI' protocol
         with AmidarIntervention(tb) as intervention: 
             #pos = get_random_position()
             intervention.add_enemy(pos, speed=8)
@@ -427,6 +468,47 @@ if __name__ == "__main__":
             n_enemies = intervention.num_enemies()
         # check one has been added back
         assert n_enemies == 5
+
+        # change to 'EnemyPerimeterAI' protocol
+        change_eid = n_enemies - 1
+        with AmidarIntervention(tb) as intervention: 
+            intervention.set_enemy_protocol(change_eid, 'EnemyPerimeterAI')
+        with AmidarIntervention(tb) as intervention: 
+            ai_keys = intervention.state['enemies'][change_eid]['ai'].keys()
+            ai_args = intervention.state['enemies'][change_eid]['ai']['EnemyPerimeterAI'].keys()
+        assert 'EnemyPerimeterAI' in ai_keys and len(ai_keys) == 1 
+        print('EnemyPerimeterAI', ai_args)
+        #assert len(ai_args) == 5
+
+        # change to 'EnemyAmidarMvmt' protocol
+        with AmidarIntervention(tb) as intervention: 
+            intervention.set_enemy_protocol(change_eid, 'EnemyAmidarMvmt')
+        with AmidarIntervention(tb) as intervention: 
+            ai_keys = intervention.state['enemies'][change_eid]['ai'].keys()
+            ai_args = intervention.state['enemies'][change_eid]['ai']['EnemyAmidarMvmt'].keys()
+        assert 'EnemyAmidarMvmt' in ai_keys and len(ai_keys) == 1 
+        print('EnemyAmidarMvmt', ai_args)
+        assert len(ai_args) == 5
+
+        # change to 'EnemyTargetPlayer' protocol
+        with AmidarIntervention(tb) as intervention: 
+            intervention.set_enemy_protocol(change_eid, 'EnemyTargetPlayer')
+        with AmidarIntervention(tb) as intervention: 
+            ai_keys = intervention.state['enemies'][change_eid]['ai'].keys()
+            ai_args = intervention.state['enemies'][change_eid]['ai']['EnemyTargetPlayer'].keys()
+        assert 'EnemyTargetPlayer' in ai_keys and len(ai_keys) == 1 
+        print('EnemyTargetPlayer', ai_args)
+
+
+        # change to 'EnemyRandomAI' protocol
+        with AmidarIntervention(tb) as intervention: 
+            intervention.set_enemy_protocol(change_eid, 'EnemyRandomMvmt')
+        with AmidarIntervention(tb) as intervention: 
+            ai_keys = intervention.state['enemies'][change_eid]['ai'].keys()
+            ai_args = intervention.state['enemies'][change_eid]['ai']['EnemyRandomMvmt'].keys()
+        assert 'EnemyRandomMvmt' in ai_keys and len(ai_keys) == 1 
+        print('EnemyRandomMvmt', ai_args)
+
 
 
         # check number of jumps
