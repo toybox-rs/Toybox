@@ -9,11 +9,17 @@ use toybox_core::{AleAction, Input, QueryError};
 
 use serde_json;
 
+use types::*;
+
 use rand::seq::SliceRandom;
 
-pub mod screen {
+/// This module contains constants derived from observation and measurement of the Atari 2600 game.
+mod screen {
+    /// This is the size of the screen.
     pub const GAME_SIZE: (i32, i32) = (240, 160);
+    /// This is the y-offset of the gray frame that surrounds the board.
     pub const FRAME_OFFSET: i32 = 13;
+    /// This is the thickness of the gray frame that surrounds the board.
     pub const FRAME_THICKNESS: i32 = 12;
     pub const FRAME_SUPPORT_WIDTH: i32 = 12;
 
@@ -28,26 +34,34 @@ pub mod screen {
 
     pub const FRAME_COLOR: (u8, u8, u8) = (144, 144, 144);
 
-    pub const SCORE_CHAR_SIZE: (i32, i32) = (18, 7);
-
     pub const BOARD_LEFT_X: i32 = FRAME_SUPPORT_WIDTH;
     pub const BOARD_RIGHT_X: i32 = GAME_SIZE.0 - FRAME_SUPPORT_WIDTH;
     pub const BOARD_TOP_Y: i32 = FRAME_OFFSET + FRAME_THICKNESS;
     pub const BOARD_BOTTOM_Y: i32 = FRAME_OFFSET + FRAME_LEFT_HEIGHT;
 
     // Atari manual refers to orange, yellow, green, aqua, blue... not what images show.
+    /// This is the RGB color of the red bricks.
     pub const RED: (u8, u8, u8) = (200, 72, 72);
+    /// This is the RGB color of the dark-orange bricks.
     pub const DARK_ORANGE: (u8, u8, u8) = (198, 108, 58);
+    /// This is the RGB color of the orange bricks.
     pub const ORANGE: (u8, u8, u8) = (180, 122, 48);
+    /// This is the RGB color of the yellow bricks.
     pub const YELLOW: (u8, u8, u8) = (162, 162, 42);
+    /// This is the RGB color of the green bricks.
     pub const GREEN: (u8, u8, u8) = (72, 160, 72);
+    /// This is the RGB color of the blue bricks.
     pub const BLUE: (u8, u8, u8) = (66, 72, 200);
 
+    /// This is the point value of the rows of bricks, from top to bottom.
     pub const ROW_SCORES: &[i32] = &[7, 7, 4, 4, 1, 1];
+    /// This is the color of the rows of bricks, from top to bottom.
     pub const ROW_COLORS: &[&(u8, u8, u8)] = &[&RED, &DARK_ORANGE, &ORANGE, &YELLOW, &GREEN, &BLUE];
 
     // Atari colors have paddle, ball, and red all being the same.
+    /// The color of the paddle in the atari-py version.
     pub const PADDLE_COLOR: (u8, u8, u8) = (200, 72, 72);
+    /// The color of the ball in the atari-py version.
     pub const BALL_COLOR: (u8, u8, u8) = (200, 72, 72);
 
     pub const ROOF_SPACING: i32 = 18;
@@ -62,41 +76,8 @@ pub mod screen {
 
     pub const BALL_ANGLE_MIN: f64 = 30.0;
     pub const BALL_ANGLE_RANGE: f64 = 120.0;
-    pub const BALL_SPEED_START: f64 = 2.0;
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StartBall {
-    x: f64,
-    y: f64,
-    angle_degrees: f64,
-}
-impl StartBall {
-    fn new(x: f64, y: f64, angle_degrees: f64) -> StartBall {
-        StartBall {
-            x,
-            y,
-            angle_degrees,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Breakout {
-    pub rand: random::Gen,
-    bg_color: Color,
-    frame_color: Color,
-    paddle_color: Color,
-    ball_color: Color,
-    row_colors: Vec<Color>,
-    row_scores: Vec<i32>,
-    start_lives: i32,
-    ball_speed_row_depth: u32,
-    ball_speed_slow: f64,
-    ball_speed_fast: f64,
-    ball_start_positions: Vec<StartBall>,
-    paddle_discrete_segments: Option<i32>,
-}
 impl Breakout {
     #[cfg(test)]
     fn unique_colors(&self) -> Vec<&Color> {
@@ -112,6 +93,7 @@ impl Breakout {
         Body2D::new_pos(f64::from(w) / 2.0, screen::PADDLE_START_Y.into())
     }
 }
+
 impl Default for Breakout {
     fn default() -> Self {
         let (w, h) = screen::GAME_SIZE;
@@ -143,29 +125,6 @@ impl Default for Breakout {
             paddle_discrete_segments: Some(5),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[repr(C)]
-pub struct Brick {
-    // Logical y-coordinates of this brick; used for analysis.
-    pub row: i32,
-    // Logical x-coordinates of this brick; used for analysis.
-    pub col: i32,
-    /// Brick position describes the upper-left of the brick.
-    pub position: Vec2D,
-    /// Brick size is the width and height of the brick.
-    pub size: Vec2D,
-    /// This is the number of points for a brick.
-    pub points: i32,
-    /// This starts as true and moves to false when hit.
-    pub alive: bool,
-    /// What color is this brick.
-    pub color: Color,
-    /// How deep is this brick? Will trigger speedup?
-    pub depth: u32,
-    /// Destructible: if false, never let this brick die.
-    pub destructible: bool,
 }
 
 impl Brick {
@@ -206,29 +165,6 @@ impl Brick {
             && point.y >= self.position.y
             && point.y <= (self.position.y + self.size.y)
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[repr(C)]
-pub struct StateCore {
-    pub rand: random::Gen,
-    pub lives: i32,
-    pub is_dead: bool,
-    pub points: i32,
-    /// ball position describes the center of the ball.
-    pub balls: Vec<Body2D>,
-    pub ball_radius: f64,
-    /// paddle position describes the center of the paddle.
-    pub paddle: Body2D,
-    pub paddle_width: f64,
-    pub paddle_speed: f64,
-    pub bricks: Vec<Brick>,
-    pub reset: bool,
-}
-
-pub struct State {
-    pub config: Breakout,
-    pub state: StateCore,
 }
 
 impl toybox_core::Simulation for Breakout {
@@ -714,7 +650,7 @@ impl toybox_core::State for State {
 /// Define some queries on StateCore.
 impl StateCore {
     /// Returns a set of numbers corresponding to the stacks that are channels.
-    pub fn find_channels(&self) -> Vec<i32> {
+    fn find_channels(&self) -> Vec<i32> {
         let across = screen::BRICKS_ACROSS as i32;
         let down = screen::ROW_SCORES.len() as i32;
         let mut retval = Vec::new();
