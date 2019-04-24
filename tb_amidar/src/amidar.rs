@@ -29,7 +29,7 @@ pub mod raw_images {
     pub const ENEMY_L1: &[u8] = include_bytes!("resources/amidar/enemy_l1.png");
     pub const ENEMY_L2: &[u8] = include_bytes!("resources/amidar/enemy_l2.png");
     pub const ENEMY_CHASE_L1: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
-    pub const ENEMY_CHASE_L2: &[u8] = include_bytes!("resources/amidar/enemy_chase_l2.png");
+    pub const ENEMY_CHASE_L2: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
     pub const PAINTED_BOX_BAR: &[u8] = include_bytes!("resources/amidar/painted_box_bar.png");
 
     pub const BLOCK_TILE_PAINTED_L1: &[u8] =
@@ -1224,12 +1224,6 @@ impl toybox_core::Simulation for Amidar {
 
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
-        // If everything is painted, game is over. Set lives to 0.
-        // if self.state.board.boxes.iter().all(|b: &GridBox| b.painted) {
-        //     0
-        // } else {
-        //     self.state.lives
-        // }
         self.state.lives
     }
     fn score(&self) -> i32 {
@@ -1332,8 +1326,21 @@ impl toybox_core::State for State {
         } else {
             if self.state.board.board_complete() {
                 self.reset();
+                // Increment the level
                 self.state.level += 1;
+                // If we triggered the chase counter immediately before 
+                // advancing, it will still be on and will mess up the sprites. Reset to 0.
+                self.state.chase_timer = 0;
+                // Time to paint again!
                 self.state.board = Board::fast_new();
+                // If you successfully complete a level, you can get a life back (up the maximum)
+                if self.lives() < self.config.start_lives {
+                    self.state.lives += 1;
+                }
+                if self.state.level > 2 {
+                    // Starting at level 3, there are six enemies.
+                }
+                // Increase enemy speed.
             } 
         }
     }
@@ -1353,18 +1360,15 @@ impl toybox_core::State for State {
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
 
+                // Use the level-1 sprites for odd levels less than the sixth level. 
+                // Use the level-2 sprites for even levels and those greater than the sixth level.
+                // We will probably want to put some of this in the config later.
+                let ghosts = self.state.level % 2 == 1 && self.state.level < 6;
+
                 if self.config.render_images {
                     let tile_sprite: &FixedSpriteData = match tile {
-                        &Tile::Painted => match self.state.level % 2 {
-                            1 => &images::BLOCK_TILE_PAINTED_L1,
-                            0 => &images::BLOCK_TILE_PAINTED_L2,
-                            _ => unreachable!(),
-                        },
-                        &Tile::Unpainted | &Tile::ChaseMarker => match self.state.level % 2 {
-                            1 => &images::BLOCK_TILE_UNPAINTED_L1,
-                            0 => &images::BLOCK_TILE_UNPAINTED_L2,
-                            _ => unreachable!(),
-                        },
+                        &Tile::Painted => if ghosts { &images::BLOCK_TILE_PAINTED_L1 } else { &images::BLOCK_TILE_PAINTED_L2 },
+                        &Tile::Unpainted | &Tile::ChaseMarker => if ghosts { &images::BLOCK_TILE_UNPAINTED_L1 } else { &images::BLOCK_TILE_UNPAINTED_L2 },
                         &Tile::Empty => continue,
                     };
                     output.push(Drawable::sprite(
