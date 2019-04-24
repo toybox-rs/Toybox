@@ -123,89 +123,89 @@ class AmidarIntervention(Intervention):
         self.state['board']['tiles'][tid['ty']][tid['tx']] = label
 
 
-    def set_box(self, bid, paint=True, include_tiles=True, allow_chase=True): 
-        box = self.state['board']['boxes'][bid]
-        box['painted'] = paint
+    # def set_box(self, bid, paint=True, include_tiles=True, allow_chase=True): 
+    #     box = self.state['board']['boxes'][bid]
+    #     box['painted'] = paint
 
-        if allow_chase: 
-            # if we allow the intervention to trigger chasing, 
-            # we only want to do so if it was not already triggered 
-            allow_chase = allow_chase and not self.check_chase_condition()
+    #     if allow_chase: 
+    #         # if we allow the intervention to trigger chasing, 
+    #         # we only want to do so if it was not already triggered 
+    #         allow_chase = allow_chase and not self.check_chase_condition()
 
-        if include_tiles: 
-            tx_left = box['top_left']['tx']
-            ty_left = box['top_left']['ty']
-            tx_right = box['bottom_right']['tx']
-            ty_right = box['bottom_right']['ty']
+    #     if include_tiles: 
+    #         tx_left = box['top_left']['tx']
+    #         ty_left = box['top_left']['ty']
+    #         tx_right = box['bottom_right']['tx']
+    #         ty_right = box['bottom_right']['ty']
 
-            for i in range(tx_left, tx_right+1): 
-                for j in range(ty_left, ty_right+1):
-                    if self.state['board']['tiles'][i][j] != "Empty": 
-                        self.state['board']['tiles'][i][j] = "Painted"
+    #         for i in range(tx_left, tx_right+1): 
+    #             for j in range(ty_left, ty_right+1):
+    #                 if self.state['board']['tiles'][i][j] != "Empty": 
+    #                     self.state['board']['tiles'][i][j] = "Painted"
 
-        if allow_chase: 
-            self.chase_react()
-
-
-    def check_chase_condition(self): 
-        chase = False
-        continue_check = True
-
-        for box in self.state['board']['boxes']: 
-            if box['triggers_chase']: 
-                tx_left = box['top_left']['tx']
-                ty_left = box['top_left']['ty']
-                tx_right = box['bottom_right']['tx']
-                ty_right = box['bottom_right']['ty']
-
-                all_painted = True
-                for i in range(tx_left, tx_right+1): 
-                    for j in range(ty_left, ty_right+1):
-                        if self.state['board']['tiles'][i][j] != "Empty": 
-                            all_painted &= self.state['board']['tiles'][i][j] == "Painted"
-                        if not all_painted: 
-                            continue_check = False
-                            break
-                    if not continue_check:
-                        break
-
-            if not continue_check: 
-                break
-
-        return all_painted
+    #     if allow_chase: 
+    #         self.chase_react()
 
 
-    def chase_react(self): 
-        if self.check_chase_condition(): 
-            self.set_mode('chase')
+    # def check_chase_condition(self): 
+    #     chase = False
+    #     continue_check = True
+
+    #     for box in self.state['board']['boxes']: 
+    #         if box['triggers_chase']: 
+    #             tx_left = box['top_left']['tx']
+    #             ty_left = box['top_left']['ty']
+    #             tx_right = box['bottom_right']['tx']
+    #             ty_right = box['bottom_right']['ty']
+
+    #             all_painted = True
+    #             for i in range(tx_left, tx_right+1): 
+    #                 for j in range(ty_left, ty_right+1):
+    #                     if self.state['board']['tiles'][i][j] != "Empty": 
+    #                         all_painted &= self.state['board']['tiles'][i][j] == "Painted"
+    #                     if not all_painted: 
+    #                         continue_check = False
+    #                         break
+    #                 if not continue_check:
+    #                     break
+
+    #         if not continue_check: 
+    #             break
+
+    #     return all_painted
 
 
-    def set_player_tile(self, pos):
-        # check the input formatting
-        assert Intervention.check_position(self, pos, ['x','y'])
-
-        # get tile for new position
-        # check that this is a walkable, valid tile
-        tile = self.world_to_tile(pos)
-        assert self.check_tile_position(tile)
-
-        # now set the position
-        self.state['player']['position']['x'] = pos['x']
-        self.state['player']['position']['y'] = pos['y']
+    # def chase_react(self): 
+    #     if self.check_chase_condition(): 
+    #         self.set_mode('chase')
 
 
-    def set_enemy_tile(self, eid, pos):
-        assert Intervention.check_position(self, pos, ['x', 'y'])
+    # def set_player_tile(self, pos):
+    #     # check the input formatting
+    #     assert Intervention.check_position(self, pos, ['x','y'])
 
-        self.state['enemies'][eid]['position']['x'] = pos['x']
-        self.state['enemies'][eid]['position']['y'] = pos['y']
+    #     # get tile for new position
+    #     # check that this is a walkable, valid tile
+    #     tile = self.world_to_tile(pos)
+    #     assert self.check_tile_position(tile)
+
+    #     # now set the position
+    #     self.state['player']['position']['x'] = pos['x']
+    #     self.state['player']['position']['y'] = pos['y']
 
 
-    def set_enemy_tiles(self, eids, pos_list):
-        assert len(eids) == len(pos_list)
+    # def set_enemy_tile(self, eid, pos):
+    #     assert Intervention.check_position(self, pos, ['x', 'y'])
 
-        for i, eid in enumerate(eids): 
-            set_enemy_tile(eid, pos_list[i])
+    #     self.state['enemies'][eid]['position']['x'] = pos['x']
+    #     self.state['enemies'][eid]['position']['y'] = pos['y']
+
+
+    # def set_enemy_tiles(self, eids, pos_list):
+    #     assert len(eids) == len(pos_list)
+
+    #     for i, eid in enumerate(eids): 
+    #         set_enemy_tile(eid, pos_list[i])
 
 
     def set_mode(self, mode_id='regular', set_time=None): 
@@ -220,12 +220,12 @@ class AmidarIntervention(Intervention):
             self.state['chase_timer'] = 0
 
 
-    def get_enemy_protocol(self, eid): 
-        return self.state['enemies'][eid]['ai']
+    # def get_enemy_protocol(self, eid): 
+    #     return self.state['enemies'][eid]['ai']
 
 
-    def get_enemy_protocols(self, eids): 
-        return [self.state['enemies'][eid]['ai'] for eid in eids]
+    # def get_enemy_protocols(self, eids): 
+    #     return [self.state['enemies'][eid]['ai'] for eid in eids]
 
 
     def set_enemy_protocol(self, eid, protocol='EnemyAmidarMvmt', **kwargs):
