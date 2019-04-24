@@ -102,7 +102,7 @@ class AmidarIntervention(Intervention):
                 for i in range(tx_left, tx_right+1): 
                     for j in range(ty_left, ty_right+1):
                         if self.state['board']['tiles'][i][j] != "Empty": 
-                            all_painted &= if self.state['board']['tiles'][i][j] == "Painted"
+                            all_painted &= self.state['board']['tiles'][i][j] == "Painted"
                         if not all_painted: 
                             continue_check = False
                             break
@@ -161,19 +161,19 @@ class AmidarIntervention(Intervention):
         return [self.state['enemies'][eid]['ai'] for eid in eids]
 
 
-    def set_enemy_protocol(self, eid, protocol='EnemyAmidarMvmt', kwargs**):
+    def set_enemy_protocol(self, eid, protocol='EnemyAmidarMvmt', **kwargs):
         enemy = self.state['enemies'][eid]
         
         enemy['ai'] = {}
         enemy['ai'][protocol] = get_default_protocol(protocol, kwargs)
 
 
-    def get_default_protocol(self, protocol, e_pos, kwargs**): 
+    def get_default_protocol(self, protocol, e_pos, **kwarg): 
         assert protocol in ['EnemyLookupAI', 'EnemyPerimeterAI', 'EnemyAmidarMvmt', 'EnemyTargetPlayer', 'EnemyRandomMvmt']
         protocol_ai = {}
 
         if protocol == 'EnemyLookupAI': 
-            protocol_ai['default_route_index'] = eid %% 5 if 'default_route_index' not in kwargs.keys() else kwargs['default_route_index']
+            protocol_ai['default_route_index'] = eid % 5 if 'default_route_index' not in kwargs.keys() else kwargs['default_route_index']
             protocol_ai['next'] = 0 if 'next' not in kwargs.keys() else kwargs['next']
 
         # add start position
@@ -200,7 +200,7 @@ class AmidarIntervention(Intervention):
             # for now, just assume the first step after setting is False
             protocol_ai['player_seen'] = False if 'player_seen' not in kwargs.keys() else kwargs['player_seen']
 
-        if protocol == 'EnemyAmidarMvmt'
+        if protocol == 'EnemyAmidarMvmt':
             protocol_ai['vert'] = random.choice(["Up", "Down"]) if 'vert' not in kwargs.keys() else kwargs['vert']
             protocol_ai['horiz']= random.choice(["Left", "Right"]) if 'horiz' not in kwargs.keys() else kwargs['horiz']
             protocol_ai['start_vert'] = random.choice(["Up", "Down"]) if 'start_vert' not in kwargs.keys() else kwargs['start_vert']
@@ -278,7 +278,7 @@ class AmidarIntervention(Intervention):
             self.set_enemy_protocol[eid, protocols[i]] 
 
 
-    def add_enemy(self, pos, ai='EnemyLookupAI', kwargs**): 
+    def add_enemy(self, pos, ai='EnemyLookupAI', **kwargs): 
         new_e = {}
 
         # append kwargs, fill in with defaults
@@ -291,7 +291,7 @@ class AmidarIntervention(Intervention):
         new_e['position'] = pos
         self.state['enemies'].append(new_e)        
 
-        self.set_enemy_protocol(-1, ai, kwargs**)        
+        self.set_enemy_protocol(-1, ai, kwargs)        
 
 
     def remove_enemy(self, eid):
@@ -308,7 +308,7 @@ class AmidarIntervention(Intervention):
         self.state['jumps'] = n
 
 
-    def set n_lives(self, n):
+    def set_n_lives(self, n):
         assert n > 0 
         self.state['lives'] = n
 
