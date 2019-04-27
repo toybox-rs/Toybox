@@ -162,6 +162,8 @@ class BreakoutIntervention(Intervention):
     
 # Intervention tests
     # all the constants!
+    # vanishing ball: after hitting the ball, make the ball disappear 
+        # requires the model you throw at it has memory/sense of time
     # add brick in arbitrary location?
 
 
