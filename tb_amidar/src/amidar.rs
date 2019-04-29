@@ -108,6 +108,8 @@ pub struct Amidar {
     default_board_bugs: bool,
     enemies: Vec<MovementAI>,
     level: i32,
+    /// How many previous junctions should the player and enemies remember?
+    history_limit: u32,
 }
 
 impl Amidar {
@@ -143,6 +145,8 @@ impl Default for Amidar {
             render_images: true,
             box_bonus: 50,
             default_board_bugs: true,
+            // limit number of junctions remembered to something greater than two.
+            history_limit: 12,
             enemies: (0..DEFAULT_ENEMY_ROUTES.len())
                 .map(|idx| MovementAI::EnemyLookupAI {
                     next: 0,
@@ -603,6 +607,7 @@ impl Mob {
         buttons: Input,
         board: &mut Board,
         player: Option<Mob>,
+        history_limit: u32,
         rng: &mut random::Gen,
     ) -> Option<BoardUpdate> {
         if self.history.is_empty() {
@@ -648,7 +653,11 @@ impl Mob {
         if self.is_player() {
             board.check_paint(&mut self.history).into_option()
         } else {
-            if self.history.len() > 12 {
+            // Each moving object in Amidar keeps track of which junctions it has visited. Here, we
+            // make sure that datastructure does not grow unbounded with time; limiting it to
+            // what is defined in the config.
+
+            if self.history.len() > (history_limit as usize) {
                 let _ = self.history.pop_back();
             }
             None
@@ -1231,13 +1240,16 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         let pre_update_score: i32 = self.score();
+        let history_limit = self.config.history_limit;
 
         // Move the player and determine whether the board changes.
-        if let Some(score_change) =
-            self.state
-                .player
-                .update(buttons, &mut self.state.board, None, &mut self.state.rand)
-        {
+        if let Some(score_change) = self.state.player.update(
+            buttons,
+            &mut self.state.board,
+            None,
+            history_limit,
+            &mut self.state.rand,
+        ) {
             // Don't award score for the first, semi-painted segment on a default Amidar board, but do paint it.
             let mut allow_score_change = true;
             if self.config.default_board_bugs {
@@ -1286,6 +1298,7 @@ impl toybox_core::State for State {
                 Input::default(),
                 &mut self.state.board,
                 Some(self.state.player.clone()),
+                history_limit,
                 &mut self.state.rand,
             );
         }

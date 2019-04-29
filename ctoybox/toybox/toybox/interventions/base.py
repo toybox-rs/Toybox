@@ -51,6 +51,14 @@ class Intervention(ABC):
               self.dirty_config = True
 
 
+  def check_position(self, pdict, key_ls): 
+    # check that pdict is a dictionary containing the keys in list ls
+    assert isinstance(pdict, dict)
+    assert all([k in pdict.keys() for k in key_ls])
+
+    return True
+
+
 if __name__ == "__main__":
   with Toybox('amidar') as tb:
     state = tb.to_state_json()
