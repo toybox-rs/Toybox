@@ -583,6 +583,9 @@ impl Mob {
     fn is_player(&self) -> bool {
         self.ai == MovementAI::Player
     }
+    fn change_speed(&mut self, new_speed: i32) {
+        self.speed = new_speed;
+    }
     fn reset(&mut self, player_start: &TilePoint, board: &Board) {
         self.step = None;
         self.ai.reset();
@@ -630,9 +633,18 @@ impl Mob {
                 }
                 None
             } else {
-                self.position.x += self.speed * dx.signum();
-                self.position.y += self.speed * dy.signum();
-                Some(target.clone())
+                if dx.abs() < self.speed && dy.abs() < self.speed {
+                    self.position.x += dx;
+                    self.position.y += dy;
+                    if let Some(pt) = board.get_junction_id(target) {
+                            self.history.push_front(pt);
+                    }
+                    None
+                } else {
+                    self.position.x += self.speed * dx.signum();
+                    self.position.y += self.speed * dy.signum();
+                    Some(target.clone())
+                }
             }
         } else {
             None
@@ -1248,7 +1260,7 @@ impl toybox_core::State for State {
             &mut self.state.board,
             None,
             history_limit,
-            &mut self.state.rand,
+            &mut self.state.rand
         ) {
             // Don't award score for the first, semi-painted segment on a default Amidar board, but do paint it.
             let mut allow_score_change = true;
@@ -1354,6 +1366,10 @@ impl toybox_core::State for State {
                     // Starting at level 3, there are six enemies.
                 }
                 // Increase enemy speed.
+                for e in &mut self.state.enemies {
+                    let new_speed = self.state.level * e.speed;
+                    e.change_speed(new_speed);
+                }
             } 
         }
     }
