@@ -637,7 +637,7 @@ impl Mob {
                     self.position.x += dx;
                     self.position.y += dy;
                     if let Some(pt) = board.get_junction_id(target) {
-                            self.history.push_front(pt);
+                        self.history.push_front(pt);
                     }
                     None
                 } else {
@@ -1260,7 +1260,7 @@ impl toybox_core::State for State {
             &mut self.state.board,
             None,
             history_limit,
-            &mut self.state.rand
+            &mut self.state.rand,
         ) {
             // Don't award score for the first, semi-painted segment on a default Amidar board, but do paint it.
             let mut allow_score_change = true;
@@ -1353,7 +1353,7 @@ impl toybox_core::State for State {
                 self.reset();
                 // Increment the level
                 self.state.level += 1;
-                // If we triggered the chase counter immediately before 
+                // If we triggered the chase counter immediately before
                 // advancing, it will still be on and will mess up the sprites. Reset to 0.
                 self.state.chase_timer = 0;
                 // Time to paint again!
@@ -1370,7 +1370,7 @@ impl toybox_core::State for State {
                     let new_speed = self.state.level * e.speed;
                     e.change_speed(new_speed);
                 }
-            } 
+            }
         }
     }
 
@@ -1389,15 +1389,27 @@ impl toybox_core::State for State {
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
 
-                // Use the level-1 sprites for odd levels less than the sixth level. 
+                // Use the level-1 sprites for odd levels less than the sixth level.
                 // Use the level-2 sprites for even levels and those greater than the sixth level.
                 // We will probably want to put some of this in the config later.
                 let ghosts = self.state.level % 2 == 1 && self.state.level < 6;
 
                 if self.config.render_images {
                     let tile_sprite: &FixedSpriteData = match tile {
-                        &Tile::Painted => if ghosts { &images::BLOCK_TILE_PAINTED_L1 } else { &images::BLOCK_TILE_PAINTED_L2 },
-                        &Tile::Unpainted | &Tile::ChaseMarker => if ghosts { &images::BLOCK_TILE_UNPAINTED_L1 } else { &images::BLOCK_TILE_UNPAINTED_L2 },
+                        &Tile::Painted => {
+                            if ghosts {
+                                &images::BLOCK_TILE_PAINTED_L1
+                            } else {
+                                &images::BLOCK_TILE_PAINTED_L2
+                            }
+                        }
+                        &Tile::Unpainted | &Tile::ChaseMarker => {
+                            if ghosts {
+                                &images::BLOCK_TILE_UNPAINTED_L1
+                            } else {
+                                &images::BLOCK_TILE_UNPAINTED_L2
+                            }
+                        }
                         &Tile::Empty => continue,
                     };
                     output.push(Drawable::sprite(
