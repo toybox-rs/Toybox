@@ -1,4 +1,5 @@
 unset PYTHONPATH
+module load cudnn/7.3-cuda_9.0
 
 algs="acktr a2c ppo2"
 work1=/mnt/nfs/work1/jensen/kclary/NeurIPS_2019
@@ -17,6 +18,8 @@ seeds=`cat training_seeds`
 # make sure we have all the pip dependencies we want installed
 pip3 install gym[atari] --user
 pip3 install 'tensorboard<1.8.0,>=1.7.0' --user
+pip3 uninstall atari-py --user
+pip3 install 'atari-py>=0.1.1,<0.1.2' --user
 curl https://sh.rustup.rs -sSf > install_rust.sh
 chmod +x install_rust.sh
 ./install_rust.sh -y
