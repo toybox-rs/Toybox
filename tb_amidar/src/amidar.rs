@@ -115,7 +115,7 @@ pub struct Amidar {
     /// How many previous junctions should the player and enemies remember?
     history_limit: u32,
     enemy_starting_speed: i32,
-    player_speed: i32
+    player_speed: i32,
 }
 
 impl Amidar {
@@ -578,7 +578,7 @@ impl Mob {
             history: VecDeque::new(),
         }
     }
-    pub fn new_player(position: WorldPoint, speed: i32 ) -> Mob {
+    pub fn new_player(position: WorldPoint, speed: i32) -> Mob {
         Mob {
             ai: MovementAI::Player,
             position,
@@ -1062,7 +1062,7 @@ impl Board {
             true
         }
     }
-    pub fn make_enemy(&self, ai: MovementAI, speed:i32) -> Mob {
+    pub fn make_enemy(&self, ai: MovementAI, speed: i32) -> Mob {
         let fake = TilePoint::new(0, 0);
         let mut m = Mob::new(ai, fake.to_world(), speed);
         m.reset(&fake, self);
@@ -1372,7 +1372,7 @@ impl toybox_core::State for State {
                 }
                 if self.state.level > 2 {
                     // Starting at level 3, there are six enemies.
-                    // We haven't observed an agent that can get to level 3 and can't find any description 
+                    // We haven't observed an agent that can get to level 3 and can't find any description
                     // of what level 3 looks like, so we are leaving this blank for now.
                 }
                 // Increase enemy speed.
@@ -1386,7 +1386,7 @@ impl toybox_core::State for State {
                         self.config.enemy_starting_speed + 4
                     }
                 };
-                for e in &mut self.state.enemies {                    
+                for e in &mut self.state.enemies {
                     e.change_speed(new_speed);
                 }
             }
