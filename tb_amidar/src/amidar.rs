@@ -1770,16 +1770,4 @@ mod tests {
         println!("painted_now: {} ... before: {}", painted_now, first);
         assert!(painted_now < first);
     }
-
-    #[test]
-    fn test_level_2() {
-        let mut state = super::State::try_new(&Amidar::default()).unwrap();
-        // paint all tiles except the last
-        let mut tiles = state.state.board.tiles;
-        let len = tiles.len();
-        for i in 0..(len - 2) {
-            tiles[i] = Tile::Painted;
-        }
-        // finish this
-    }
 }
