@@ -85,9 +85,11 @@ mod world {
 }
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
-pub const ENEMY_STARTING_SPEED: i32 = 10;
-pub const PLAYER_SPEED: i32 = 8;
 
+mod inits {
+    pub const ENEMY_STARTING_SPEED: i32 = 10;
+    pub const PLAYER_SPEED: i32 = 8;
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amidar {
     pub rand: random::Gen,
@@ -112,6 +114,8 @@ pub struct Amidar {
     level: i32,
     /// How many previous junctions should the player and enemies remember?
     history_limit: u32,
+    enemy_starting_speed: i32,
+    player_speed: i32
 }
 
 impl Amidar {
@@ -156,6 +160,8 @@ impl Default for Amidar {
                 })
                 .collect(),
             level: 1,
+            enemy_starting_speed: inits::ENEMY_STARTING_SPEED,
+            player_speed: inits::PLAYER_SPEED,
         }
     }
 }
@@ -562,23 +568,23 @@ pub struct Mob {
     history: VecDeque<u32>,
 }
 impl Mob {
-    fn new(ai: MovementAI, position: WorldPoint) -> Mob {
+    fn new(ai: MovementAI, position: WorldPoint, speed: i32) -> Mob {
         Mob {
             ai,
             position,
             step: None,
             caught: false,
-            speed: ENEMY_STARTING_SPEED,
+            speed: speed,
             history: VecDeque::new(),
         }
     }
-    pub fn new_player(position: WorldPoint) -> Mob {
+    pub fn new_player(position: WorldPoint, speed: i32 ) -> Mob {
         Mob {
             ai: MovementAI::Player,
             position,
             step: None,
             caught: false,
-            speed: PLAYER_SPEED,
+            speed: speed,
             history: VecDeque::new(),
         }
     }
@@ -1056,9 +1062,9 @@ impl Board {
             true
         }
     }
-    pub fn make_enemy(&self, ai: MovementAI) -> Mob {
+    pub fn make_enemy(&self, ai: MovementAI, speed:i32) -> Mob {
         let fake = TilePoint::new(0, 0);
-        let mut m = Mob::new(ai, fake.to_world());
+        let mut m = Mob::new(ai, fake.to_world(), speed);
         m.reset(&fake, self);
         m
     }
@@ -1117,9 +1123,9 @@ impl State {
         let enemies = config
             .enemies
             .iter()
-            .map(|ai| board.make_enemy(ai.clone()))
+            .map(|ai| board.make_enemy(ai.clone(), config.enemy_starting_speed))
             .collect();
-        let player = Mob::new_player(config.player_start.to_world());
+        let player = Mob::new_player(config.player_start.to_world(), config.player_speed);
 
         let core = StateCore {
             rand: random::Gen::new_child(&mut config.rand),
@@ -1373,11 +1379,11 @@ impl toybox_core::State for State {
                 // Make pretty later
                 let new_speed = {
                     if self.state.level < 3 {
-                        ENEMY_STARTING_SPEED
+                        self.config.enemy_starting_speed
                     } else if self.state.level < 5 {
-                        ENEMY_STARTING_SPEED + 2
+                        self.config.enemy_starting_speed + 2
                     } else {
-                        ENEMY_STARTING_SPEED + 4
+                        self.config.enemy_starting_speed + 4
                     }
                 };
                 for e in &mut self.state.enemies {                    
