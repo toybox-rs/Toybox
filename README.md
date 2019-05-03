@@ -30,6 +30,7 @@ If you use this code, or otherwise are inspired by our white-box testing approac
 * `rustup-init` with the default install
 * clone this repo
 * `source $HOME/.cargo/env`
+* `cd ctoybox/toybox && python setup.py install`
 
 ## Lints and Formatting in Rust
 
