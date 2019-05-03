@@ -85,6 +85,8 @@ mod world {
 }
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
+pub const ENEMY_STARTING_SPEED: i32 = 10;
+pub const PLAYER_SPEED: i32 = 8;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amidar {
@@ -566,7 +568,7 @@ impl Mob {
             position,
             step: None,
             caught: false,
-            speed: 8,
+            speed: ENEMY_STARTING_SPEED,
             history: VecDeque::new(),
         }
     }
@@ -576,7 +578,7 @@ impl Mob {
             position,
             step: None,
             caught: false,
-            speed: 8,
+            speed: PLAYER_SPEED,
             history: VecDeque::new(),
         }
     }
@@ -1364,10 +1366,21 @@ impl toybox_core::State for State {
                 }
                 if self.state.level > 2 {
                     // Starting at level 3, there are six enemies.
+                    // We haven't observed an agent that can get to level 3 and can't find any description 
+                    // of what level 3 looks like, so we are leaving this blank for now.
                 }
                 // Increase enemy speed.
-                for e in &mut self.state.enemies {
-                    let new_speed = self.state.level * e.speed;
+                // Make pretty later
+                let new_speed = {
+                    if self.state.level < 3 {
+                        ENEMY_STARTING_SPEED
+                    } else if self.state.level < 5 {
+                        ENEMY_STARTING_SPEED + 2
+                    } else {
+                        ENEMY_STARTING_SPEED + 4
+                    }
+                };
+                for e in &mut self.state.enemies {                    
                     e.change_speed(new_speed);
                 }
             }
