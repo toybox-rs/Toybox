@@ -23,7 +23,8 @@ class MockALE():
         return self.toybox.get_score()
 
     def game_over(self):
-        return self.toybox.game_over()
+        # Note that this is to match baselines / atari_py and not what videogames would expect.
+        return self.toybox.get_lives() == 0
 
     def saveScreenPNG(self, name):
         # Has to be bytes for ALE
@@ -117,7 +118,8 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.score = score
     
         # Check whether the episode is done
-        done = self.toybox.game_over()
+        # use "ale" semantics here
+        done = self.ale.game_over()
     
         # Send back dignostic information
         info['lives'] = self.toybox.get_lives()
