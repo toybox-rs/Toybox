@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
-from gym.spaces import np_random
 from gym.utils import seeding
+try:
+    from gym.spaces import np_random
+except ImportError:
+    np_random = seeding.np_random
 from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
 from gym.envs.atari import AtariEnv
 from gym import utils

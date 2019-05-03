@@ -12,5 +12,5 @@ if [ ! -e toybox-regress-models.zip ]; then
 fi
 
 # required for gym env registration
-cd ctoybox && (./start_python ../scripts/utils/test_games.py && ../scripts/utils/regress.sh)
+cd ctoybox && (../scripts/utils/unit_tests.sh && ../scripts/utils/regress.sh)
 
