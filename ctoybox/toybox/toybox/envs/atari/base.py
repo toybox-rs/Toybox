@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
-from gym.spaces import np_random
 from gym.utils import seeding
 from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
 from gym.envs.atari import AtariEnv
 from gym import utils
 
 import numpy as np
+from numpy import random
 
 class MockALE():
     def __init__(self, toybox):
@@ -40,7 +40,7 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.viewer = None
 
         # Required for compatability with OpenAI Gym's Atari wrappers
-        self.np_random = np_random
+        self.np_random = random.random
         self.ale = MockALE(toybox)
         utils.EzPickle.__init__(self, game, 'human', frameskip, repeat_action_probability)
         
