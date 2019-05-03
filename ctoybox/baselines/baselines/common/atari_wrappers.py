@@ -75,7 +75,8 @@ class SampleEnvs(gym.Wrapper):
         env = np.random.choice(envs, 1)[0]
         turtle = get_turtle(env)
         print('Starting env:', turtle)
-        gym.Wrapper.__init__(self, env)
+        for e in envs: 
+            gym.Wrapper.__init__(self, e)
         self.envs = envs
         self.weights = weights
         SE_samples[turtle] += 1
@@ -92,7 +93,7 @@ class SampleEnvs(gym.Wrapper):
         env = np.random.choice(self.envs, p=self.weights)
         print('resetting to env:', env)
         self.env = env
-        gym.Wrapper.__init__(self, env)
+        #gym.Wrapper.__init__(self, env)
         self.env.reset(**kwargs)
         SE_samples[get_turtle(env)] += 1 
         obs, _, _, _ = self.env.step(0)
