@@ -234,7 +234,7 @@ class State(object):
         return lib.state_score(self.__state)
 
     def game_over(self):
-        return self.lives() == 0
+        return self.lives() < 0
 
     def query_json(self, query, args="null"):
         txt = rust_str(lib.state_query_json(self.__state, json_str(query).encode('utf-8'), json_str(args).encode('utf-8')))
