@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--algorithm', type=str, default='ppo2')
     parser.add_argument('--policy', type=str, default='cnn')
-    parser.add_argument('--num_timesteps', type=int, default=int(1e5))
+    parser.add_argument('--num_timesteps', type=float, default=int(1e5))
     parser.add_argument('--save_path', type=str, default=None)
     parser.add_argument('--verbose', type=int, default=1)
     parser.add_argument('--load_path', type=str, default=None)
@@ -27,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--save_interval', type=int, default=1_000_000)
 
     args = parser.parse_args()
+    num_timesteps = int(args.num_timesteps)
 
     # This is a very opinionated 
     log_dir_name = '%s_%s_%s_%d_%s' % (args.env, args.algorithm, args.policy, args.seed, datetime.datetime.now().isoformat())
@@ -68,17 +69,15 @@ if __name__ == '__main__':
     last_save = 0
     def update_callback(_locals, _globals):
         global last_save
-        x, y = ts2xy(load_results(log_dir_name), 'timesteps')
-        if len(x) > 0:
-            timestep = x[-1]
-            if timestep - last_save > args.save_interval:
-                model.save(os.path.join(log_dir_name, 't%d.model' % timestep))
-                last_save = timestep
+        timestep = model.num_timesteps
+        if timestep - last_save > args.save_interval:
+            model.save(os.path.join(log_dir_name, 't%d.model' % timestep))
+            last_save = timestep
 
-    model.learn(total_timesteps=args.num_timesteps, callback=update_callback)
+    model.learn(total_timesteps=num_timesteps, callback=update_callback)
 
     # always save the last model...
-    model.save(os.path.join(log_dir_name, 't%d.model' % args.num_timesteps))
+    model.save(os.path.join(log_dir_name, 't%d.model' % num_timesteps))
 
     if args.save_path:
         model.save(args.save_path)
