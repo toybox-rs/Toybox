@@ -25,17 +25,26 @@ pub mod screen {
 }
 pub mod raw_images {
     pub const PLAYER_L1: &[u8] = include_bytes!("resources/amidar/player_l1.png");
+    pub const PLAYER_L2: &[u8] = include_bytes!("resources/amidar/player_l2.png");
     pub const ENEMY_L1: &[u8] = include_bytes!("resources/amidar/enemy_l1.png");
+    pub const ENEMY_L2: &[u8] = include_bytes!("resources/amidar/enemy_l2.png");
     pub const ENEMY_CHASE_L1: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
+    pub const ENEMY_CHASE_L2: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
     pub const PAINTED_BOX_BAR: &[u8] = include_bytes!("resources/amidar/painted_box_bar.png");
+
     pub const BLOCK_TILE_PAINTED_L1: &[u8] =
         include_bytes!("resources/amidar/block_tile_painted_l1.png");
+    pub const BLOCK_TILE_PAINTED_L2: &[u8] =
+        include_bytes!("resources/amidar/block_tile_painted_l2.png");
     pub const BLOCK_TILE_UNPAINTED_L1: &[u8] =
         include_bytes!("resources/amidar/block_tile_unpainted_l1.png");
+    pub const BLOCK_TILE_UNPAINTED_L2: &[u8] =
+        include_bytes!("resources/amidar/block_tile_unpainted_l2.png");
 }
 pub mod images {
     use super::*;
     lazy_static! {
+        // Level 1 images
         pub static ref PLAYER_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::PLAYER_L1);
         pub static ref ENEMY_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L1);
@@ -43,12 +52,29 @@ pub mod images {
         pub static ref ENEMY_CHASE_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L1);
         pub static ref ENEMY_CAUGHT_L1: FixedSpriteData = ENEMY_CHASE_L1.make_black_version();
-        pub static ref PAINTED_BOX_BAR: FixedSpriteData =
-            FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
         pub static ref BLOCK_TILE_PAINTED_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L1);
         pub static ref BLOCK_TILE_UNPAINTED_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L1);
+
+
+        // Level 2 images
+        pub static ref PLAYER_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PLAYER_L2);
+        pub static ref ENEMY_L2: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L2);
+        pub static ref ENEMY_JUMP_L2: FixedSpriteData = ENEMY_L2.make_black_version();
+        pub static ref ENEMY_CHASE_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L2);
+        pub static ref ENEMY_CAUGHT_L2: FixedSpriteData = ENEMY_CHASE_L2.make_black_version();
+        pub static ref BLOCK_TILE_PAINTED_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L2);
+        pub static ref BLOCK_TILE_UNPAINTED_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L2);
+
+
+        pub static ref PAINTED_BOX_BAR: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
+
     }
 }
 
@@ -60,6 +86,10 @@ mod world {
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
 
+mod inits {
+    pub const ENEMY_STARTING_SPEED: i32 = 10;
+    pub const PLAYER_SPEED: i32 = 8;
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amidar {
     pub rand: random::Gen,
@@ -81,8 +111,11 @@ pub struct Amidar {
     /// This should be false if you ever use a non-default board.
     default_board_bugs: bool,
     enemies: Vec<MovementAI>,
+    level: i32,
     /// How many previous junctions should the player and enemies remember?
     history_limit: u32,
+    enemy_starting_speed: i32,
+    player_speed: i32,
 }
 
 impl Amidar {
@@ -126,6 +159,9 @@ impl Default for Amidar {
                     default_route_index: idx as u32,
                 })
                 .collect(),
+            level: 1,
+            enemy_starting_speed: inits::ENEMY_STARTING_SPEED,
+            player_speed: inits::PLAYER_SPEED,
         }
     }
 }
@@ -532,28 +568,31 @@ pub struct Mob {
     history: VecDeque<u32>,
 }
 impl Mob {
-    fn new(ai: MovementAI, position: WorldPoint) -> Mob {
+    fn new(ai: MovementAI, position: WorldPoint, speed: i32) -> Mob {
         Mob {
             ai,
             position,
             step: None,
             caught: false,
-            speed: 8,
+            speed: speed,
             history: VecDeque::new(),
         }
     }
-    pub fn new_player(position: WorldPoint) -> Mob {
+    pub fn new_player(position: WorldPoint, speed: i32) -> Mob {
         Mob {
             ai: MovementAI::Player,
             position,
             step: None,
             caught: false,
-            speed: 8,
+            speed: speed,
             history: VecDeque::new(),
         }
     }
     fn is_player(&self) -> bool {
         self.ai == MovementAI::Player
+    }
+    fn change_speed(&mut self, new_speed: i32) {
+        self.speed = new_speed;
     }
     fn reset(&mut self, player_start: &TilePoint, board: &Board) {
         self.step = None;
@@ -602,9 +641,18 @@ impl Mob {
                 }
                 None
             } else {
-                self.position.x += self.speed * dx.signum();
-                self.position.y += self.speed * dy.signum();
-                Some(target.clone())
+                if dx.abs() < self.speed && dy.abs() < self.speed {
+                    self.position.x += dx;
+                    self.position.y += dy;
+                    if let Some(pt) = board.get_junction_id(target) {
+                        self.history.push_front(pt);
+                    }
+                    None
+                } else {
+                    self.position.x += self.speed * dx.signum();
+                    self.position.y += self.speed * dy.signum();
+                    Some(target.clone())
+                }
             }
         } else {
             None
@@ -1014,9 +1062,9 @@ impl Board {
             true
         }
     }
-    pub fn make_enemy(&self, ai: MovementAI) -> Mob {
+    pub fn make_enemy(&self, ai: MovementAI, speed: i32) -> Mob {
         let fake = TilePoint::new(0, 0);
-        let mut m = Mob::new(ai, fake.to_world());
+        let mut m = Mob::new(ai, fake.to_world(), speed);
         m.reset(&fake, self);
         m
     }
@@ -1033,6 +1081,19 @@ impl Board {
         }
         Tile::Empty
     }
+
+    pub fn board_complete(&self) -> bool {
+        // if this is too slow, we can store a private variable for the number of
+        // unpainted tiles
+        for row in &self.tiles {
+            for tile in row {
+                if tile.needs_paint() {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1046,6 +1107,7 @@ pub struct StateCore {
     pub player: Mob,
     pub enemies: Vec<Mob>,
     pub board: Board,
+    pub level: i32,
 }
 
 pub struct State {
@@ -1061,9 +1123,9 @@ impl State {
         let enemies = config
             .enemies
             .iter()
-            .map(|ai| board.make_enemy(ai.clone()))
+            .map(|ai| board.make_enemy(ai.clone(), config.enemy_starting_speed))
             .collect();
-        let player = Mob::new_player(config.player_start.to_world());
+        let player = Mob::new_player(config.player_start.to_world(), config.player_speed);
 
         let core = StateCore {
             rand: random::Gen::new_child(&mut config.rand),
@@ -1072,6 +1134,7 @@ impl State {
             chase_timer: 0,
             jumps: config.start_jumps,
             jump_timer: 0,
+            level: 1,
             player,
             enemies,
             board,
@@ -1190,12 +1253,7 @@ impl toybox_core::Simulation for Amidar {
 
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
-        // If everything is painted, game is over. Set lives to 0.
-        if self.state.board.boxes.iter().all(|b: &GridBox| b.painted) {
-            0
-        } else {
-            self.state.lives
-        }
+        self.state.lives
     }
     fn score(&self) -> i32 {
         self.state.score
@@ -1216,6 +1274,7 @@ impl toybox_core::State for State {
             let mut allow_score_change = true;
             if self.config.default_board_bugs {
                 let (start, end) = score_change.junctions.unwrap();
+                // Locations of the first, semi-painted segment.
                 if start == 607 && end == 415 {
                     allow_score_change = false;
                 }
@@ -1291,11 +1350,46 @@ impl toybox_core::State for State {
             }
         }
 
+        // If dead, reset. If alive, check to see if we have advanced to the next level.
         if dead {
             self.state.jumps = self.config.start_jumps;
             self.state.lives -= 1;
             self.state.score = pre_update_score;
             self.reset();
+        } else {
+            if self.state.board.board_complete() {
+                self.reset();
+                // Increment the level
+                self.state.level += 1;
+                // If we triggered the chase counter immediately before
+                // advancing, it will still be on and will mess up the sprites. Reset to 0.
+                self.state.chase_timer = 0;
+                // Time to paint again!
+                self.state.board = Board::fast_new();
+                // If you successfully complete a level, you can get a life back (up the maximum)
+                if self.lives() < self.config.start_lives {
+                    self.state.lives += 1;
+                }
+                if self.state.level > 2 {
+                    // Starting at level 3, there are six enemies.
+                    // We haven't observed an agent that can get to level 3 and can't find any description
+                    // of what level 3 looks like, so we are leaving this blank for now.
+                }
+                // Increase enemy speed.
+                // Make pretty later
+                let new_speed = {
+                    if self.state.level < 3 {
+                        self.config.enemy_starting_speed
+                    } else if self.state.level < 5 {
+                        self.config.enemy_starting_speed + 2
+                    } else {
+                        self.config.enemy_starting_speed + 4
+                    }
+                };
+                for e in &mut self.state.enemies {
+                    e.change_speed(new_speed);
+                }
+            }
         }
     }
 
@@ -1314,10 +1408,27 @@ impl toybox_core::State for State {
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
 
+                // Use the level-1 sprites for odd levels less than the sixth level.
+                // Use the level-2 sprites for even levels and those greater than the sixth level.
+                // We will probably want to put some of this in the config later.
+                let ghosts = self.state.level % 2 == 1 && self.state.level < 6;
+
                 if self.config.render_images {
                     let tile_sprite: &FixedSpriteData = match tile {
-                        &Tile::Painted => &images::BLOCK_TILE_PAINTED_L1,
-                        &Tile::Unpainted | &Tile::ChaseMarker => &images::BLOCK_TILE_UNPAINTED_L1,
+                        &Tile::Painted => {
+                            if ghosts {
+                                &images::BLOCK_TILE_PAINTED_L1
+                            } else {
+                                &images::BLOCK_TILE_PAINTED_L2
+                            }
+                        }
+                        &Tile::Unpainted | &Tile::ChaseMarker => {
+                            if ghosts {
+                                &images::BLOCK_TILE_UNPAINTED_L1
+                            } else {
+                                &images::BLOCK_TILE_UNPAINTED_L2
+                            }
+                        }
                         &Tile::Empty => continue,
                     };
                     output.push(Drawable::sprite(
@@ -1378,11 +1489,16 @@ impl toybox_core::State for State {
 
         let (player_x, player_y) = self.state.player.position.to_screen().pixels();
         let (player_w, player_h) = screen::PLAYER_SIZE;
+        let player_sprite = match self.state.level % 2 {
+            1 => images::PLAYER_L1.clone(),
+            0 => images::PLAYER_L2.clone(),
+            _ => unreachable!(),
+        };
         if self.config.render_images {
             output.push(Drawable::sprite(
                 offset_x + player_x - 1,
                 offset_y + player_y - 1,
-                images::PLAYER_L1.clone(),
+                player_sprite,
             ))
         } else {
             output.push(Drawable::rect(
@@ -1404,14 +1520,30 @@ impl toybox_core::State for State {
                     offset_y + y - 1,
                     if self.state.chase_timer > 0 {
                         if enemy.caught {
-                            images::ENEMY_CAUGHT_L1.clone()
+                            match self.state.level % 2 {
+                                1 => images::ENEMY_CAUGHT_L1.clone(),
+                                0 => images::ENEMY_CAUGHT_L2.clone(),
+                                _ => unreachable!(),
+                            }
                         } else {
-                            images::ENEMY_CHASE_L1.clone()
+                            match self.state.level % 2 {
+                                1 => images::ENEMY_CHASE_L1.clone(),
+                                0 => images::ENEMY_CHASE_L2.clone(),
+                                _ => unreachable!(),
+                            }
                         }
                     } else if self.state.jump_timer > 0 {
-                        images::ENEMY_JUMP_L1.clone()
+                        match self.state.level % 2 {
+                            1 => images::ENEMY_JUMP_L1.clone(),
+                            0 => images::ENEMY_JUMP_L2.clone(),
+                            _ => unreachable!(),
+                        }
                     } else {
-                        images::ENEMY_L1.clone()
+                        match self.state.level % 2 {
+                            1 => images::ENEMY_L1.clone(),
+                            0 => images::ENEMY_L2.clone(),
+                            _ => unreachable!(),
+                        }
                     },
                 ))
             } else {

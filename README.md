@@ -1,12 +1,21 @@
-# The Machine Learning Toybox [![Build Status](https://travis-ci.com/jjfiv/toybox.svg?token=wqGZxUYsDSPaq1jz2zn6&branch=master)](https://travis-ci.com/jjfiv/toybox)
+# The Reinforcement Learning Toybox [![Build Status](https://travis-ci.com/jjfiv/toybox.svg?token=wqGZxUYsDSPaq1jz2zn6&branch=master)](https://travis-ci.com/jjfiv/toybox)
 
-A set of games designed for causal experimentation with deep RL agents.
+A set of games designed for testing deep RL agents.
 
+If you use this code, or otherwise are inspired by our white-box testing approach, please cite our [NeurIPS workshop paper](https://arxiv.org/abs/1812.02850):
+
+```
+@inproceedings{foley2018toybox,
+  title={{Toybox: Better Atari Environments for Testing Reinforcement Learning Agents}},
+  author={Foley, John and Tosch, Emma and Clary, Kaleigh and Jensen, David},
+  booktitle={{NeurIPS 2018 Workshop on Systems for ML}},
+  year={2018}
+}
+```
 ## Projects
 
 - ``toybox`` - Contains core logic for games.
-- ``ctoybox`` - Contains OpenAI Gym environment bindings.
-- ``breakout-web-play`` - Contains a web front-end for playing those games as a human.
+- ``ctoybox`` - Contains C API for toybox; and our python code, e.g., Gym environment bindings.
 
 ## Play the games (using pygame)
 
@@ -21,6 +30,7 @@ A set of games designed for causal experimentation with deep RL agents.
 * `rustup-init` with the default install
 * clone this repo
 * `source $HOME/.cargo/env`
+* `cd ctoybox/toybox && python setup.py install`
 
 ## Lints and Formatting in Rust
 
