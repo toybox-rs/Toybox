@@ -1,10 +1,12 @@
 #!/bin/bash
 # RUN THIS command FROM CTOYBOX.
-pip3 install -q -r REQUIREMENTS.txt --user
+
+#pip3 install -q -r REQUIREMENTS.txt 
 export PYTHONPATH=${PWD}/baselines:${PWD}/toybox:${PYTHONPATH}
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/../target/release
 export LIBCTOYBOX=${PWD}/..
 echo "PYTHONPATH $PYTHONPATH"
 echo "LD_LIBRARY_PATH $LD_LIBRARY_PATH"
 echo "LIBCTOYBOX $LIBCTOYBOX"
+./check_installs.sh
 python3 "$@"
