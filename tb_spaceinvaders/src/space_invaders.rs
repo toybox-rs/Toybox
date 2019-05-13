@@ -485,7 +485,9 @@ impl StateCore {
             self.shields.push(SHIELD_SPRITE.translate(x, y))
         }
 
-        let (x, y) = screen::ENEMY_START_POS;
+        let (x, mut y) = screen::ENEMY_START_POS;
+        // start position should get lower with each level
+        y += self.levels_completed * 2;
         let (w, h) = screen::ENEMY_SIZE;
         let x_offset = w + screen::ENEMY_SPACE.0;
         let y_offset = h + screen::ENEMY_SPACE.1;
@@ -858,21 +860,17 @@ impl toybox_core::Simulation for SpaceInvaders {
 
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
-        // If we have removed all enemies, set lives to 0 and end.
-        if self.state.enemies.iter().all(|e: &Enemy| !e.alive) {
-            0
-        } else {
-            self.state.lives
-        }
+        self.state.lives
     }
     fn score(&self) -> i32 {
         self.state.score
     }
     fn update_mut(&mut self, buttons: Input) {
         if self.state.reset_condition() {
-            // Subtract lives on death.
+            // If enemies hit the earth, you have lost. Game is over.
             if self.state.has_lost() {
-                self.state.lives -= 1;
+                self.state.lives = -1;
+                return;
             } else if self.state.has_won() {
                 self.state.levels_completed += 1;
             }
