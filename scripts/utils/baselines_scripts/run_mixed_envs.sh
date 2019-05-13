@@ -30,7 +30,7 @@ for env in $envs; do
                     wflg="--weights=$weight"
                 fi
                 echo "Processing model $uid"
-                model=$work1/$uid.`date -I`.model
+                model=$work1/$uid.`date -I`
                 dest=mixed_env_scripts/run_cmd_$uid.sh
                 logdir=$logs/$uid
                 mkdir -p $logdir
@@ -49,16 +49,16 @@ source gypsum.sh
 
 OPENAI_LOGDIR=$logdir
 OPENAI_FORMAT=csv 
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --save_path=$model.$stepincr $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.$stepincr --save_path=$model.2e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.2e7 --save_path=$model.3e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.3e7 --save_path=$model.4e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.4e7 --save_path=$model.5e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.5e7 --save_path=$model.6e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.6e7 --save_path=$model.7e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.7e7 --save_path=$model.8e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.8e7 --save_path=$model.9e7 $wflg
-./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.9e7 --save_path=$model.10e7 $wflg"
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --save_path=$model.$stepincr.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.$stepincr.model --save_path=$model.2e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.2e7.model --save_path=$model.3e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.3e7.model --save_path=$model.4e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.4e7.model --save_path=$model.5e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.5e7.model --save_path=$model.6e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.6e7.model --save_path=$model.7e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.7e7.model --save_path=$model.8e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.8e7.model --save_path=$model.9e7.model $wflg
+./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=$stepincr --load_path=$model.9e7.model --save_path=$model.10e7.model $wflg"
                 echo "$cmd"
                 echo "$cmd" > $dest
                 #sbatch -p $partition --gres=gpu:1 $dest
