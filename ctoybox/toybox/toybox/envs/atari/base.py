@@ -24,7 +24,7 @@ class MockALE():
 
     def game_over(self):
         # Note that this is to match baselines / atari_py and not what videogames would expect.
-        return self.toybox.get_lives() == 0
+        return self.toybox.get_lives() <= 0
 
     def saveScreenPNG(self, name):
         # Has to be bytes for ALE
