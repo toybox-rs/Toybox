@@ -15,7 +15,8 @@ class SpaceInvadersIntervention(Intervention):
     # def lives_remaining(self): 
     #     return self.state['lives']
 
-
+    def get_level(self):
+        return self.state['levels_completed'] + 1
 
 
     # # atomic setters

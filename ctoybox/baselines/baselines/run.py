@@ -214,16 +214,19 @@ def main():
         num_games = 0
         # This is a hack to get the starting screen, which throws an error in ALE for amidar
         num_steps = -1
+        counter = 0
 
+        # import toybox.interventions.space_invaders as si
         while num_games < 100:
             actions = model.step(obs)[0]
-            num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
-            #done = done and (num_lives == 1 or turtle.ale.game_over())
-            #env.render()
-            #time.sleep(1.0/60.0)
-            done = num_lives == 1 and done 
-            #done = done.any() if isinstance(done, np.ndarray) else done
+            num_lives = turtle.ale.lives()
+            if counter % 100 == 0:
+                print('num lives %d, done %s' % (num_lives, str(done)))
+#                print("Current level %d\t num lives %d" % (sii.get_level(), num_lives))
+            counter += 1
+            env.render()
+            time.sleep(1.0/60.)
 
             if isinstance(info, list) or isinstance(info, tuple):
                 session_scores.add(np.average([d['score'] for d in info]))
@@ -231,6 +234,9 @@ def main():
                 session_scores.add(['score'])
             else:
                 session_scores.add(-1)
+
+            if isinstance(done, list) or isinstance(done, tuple):
+                done = all(done)
 
             if done:
                 num_games += 1

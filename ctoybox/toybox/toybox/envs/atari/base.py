@@ -37,7 +37,7 @@ class MockALE():
 
 class ToyboxBaseEnv(AtariEnv, ABC):
     metadata = {'render.modes': ['human']}
-    
+
     def __init__(self, toybox, game, frameskip=(2, 5), repeat_action_probability=0., grayscale=True, alpha=False, actions=None):
         assert(toybox.rstate)
         self.toybox = toybox
@@ -48,7 +48,7 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.np_random = np_random
         self.ale = MockALE(toybox)
         utils.EzPickle.__init__(self, game, 'human', frameskip, repeat_action_probability)
-        
+
         # By default, we don't need actions passed in:
         if actions is None:
             actions = toybox.get_legal_action_set()
@@ -61,15 +61,15 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self._height = self.toybox.get_height()
         self._width = self.toybox.get_width()
         self._dim = (self._height, self._width, self._rgba) # * len(self.toybox.get_state())) 
-        
+
         self.reward_range = (0, float('inf'))
         self.action_space = spaces.Discrete(len(self._action_set))
         self.observation_space = spaces.Box(
-            low=0, 
-            high=self._pixel_high, 
-            shape=self._dim, 
+            low=0,
+            high=self._pixel_high,
+            shape=self._dim,
             dtype='uint8')
-    
+
     def seed(self, seed=None):
         """
         This is totally the implementation in AtariEnv in openai/gym.
@@ -102,30 +102,29 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         reward = None
         done = False
         info = {}
-    
+
         # Sometimes the action_index is a numpy integer...
         #print('Action index and type', action_index, type(action_index))
         assert(action_index < len(self._action_set))
         assert(type(self._action_set)== list)
-    
+
         self.toybox.apply_ale_action(self._action_set[action_index])
         obs = self._get_obs()
-        
-        
+
         # Compute the reward from the current score and reset the current score.
         score = self.toybox.get_score()
         reward = max(score - self.score, 0)
         self.score = score
-    
+
         # Check whether the episode is done
         # use "ale" semantics here
         done = self.ale.game_over()
-    
+
         # Send back dignostic information
         info['lives'] = self.toybox.get_lives()
         #info['frame'] = frame
         info['score'] = 0 if done else self.score
-    
+
         return obs, reward, done, info
 
     def reset(self):
