@@ -192,6 +192,7 @@ def main():
     extra_args = parse_cmdline_kwargs(unknown_args)
     
     test_output_file = extra_args['test_output_file']
+    del extra_args['test_output_file']
 
     rank = 0
     logger.configure()
@@ -209,12 +210,11 @@ def main():
 
 
     # get initial state
-    start_state = turtle.toybox.to_json()
-
-    config = start_state['config']
+    start_state = turtle.toybox.state_to_json()
+    config = turtle.toybox.config_to_json()
     bricks = start_state['bricks']
 
-    rows = len(start_state['config']['row_scores'])
+    rows = len(config['row_scores'])
     cols = len(bricks) // rows
 
     # Give the ball only one life.
@@ -245,7 +245,7 @@ def main():
         for trial in range(30):
             obs = env.reset()
             # overwrite state inside the env wrappers:
-            turtle.toybox.write_json(start_state)
+            turtle.toybox.write_state_json(start_state)
             # Take a step to overwrite anything that's stuck there, e.g., gameover
             obs, _, done, info = env.step(0)
 
@@ -257,13 +257,11 @@ def main():
             for t in range(7200):
                 actions = model.step(obs)[0]
                 obs, _, done, info = env.step(actions)
-                #env.render()
-                #time.sleep(1.0/1920.0)
                 score = turtle.toybox.get_score()
                 if score > best_score:
                     best_score = score
                 fail = turtle.toybox.get_lives() != 1 or turtle.toybox.game_over() 
-                hit_brick = not turtle.toybox.rstate.breakout_brick_live_by_index(i)
+                hit_brick = not turtle.toybox.query_state_json('brick_live_by_index', args=str(i))
                 tup = (i, current_col, trial, best_score, t, not fail)
                 if fail or hit_brick:
                     break

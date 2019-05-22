@@ -6,8 +6,6 @@ from toybox.envs.atari.breakout import BreakoutEnv
 import time
 import sys
 import csv
-import matplotlib as mpl
-import matplotlib.cm as cm
 import multiprocessing
 import os.path as osp
 import gym
@@ -171,20 +169,6 @@ def get_learn_function_defaults(alg, env_type):
         kwargs = {}
     return kwargs
 
-# from https://stackoverflow.com/questions/40948069/color-range-python
-def convert_to_rgb(minimum, maximum, value):
-    norm = mpl.colors.Normalize(vmin=minimum, vmax=maximum)
-    cmap = cm.hot
-
-    m = cm.ScalarMappable(norm=norm, cmap=cmap)
-    print(m.to_rgba(value))
-
-    norm = (value - minimum)/(maximum - minimum)
-    (r, g, b) = colorsys.hsv_to_rgb(norm, 1.0, 1.0)
-    R, G, B = int(255 * r), int(255 * g), int(255 * b)
-
-    return R, G, B
-
 def parse_cmdline_kwargs(args):
     '''
     convert a list of '='-spaced command-line arguments to a dictionary, evaluating python objects when possible
@@ -207,6 +191,7 @@ def main():
     extra_args = parse_cmdline_kwargs(unknown_args)
 
     test_output_file = extra_args['test_output_file']
+    del extra_args['test_output_file']
 
     rank = 0
     logger.configure()
@@ -223,13 +208,13 @@ def main():
             raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
 
     # get total number of bricks
-    n_bricks = turtle.toybox.rstate.breakout_bricks_remaining()
+    n_bricks = turtle.toybox.query_state_json('bricks_remaining')
 
     n_trials = 30
     brick_info = []
 
     # get initial state
-    start_state = turtle.toybox.to_json()
+    start_state = turtle.toybox.state_to_json()
 
     # for each brick, remove and run n_trials to determine number of steps until success (or death)
     for brick in range(n_bricks): 
@@ -243,7 +228,7 @@ def main():
         brick_score = start_state["bricks"][brick]["points"]
 
         # load env from manipulated state
-        turtle.toybox.write_json(start_state)
+        turtle.toybox.write_state_json(start_state)
 
         # n trials 
         num_games = 0
@@ -269,7 +254,7 @@ def main():
                 num_games += 1
 
                 obs = env.reset()
-                turtle.toybox.write_json(start_state)
+                turtle.toybox.write_state_json(start_state)
 
                 step_counts.append(n_steps)
                 n_steps = 0

@@ -192,6 +192,7 @@ def main():
     extra_args = parse_cmdline_kwargs(unknown_args)
     
     test_output_file = extra_args['test_output_file']
+    del extra_args['test_output_file']
 
     rank = 0
     logger.configure()
@@ -209,7 +210,7 @@ def main():
 
 
     # get initial state
-    start_state = turtle.toybox.to_json()
+    start_state = turtle.toybox.state_to_json()
     config = turtle.toybox.config_to_json()
     ball_speed_slow = config['ball_speed_slow']
 
@@ -244,7 +245,7 @@ def main():
             time.sleep(1/60.0);
 
             # overwrite state inside the env wrappers:
-            turtle.toybox.write_json(start_state)
+            turtle.toybox.write_state_json(start_state)
             # Take a step to overwrite anything that's stuck there, e.g., gameover
             obs, _, done, info = env.step(0)
 
