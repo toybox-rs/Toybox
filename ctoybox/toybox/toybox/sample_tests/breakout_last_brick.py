@@ -58,41 +58,15 @@ def hotpatch_step(self, a):
 
 AtariEnv.step = hotpatch_step
 
-try:
-    from mpi4py import MPI
-except ImportError:
-    MPI = None
-
-try:
-    import pybullet_envs
-except ImportError:
-    pybullet_envs = None
-
-try:
-    import roboschool
-except ImportError:
-    roboschool = None
+MPI = None
+pybullet_envs = None
+roboschool = None
 
 _game_envs = defaultdict(set)
 for env in gym.envs.registry.all():
     # TODO: solve this with regexes
     env_type = env._entry_point.split(':')[0].split('.')[-1]
     _game_envs[env_type].add(env.id)
-
-# reading benchmark names directly from retro requires
-# importing retro here, and for some reason that crashes tensorflow
-# in ubuntu
-_game_envs['retro'] = {
-    'BubbleBobble-Nes',
-    'SuperMarioBros-Nes',
-    'TwinBee3PokoPokoDaimaou-Nes',
-    'SpaceHarrier-Nes',
-    'SonicTheHedgehog-Genesis',
-    'Vectorman-Genesis',
-    'FinalFight-Snes',
-    'SpaceInvaders-Snes',
-}
-
 
 def train(args, extra_args):
     env_type, env_id = get_env_type(args.env)
@@ -232,12 +206,10 @@ def main():
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
 
-    if MPI is None or MPI.COMM_WORLD.Get_rank() == 0:
-        rank = 0
-        logger.configure()
-    else:
-        logger.configure(format_strs=[])
-        rank = MPI.COMM_WORLD.Get_rank()
+    test_output_file = extra_args['test_output_file']
+
+    rank = 0
+    logger.configure()
 
     model, env = train(args, extra_args)
     env.close()
@@ -254,7 +226,6 @@ def main():
     n_bricks = turtle.toybox.rstate.breakout_bricks_remaining()
 
     n_trials = 30
-    #brick_info = [["brick_id", "avg_steps", "median_steps", "std_dev_steps", "n_successes"]]
     brick_info = []
 
     # get initial state
@@ -311,7 +282,7 @@ def main():
         print("brick %s: avg %s steps, %s median steps, %s/%s successes" % (brick, avg, med, successes, n_trials))
         brick_info.append([brick, avg, med, stdev(step_counts), successes])
 
-        with open('last_brick.tsv', 'w') as fp:
+        with open(test_output_file, 'w') as fp:
             for row in brick_info:
                 print('\t'.join([str(x) for x in row]), file=fp)
 
