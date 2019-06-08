@@ -1,5 +1,5 @@
 import toybox
-import toybox.interventions.breakout as inter
+from toybox.interventions.breakout import BreakoutIntervention as inter
 from toybox.toybox import Toybox
 
 def all_but_one(toybox:Toybox):
@@ -24,6 +24,47 @@ def all_but_one(toybox:Toybox):
                 new_js = inter.get_json()
                 tbs.append(tb.from_json(new_js))
     return tbs
+
+
+
+    states = []
+    
+    with Toybox('breakout') as tb:
+    # remove all bricks to initialize state
+    with BreakoutIntervention(tb) as intervention:
+        nbricks = intervention.num_bricks_remaining()
+        for i in range(nbricks): 
+            intervention.set_brick(i, alive=False)
+
+    # for each brick, turn on and save JSON state
+    for i in range(nbricks): 
+        with Intervention(tb) as inter: 
+            inter.set_brick(i)
+
+
+
+    # reset and assert that the brick is present
+    with BreakoutIntervention(tb) as intervention:
+        nbricks = intervention.num_bricks_remaining()
+        intervention.set_brick(0, alive=True)
+        nbricks_post = intervention.num_bricks_remaining()
+
+        assert nbricks + 1 == nbricks_post
+
+    # add a channel and assert that num_rows bricks have been removed
+    with BreakoutIntervention(tb) as intervention: 
+        nbricks = intervention.num_bricks_remaining()
+
+        stacks = intervention.get_stacks()
+        intervention.add_channel(stacks[0])
+        nbricks_post = intervention.num_bricks_remaining()
+        assert nbricks_post == nbricks - intervention.num_rows()
+
+        col, channel = intervention.find_channel()
+        assert channel
+
+        assert intervention.channel_count() == 1
+
 
 
 def channels(toybox:Toybox):
