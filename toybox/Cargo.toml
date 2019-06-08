@@ -4,10 +4,6 @@ version = "0.1.0"
 authors = ["John Foley <jfoley@cs.umass.edu>"]
 
 [dependencies]
-png = "*"
-serde = "*"
-serde_derive = "*"
-serde_json = "*"
 amidar = {path = "../tb_amidar", version="*", optional=true}
 breakout = {path = "../tb_breakout", version="*", optional = true}
 space_invaders = {path = "../tb_spaceinvaders", version="*", optional = true}

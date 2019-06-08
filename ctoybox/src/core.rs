@@ -1,6 +1,7 @@
 use super::WrapSimulator;
 use super::WrapState;
-use libc::c_char;
+use libc::{c_char, c_void};
+use serde_json;
 use std::boxed::Box;
 use std::ffi::{CStr, CString};
 use std::mem;
@@ -9,7 +10,12 @@ use toybox_core::graphics::{GrayscaleBuffer, ImageBuffer};
 use toybox_core::{AleAction, Input, State};
 
 #[no_mangle]
-pub extern "C" fn simulator_alloc(name: *const i8) -> *mut WrapSimulator {
+pub extern "C" fn free_str(originally_from_rust: *mut c_char) {
+    let _will_drop: CString = unsafe { CString::from_raw(originally_from_rust) };
+}
+
+#[no_mangle]
+pub extern "C" fn simulator_alloc(name: *const c_char) -> *mut WrapSimulator {
     let name: &CStr = unsafe { CStr::from_ptr(name) };
     let name: &str = name.to_str().expect("bad utf-8!");
     let simulator = toybox::get_simulation_by_name(name).unwrap();
@@ -40,6 +46,18 @@ pub extern "C" fn simulator_seed(ptr: *mut WrapSimulator, seed: u32) {
 }
 
 #[no_mangle]
+pub extern "C" fn simulator_to_json(ptr: *mut WrapSimulator) -> *const c_char {
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+
+    let json: String = simulator.to_json();
+    let cjson: CString = CString::new(json).expect("Simulator JSON &str to CString fail!");
+    CString::into_raw(cjson)
+}
+
+#[no_mangle]
 pub extern "C" fn simulator_is_legal_action(ptr: *mut WrapSimulator, action: i32) -> bool {
     let &mut WrapSimulator { ref mut simulator } = unsafe {
         assert!(!ptr.is_null());
@@ -51,6 +69,22 @@ pub extern "C" fn simulator_is_legal_action(ptr: *mut WrapSimulator, action: i32
     } else {
         false
     }
+}
+
+#[no_mangle]
+pub extern "C" fn simulator_actions(ptr: *mut WrapSimulator) -> *const c_char {
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let actions: Vec<i32> = simulator
+        .legal_action_set()
+        .into_iter()
+        .map(|a| a.to_int())
+        .collect();
+    let actions = serde_json::to_string(&actions).expect("Vector to JSON should be OK.");
+    let cjson: CString = CString::new(actions).expect("Conversion to CString should succeed!");
+    CString::into_raw(cjson)
 }
 
 // STATE ALLOC + FREE
@@ -73,6 +107,39 @@ pub extern "C" fn state_free(ptr: *mut WrapState) {
     unsafe {
         Box::from_raw(ptr);
     }
+}
+
+/// Hopefully the last "query" cbinding we need to write.
+#[no_mangle]
+pub extern "C" fn state_query_json(
+    ptr: *mut WrapState,
+    query_str: *const c_char,
+    args_json_str: *const c_char,
+) -> *const c_char {
+    // Validate state pointer.
+    let &mut WrapState { ref mut state } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    // Validate query string pointer.
+    let query_str: &CStr = unsafe { CStr::from_ptr(query_str) };
+    let query_str: &str = query_str
+        .to_str()
+        .expect("Could not convert your query string to UTF-8!");
+    // Validate args json string pointer.
+    let args_str: &CStr = unsafe { CStr::from_ptr(args_json_str) };
+    let args_str: &str = args_str
+        .to_str()
+        .expect("Could not convert your args json string to UTF-8!");
+    let args: serde_json::Value =
+        serde_json::from_str(args_str).expect("Could not convert your args string to JSON!");
+
+    let json_str = match state.query_json(query_str, &args) {
+        Ok(s) => s,
+        Err(qe) => format!("{:?}", qe),
+    };
+    let cjson: CString = CString::new(json_str).expect("Conversion to CString should succeed!");
+    CString::into_raw(cjson)
 }
 
 // Need this information to initialize the numpy array in python
@@ -148,16 +215,20 @@ pub extern "C" fn state_apply_ale_action(state_ptr: *mut WrapState, input: i32) 
 }
 
 #[no_mangle]
-pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *mut Input) {
+pub extern "C" fn state_apply_action(state_ptr: *mut WrapState, input_ptr: *const c_char) {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
     };
-    let input = unsafe {
+    let input_ptr = unsafe {
         assert!(!input_ptr.is_null());
-        &mut *input_ptr
+        CStr::from_ptr(input_ptr)
     };
-    state.update_mut(*input);
+    let input_str = input_ptr
+        .to_str()
+        .expect("Could not create input string from pointer");
+    let input: Input = serde_json::from_str(input_str).expect("Could not input string to Input");
+    state.update_mut(input);
 }
 
 #[no_mangle]
@@ -179,31 +250,22 @@ pub extern "C" fn state_score(state_ptr: *mut WrapState) -> i32 {
 }
 
 #[no_mangle]
-pub extern "C" fn to_json(state_ptr: *mut WrapState) -> *const c_char {
+pub extern "C" fn state_to_json(state_ptr: *mut WrapState) -> *mut c_void {
     let &mut WrapState { ref mut state } = unsafe {
         assert!(!state_ptr.is_null());
         &mut *state_ptr
     };
 
     let json: String = state.to_json();
-    let cjson: CString = CString::new(json).expect("crap!");
-    CString::into_raw(cjson)
+    let cjson: CString = CString::new(json).expect("Conversion to CString should succeed!");
+    CString::into_raw(cjson) as *mut c_void
 }
 
 #[no_mangle]
-pub extern "C" fn config_to_json(state_ptr: *mut WrapState) -> *const c_char {
-    let &mut WrapState { ref mut state } = unsafe {
-        assert!(!state_ptr.is_null());
-        &mut *state_ptr
-    };
-
-    let json: String = state.config_to_json();
-    let cjson: CString = CString::new(json).expect("crap!");
-    CString::into_raw(cjson)
-}
-
-#[no_mangle]
-pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mut WrapState {
+pub extern "C" fn state_from_json(
+    ptr: *mut WrapSimulator,
+    json_str: *const c_char,
+) -> *mut WrapState {
     let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
     let json_str: &str = json_str
         .to_str()
@@ -217,4 +279,26 @@ pub extern "C" fn from_json(ptr: *mut WrapSimulator, json_str: *const i8) -> *mu
         .expect("Could not parse state JSON!");
     let state = Box::new(WrapState { state });
     Box::into_raw(state)
+}
+
+#[no_mangle]
+pub extern "C" fn simulator_from_json(
+    ptr: *mut WrapSimulator,
+    json_str: *const c_char,
+) -> *mut WrapSimulator {
+    let json_str: &CStr = unsafe { CStr::from_ptr(json_str) };
+    let json_str: &str = json_str
+        .to_str()
+        .expect("Could not convert your config string to UTF-8!");
+
+    let &mut WrapSimulator { ref mut simulator } = unsafe {
+        assert!(!ptr.is_null());
+        &mut *ptr
+    };
+    let new_sim = simulator
+        .from_json(json_str)
+        .expect("Could not parse some JSON!");
+
+    let out = Box::new(WrapSimulator { simulator: new_sim });
+    Box::into_raw(out)
 }

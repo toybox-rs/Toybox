@@ -1,10 +1,12 @@
 use super::digit_sprites::{draw_score, DIGIT_HEIGHT};
 use serde_json;
-use std::any::Any;
 use std::collections::{HashSet, VecDeque};
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData};
-use toybox_core::{AleAction, Direction, Input};
+use toybox_core::random;
+use toybox_core::{AleAction, Direction, Input, QueryError};
+
+use rand::seq::SliceRandom;
 
 // Window constants:
 pub mod screen {
@@ -23,17 +25,26 @@ pub mod screen {
 }
 pub mod raw_images {
     pub const PLAYER_L1: &[u8] = include_bytes!("resources/amidar/player_l1.png");
+    pub const PLAYER_L2: &[u8] = include_bytes!("resources/amidar/player_l2.png");
     pub const ENEMY_L1: &[u8] = include_bytes!("resources/amidar/enemy_l1.png");
+    pub const ENEMY_L2: &[u8] = include_bytes!("resources/amidar/enemy_l2.png");
     pub const ENEMY_CHASE_L1: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
+    pub const ENEMY_CHASE_L2: &[u8] = include_bytes!("resources/amidar/enemy_chase_l1.png");
     pub const PAINTED_BOX_BAR: &[u8] = include_bytes!("resources/amidar/painted_box_bar.png");
+
     pub const BLOCK_TILE_PAINTED_L1: &[u8] =
         include_bytes!("resources/amidar/block_tile_painted_l1.png");
+    pub const BLOCK_TILE_PAINTED_L2: &[u8] =
+        include_bytes!("resources/amidar/block_tile_painted_l2.png");
     pub const BLOCK_TILE_UNPAINTED_L1: &[u8] =
         include_bytes!("resources/amidar/block_tile_unpainted_l1.png");
+    pub const BLOCK_TILE_UNPAINTED_L2: &[u8] =
+        include_bytes!("resources/amidar/block_tile_unpainted_l2.png");
 }
 pub mod images {
     use super::*;
     lazy_static! {
+        // Level 1 images
         pub static ref PLAYER_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::PLAYER_L1);
         pub static ref ENEMY_L1: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L1);
@@ -41,12 +52,29 @@ pub mod images {
         pub static ref ENEMY_CHASE_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L1);
         pub static ref ENEMY_CAUGHT_L1: FixedSpriteData = ENEMY_CHASE_L1.make_black_version();
-        pub static ref PAINTED_BOX_BAR: FixedSpriteData =
-            FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
         pub static ref BLOCK_TILE_PAINTED_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L1);
         pub static ref BLOCK_TILE_UNPAINTED_L1: FixedSpriteData =
             FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L1);
+
+
+        // Level 2 images
+        pub static ref PLAYER_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PLAYER_L2);
+        pub static ref ENEMY_L2: FixedSpriteData = FixedSpriteData::load_png(raw_images::ENEMY_L2);
+        pub static ref ENEMY_JUMP_L2: FixedSpriteData = ENEMY_L2.make_black_version();
+        pub static ref ENEMY_CHASE_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::ENEMY_CHASE_L2);
+        pub static ref ENEMY_CAUGHT_L2: FixedSpriteData = ENEMY_CHASE_L2.make_black_version();
+        pub static ref BLOCK_TILE_PAINTED_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_PAINTED_L2);
+        pub static ref BLOCK_TILE_UNPAINTED_L2: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::BLOCK_TILE_UNPAINTED_L2);
+
+
+        pub static ref PAINTED_BOX_BAR: FixedSpriteData =
+            FixedSpriteData::load_png(raw_images::PAINTED_BOX_BAR);
+
     }
 }
 
@@ -58,8 +86,15 @@ mod world {
 pub const AMIDAR_BOARD: &str = include_str!("resources/amidar_default_board");
 pub const AMIDAR_ENEMY_POSITIONS_DATA: &str = include_str!("resources/amidar_enemy_positions");
 
+mod inits {
+    pub const ENEMY_STARTING_SPEED: i32 = 10;
+    pub const PLAYER_SPEED: i32 = 8;
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
+pub struct Amidar {
+    pub rand: random::Gen,
+    board: Vec<String>,
+    pub player_start: TilePoint,
     bg_color: Color,
     player_color: Color,
     unpainted_color: Color,
@@ -73,10 +108,17 @@ pub struct Config {
     chase_score_bonus: i32,
     jump_time: i32,
     box_bonus: i32,
+    /// This should be false if you ever use a non-default board.
+    default_board_bugs: bool,
     enemies: Vec<MovementAI>,
+    level: i32,
+    /// How many previous junctions should the player and enemies remember?
+    history_limit: u32,
+    enemy_starting_speed: i32,
+    player_speed: i32,
 }
 
-impl Config {
+impl Amidar {
     pub fn colors(&self) -> Vec<&Color> {
         vec![
             &self.bg_color,
@@ -89,9 +131,12 @@ impl Config {
     }
 }
 
-impl Default for Config {
+impl Default for Amidar {
     fn default() -> Self {
-        Config {
+        Amidar {
+            rand: random::Gen::new_from_seed(13),
+            board: AMIDAR_BOARD.lines().map(|s| s.to_owned()).collect(),
+            player_start: TilePoint::new(31, 15),
             bg_color: Color::black(),
             player_color: Color::rgb(255, 255, 153),
             unpainted_color: Color::rgb(148, 0, 211),
@@ -105,12 +150,18 @@ impl Default for Config {
             jump_time: 2 * 30 + 15, // 2.5 seconds
             render_images: true,
             box_bonus: 50,
+            default_board_bugs: true,
+            // limit number of junctions remembered to something greater than two.
+            history_limit: 12,
             enemies: (0..DEFAULT_ENEMY_ROUTES.len())
                 .map(|idx| MovementAI::EnemyLookupAI {
                     next: 0,
                     default_route_index: idx as u32,
                 })
                 .collect(),
+            level: 1,
+            enemy_starting_speed: inits::ENEMY_STARTING_SPEED,
+            player_speed: inits::PLAYER_SPEED,
         }
     }
 }
@@ -167,6 +218,9 @@ pub struct TilePoint {
 impl TilePoint {
     pub fn new(tx: i32, ty: i32) -> TilePoint {
         TilePoint { tx, ty }
+    }
+    pub fn manhattan_dist(&self, other: &TilePoint) -> i32 {
+        (self.tx - other.tx).abs() + (self.ty - other.ty).abs()
     }
     pub fn to_world(&self) -> WorldPoint {
         WorldPoint::new(self.tx * world::TILE_SIZE.0, self.ty * world::TILE_SIZE.1)
@@ -282,6 +336,18 @@ pub enum MovementAI {
         start_horiz: Direction,
         start: TilePoint,
     },
+    EnemyRandomMvmt {
+        start: TilePoint,
+        start_dir: Direction,
+        dir: Direction,
+    },
+    EnemyTargetPlayer {
+        start: TilePoint,
+        start_dir: Direction,
+        vision_distance: i32,
+        dir: Direction,
+        player_seen: Option<TilePoint>,
+    },
 }
 
 impl MovementAI {
@@ -303,6 +369,22 @@ impl MovementAI {
                 *vert = start_vert;
                 *horiz = start_horiz;
             }
+            &mut MovementAI::EnemyRandomMvmt {
+                ref mut dir,
+                start_dir,
+                ..
+            } => {
+                *dir = start_dir;
+            }
+            &mut MovementAI::EnemyTargetPlayer {
+                start_dir,
+                ref mut dir,
+                ref mut player_seen,
+                ..
+            } => {
+                *dir = start_dir;
+                *player_seen = None;
+            }
         }
     }
     fn choose_next_tile(
@@ -310,6 +392,8 @@ impl MovementAI {
         position: &TilePoint,
         buttons: Input,
         board: &Board,
+        player: Option<Mob>,
+        rng: &mut random::Gen,
     ) -> Option<TilePoint> {
         match self {
             &mut MovementAI::Player => {
@@ -376,14 +460,97 @@ impl MovementAI {
                             return maybe_horiz;
                         }
                     }
-                    return maybe_vert;
-                }
-                if maybe_horiz.is_some() {
-                    return maybe_horiz;
+                    maybe_vert
+                } else if maybe_horiz.is_some() {
+                    maybe_horiz
                 } else {
                     // Flip horiz
                     *horiz = horiz.opposite();
-                    return board.can_move(position, *horiz);
+                    board.can_move(position, *horiz)
+                }
+            }
+            &mut MovementAI::EnemyRandomMvmt { ref mut dir, .. } => {
+                let directions = &[
+                    Direction::Up,
+                    Direction::Down,
+                    Direction::Left,
+                    Direction::Right,
+                ];
+                let eligible: Vec<(&Direction, Option<TilePoint>)> = directions
+                    .iter()
+                    .map(|d| (d, board.can_move(position, *d)))
+                    .filter(|(_, tp)| tp.is_some())
+                    .collect();
+                let (d, tp) = eligible.choose(rng).cloned().unwrap();
+                let tp_default = board.can_move(position, *dir);
+                if board.is_junction(position) || tp_default.is_none() {
+                    // Move to the randomly selected tile point, in its dir.
+                    *dir = *d;
+                    return tp;
+                }
+                tp_default
+            }
+            &mut MovementAI::EnemyTargetPlayer {
+                ref mut player_seen,
+                ref mut dir,
+                vision_distance,
+                ..
+            } => {
+                let player = player.unwrap();
+                assert!(player.is_player());
+                let player_tile = player.position.to_tile();
+                let px = player_tile.tx;
+                let py = player_tile.ty;
+                if board.is_line_of_sight(position, &player_tile)
+                    && position.manhattan_dist(&player_tile) <= vision_distance
+                {
+                    // The player is currently within view
+                    *player_seen = Some(player_tile);
+                    *dir = if px == position.tx {
+                        if py < position.ty {
+                            Direction::Up
+                        } else {
+                            Direction::Down
+                        }
+                    } else {
+                        if px < position.tx {
+                            Direction::Left
+                        } else {
+                            Direction::Right
+                        }
+                    };
+                    board.can_move(position, *dir)
+                } else {
+                    if player_seen.is_some() && *position == player_seen.clone().unwrap() {
+                        // If we've caught up with the player's last known position,
+                        // the trail is stale. Reset.
+                        *player_seen = None;
+                    }
+                    if player_seen.is_some() {
+                        // We are still tracking the player
+                        board.can_move(position, *dir)
+                    } else {
+                        // Explore
+                        let tp_default = board.can_move(position, *dir);
+                        if board.is_junction(position) || tp_default.is_none() {
+                            let directions = &[
+                                Direction::Up,
+                                Direction::Down,
+                                Direction::Left,
+                                Direction::Right,
+                            ];
+                            let eligible: Vec<(&Direction, Option<TilePoint>)> = directions
+                                .iter()
+                                .map(|d| (d, board.can_move(position, *d)))
+                                .filter(|(_, tp)| tp.is_some())
+                                .collect();
+                            let (d, tp) = eligible.choose(rng).cloned().unwrap();
+                            *dir = *d;
+                            tp
+                        } else {
+                            tp_default
+                        }
+                    }
                 }
             }
         }
@@ -401,28 +568,31 @@ pub struct Mob {
     history: VecDeque<u32>,
 }
 impl Mob {
-    fn new(ai: MovementAI, position: WorldPoint) -> Mob {
+    fn new(ai: MovementAI, position: WorldPoint, speed: i32) -> Mob {
         Mob {
             ai,
             position,
             step: None,
             caught: false,
-            speed: 8,
+            speed: speed,
             history: VecDeque::new(),
         }
     }
-    pub fn new_player(position: WorldPoint) -> Mob {
+    pub fn new_player(position: WorldPoint, speed: i32) -> Mob {
         Mob {
             ai: MovementAI::Player,
             position,
             step: None,
             caught: false,
-            speed: 8,
+            speed: speed,
             history: VecDeque::new(),
         }
     }
     fn is_player(&self) -> bool {
         self.ai == MovementAI::Player
+    }
+    fn change_speed(&mut self, new_speed: i32) {
+        self.speed = new_speed;
     }
     fn reset(&mut self, player_start: &TilePoint, board: &Board) {
         self.step = None;
@@ -437,11 +607,20 @@ impl Mob {
                 .to_world(),
             MovementAI::EnemyPerimeterAI { .. } => TilePoint::new(0, 0).to_world(),
             MovementAI::EnemyAmidarMvmt { ref start, .. } => start.clone().to_world(),
+            MovementAI::EnemyRandomMvmt { ref start, .. } => start.clone().to_world(),
+            MovementAI::EnemyTargetPlayer { ref start, .. } => start.clone().to_world(),
         };
         self.history.clear();
     }
 
-    pub fn update(&mut self, buttons: Input, board: &mut Board) -> Option<BoardUpdate> {
+    pub fn update(
+        &mut self,
+        buttons: Input,
+        board: &mut Board,
+        player: Option<Mob>,
+        history_limit: u32,
+        rng: &mut random::Gen,
+    ) -> Option<BoardUpdate> {
         if self.history.is_empty() {
             if let Some(pt) = board.get_junction_id(&self.position.to_tile()) {
                 self.history.push_front(pt);
@@ -462,9 +641,18 @@ impl Mob {
                 }
                 None
             } else {
-                self.position.x += self.speed * dx.signum();
-                self.position.y += self.speed * dy.signum();
-                Some(target.clone())
+                if dx.abs() < self.speed && dy.abs() < self.speed {
+                    self.position.x += dx;
+                    self.position.y += dy;
+                    if let Some(pt) = board.get_junction_id(target) {
+                        self.history.push_front(pt);
+                    }
+                    None
+                } else {
+                    self.position.x += self.speed * dx.signum();
+                    self.position.y += self.speed * dy.signum();
+                    Some(target.clone())
+                }
             }
         } else {
             None
@@ -476,16 +664,20 @@ impl Mob {
 
         // Not an else if -- if a player or enemy reaches a tile they can immediately choose a new target.
         if self.step.is_none() {
-            self.step = self
-                .ai
-                .choose_next_tile(&self.position.to_tile(), buttons, board)
+            self.step =
+                self.ai
+                    .choose_next_tile(&self.position.to_tile(), buttons, board, player, rng)
         }
 
         // Manage history:
         if self.is_player() {
             board.check_paint(&mut self.history).into_option()
         } else {
-            if self.history.len() > 12 {
+            // Each moving object in Amidar keeps track of which junctions it has visited. Here, we
+            // make sure that datastructure does not grow unbounded with time; limiting it to
+            // what is defined in the config.
+
+            if self.history.len() > (history_limit as usize) {
                 let _ = self.history.pop_back();
             }
             None
@@ -494,7 +686,13 @@ impl Mob {
 }
 
 lazy_static! {
-    static ref DEFAULT_BOARD: Board = Board::try_new().unwrap();
+    static ref DEFAULT_BOARD: Board = Board::try_new(
+        &AMIDAR_BOARD
+            .lines()
+            .map(|s| s.to_owned())
+            .collect::<Vec<_>>()
+    )
+    .unwrap();
     static ref DEFAULT_ENEMY_ROUTES: Vec<Vec<u32>> = AMIDAR_ENEMY_POSITIONS_DATA
         .lines()
         .map(|enemy_route| {
@@ -524,10 +722,12 @@ pub struct BoardUpdate {
     pub horizontal: i32,
     pub num_boxes: i32,
     pub triggers_chase: bool,
+    pub junctions: Option<(u32, u32)>,
 }
 impl BoardUpdate {
     fn new() -> BoardUpdate {
         BoardUpdate {
+            junctions: None,
             vertical: 0,
             horizontal: 0,
             num_boxes: 0,
@@ -535,7 +735,11 @@ impl BoardUpdate {
         }
     }
     fn happened(&self) -> bool {
-        self.vertical != 0 || self.horizontal != 0 || self.num_boxes != 0 || self.triggers_chase
+        self.junctions.is_some()
+            || self.vertical != 0
+            || self.horizontal != 0
+            || self.num_boxes != 0
+            || self.triggers_chase
     }
     fn into_option(self) -> Option<Self> {
         if self.happened() {
@@ -550,9 +754,9 @@ impl Board {
     pub fn fast_new() -> Board {
         DEFAULT_BOARD.clone()
     }
-    fn try_new() -> Result<Board, String> {
+    fn try_new(lines: &[String]) -> Result<Board, String> {
         let mut tiles = Vec::new();
-        for line in AMIDAR_BOARD.lines() {
+        for line in lines {
             // Rust will aggregate errors in collect for us if we give it a type-hint.
             let row: Result<Vec<_>, _> = line.chars().map(Tile::new_from_char).collect();
             // Exit function if row is errorful.
@@ -583,6 +787,49 @@ impl Board {
         let last_y = (self.height as i32) - 1;
         let last_x = (self.width as i32) - 1;
         (tx == 0 || tx == last_x) && (ty == 0 || ty == last_y)
+    }
+
+    fn is_line_of_sight(&self, p1: &TilePoint, p2: &TilePoint) -> bool {
+        if p1 == p2 {
+            // I hope this does structural equality.
+            true
+        } else if p1.ty == p2.ty {
+            // get the min X and check to see if every tile moving right between
+            // the min and the target is track.
+            let (leftest, rightest) = if p1.tx < p2.tx { (p1, p2) } else { (p2, p1) };
+            let mut x = leftest.tx;
+            let y = p1.ty;
+            while x < rightest.tx {
+                if self
+                    .can_move(&TilePoint::new(x, y), Direction::Right)
+                    .is_some()
+                {
+                    x += 1;
+                } else {
+                    return false;
+                }
+            }
+            true
+        } else if p1.tx == p2.tx {
+            // get the min Y and check to see if every time moving down between
+            // the min and the target is track.
+            let (toppest, downest) = if p1.ty < p2.ty { (p1, p2) } else { (p2, p1) };
+            let x = p1.tx;
+            let mut y = toppest.ty;
+            while y < downest.ty {
+                if self
+                    .can_move(&TilePoint::new(x, y), Direction::Down)
+                    .is_some()
+                {
+                    y += 1;
+                } else {
+                    return false;
+                }
+            }
+            true
+        } else {
+            false
+        }
     }
 
     fn get_perimeter(&self, position: &TilePoint) -> Vec<Direction> {
@@ -618,6 +865,14 @@ impl Board {
             Some(tp)
         } else {
             None
+        }
+    }
+
+    fn is_junction(&self, tile: &TilePoint) -> bool {
+        if let Some(num) = self.tile_id(tile) {
+            self.junctions.contains(&num)
+        } else {
+            false
         }
     }
 
@@ -783,6 +1038,7 @@ impl Board {
                     let (triggers_chase, boxes_painted) = self.check_box_painting(&t1, &t2);
                     score_change.num_boxes += boxes_painted;
                     score_change.triggers_chase = triggers_chase;
+                    score_change.junctions = Some((*start, *end));
                 }
             }
         }
@@ -806,9 +1062,9 @@ impl Board {
             true
         }
     }
-    pub fn make_enemy(&self, ai: MovementAI) -> Mob {
+    pub fn make_enemy(&self, ai: MovementAI, speed: i32) -> Mob {
         let fake = TilePoint::new(0, 0);
-        let mut m = Mob::new(ai, fake.to_world());
+        let mut m = Mob::new(ai, fake.to_world(), speed);
         m.reset(&fake, self);
         m
     }
@@ -825,52 +1081,68 @@ impl Board {
         }
         Tile::Empty
     }
+
+    pub fn board_complete(&self) -> bool {
+        // if this is too slow, we can store a private variable for the number of
+        // unpainted tiles
+        for row in &self.tiles {
+            for tile in row {
+                if tile.needs_paint() {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct StateCore {
+    pub rand: random::Gen,
     pub score: i32,
     pub lives: i32,
     pub jumps: i32,
     pub chase_timer: i32,
     pub jump_timer: i32,
     pub player: Mob,
-    pub player_start: TilePoint,
     pub enemies: Vec<Mob>,
     pub board: Board,
+    pub level: i32,
 }
 
 pub struct State {
-    pub config: Config,
+    pub config: Amidar,
     pub state: StateCore,
 }
 
 impl State {
-    pub fn try_new() -> Result<State, String> {
-        let board = Board::fast_new();
-        let config = Config::default();
+    pub fn try_new(config: &Amidar) -> Result<State, String> {
+        let board = Board::try_new(&config.board)?;
+        let mut config = config.clone();
 
         let enemies = config
             .enemies
             .iter()
-            .map(|ai| board.make_enemy(ai.clone()))
+            .map(|ai| board.make_enemy(ai.clone(), config.enemy_starting_speed))
             .collect();
-        let player_start = TilePoint::new(31, 15);
-        let player = Mob::new_player(player_start.to_world());
+        let player = Mob::new_player(config.player_start.to_world(), config.player_speed);
+
+        let core = StateCore {
+            rand: random::Gen::new_child(&mut config.rand),
+            lives: config.start_lives,
+            score: 0,
+            chase_timer: 0,
+            jumps: config.start_jumps,
+            jump_timer: 0,
+            level: 1,
+            player,
+            enemies,
+            board,
+        };
 
         let mut state = State {
-            config: config.clone(),
-            state: StateCore {
-                lives: config.start_lives,
-                score: 0,
-                chase_timer: 0,
-                jumps: config.start_jumps,
-                jump_timer: 0,
-                player,
-                player_start,
-                enemies,
-                board,
-            },
+            config,
+            state: core,
         };
         state.reset();
         Ok(state)
@@ -878,15 +1150,19 @@ impl State {
     pub fn reset(&mut self) {
         self.state
             .player
-            .reset(&self.state.player_start, &self.state.board);
-        self.state.player.history.push_front(
-            self.state
-                .board
-                .get_junction_id(&TilePoint::new(31, 18))
-                .unwrap(),
-        );
+            .reset(&self.config.player_start, &self.state.board);
+        // On the default board, we imagine starting from below the initial place.
+        // This way going up paints the first segment.
+        if self.config.default_board_bugs {
+            self.state.player.history.push_front(
+                self.state
+                    .board
+                    .get_junction_id(&TilePoint::new(31, 18))
+                    .unwrap(),
+            );
+        }
         for enemy in &mut self.state.enemies {
-            enemy.reset(&self.state.player_start, &self.state.board);
+            enemy.reset(&self.config.player_start, &self.state.board);
         }
     }
     pub fn board_size(&self) -> WorldPoint {
@@ -923,28 +1199,23 @@ enum EnemyPlayerState {
     EnemyCatch(usize),
 }
 
-#[derive(Clone)]
-pub struct Amidar;
-impl Default for Amidar {
-    fn default() -> Self {
-        Amidar.clone()
-    }
-}
 impl toybox_core::Simulation for Amidar {
-    fn as_any(&self) -> &Any {
-        self
+    fn reset_seed(&mut self, seed: u32) {
+        self.rand.reset_seed(seed)
     }
-    fn reset_seed(&mut self, _seed: u32) {}
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::try_new().expect("new_game should succeed."))
+        Box::new(State::try_new(self).expect("new_game should succeed."))
     }
-
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("Amidar should be JSON serializable!")
+    }
     /// Sync with [ALE impl](https://github.com/mgbellemare/Arcade-Learning-Environment/blob/master/src/games/supported/Amidar.cpp#L80)
+    /// Note, leaving a call to sort in this impl to remind users that these vecs are ordered!
     fn legal_action_set(&self) -> Vec<AleAction> {
-        vec![
+        let mut actions = vec![
             AleAction::NOOP,
             AleAction::FIRE,
             AleAction::UP,
@@ -955,7 +1226,9 @@ impl toybox_core::Simulation for Amidar {
             AleAction::RIGHTFIRE,
             AleAction::LEFTFIRE,
             AleAction::DOWNFIRE,
-        ]
+        ];
+        actions.sort();
+        actions
     }
 
     fn new_state_from_json(
@@ -963,30 +1236,22 @@ impl toybox_core::Simulation for Amidar {
         json_str: &str,
     ) -> Result<Box<toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
-        let config: Config = Config::default();
         Ok(Box::new(State {
-            config: config.clone(),
-            state: state,
+            config: self.clone(),
+            state,
         }))
     }
-    fn new_state_config_from_json(
+
+    fn from_json(
         &self,
         json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        let state: StateCore = serde_json::from_str(json_state)?;
-        let config: Config = serde_json::from_str(json_config)?;
-        Ok(Box::new(State {
-            config: config,
-            state: state,
-        }))
+    ) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: Amidar = serde_json::from_str(json_config)?;
+        Ok(Box::new(config))
     }
 }
 
 impl toybox_core::State for State {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn lives(&self) -> i32 {
         self.state.lives
     }
@@ -995,11 +1260,31 @@ impl toybox_core::State for State {
     }
     fn update_mut(&mut self, buttons: Input) {
         let pre_update_score: i32 = self.score();
-        if let Some(score_change) = self.state.player.update(buttons, &mut self.state.board) {
-            self.state.score += score_change.horizontal;
-            // max 1 point for vertical, for some reason.
-            self.state.score += score_change.vertical.signum();
-            self.state.score += self.config.box_bonus * score_change.num_boxes;
+        let history_limit = self.config.history_limit;
+
+        // Move the player and determine whether the board changes.
+        if let Some(score_change) = self.state.player.update(
+            buttons,
+            &mut self.state.board,
+            None,
+            history_limit,
+            &mut self.state.rand,
+        ) {
+            // Don't award score for the first, semi-painted segment on a default Amidar board, but do paint it.
+            let mut allow_score_change = true;
+            if self.config.default_board_bugs {
+                let (start, end) = score_change.junctions.unwrap();
+                // Locations of the first, semi-painted segment.
+                if start == 607 && end == 415 {
+                    allow_score_change = false;
+                }
+            }
+            if allow_score_change {
+                self.state.score += score_change.horizontal;
+                // max 1 point for vertical, for some reason.
+                self.state.score += score_change.vertical.signum();
+                self.state.score += self.config.box_bonus * score_change.num_boxes;
+            }
 
             if score_change.triggers_chase {
                 self.state.chase_timer = self.config.chase_time;
@@ -1029,7 +1314,13 @@ impl toybox_core::State for State {
 
         // move enemies:
         for e in self.state.enemies.iter_mut() {
-            e.update(Input::default(), &mut self.state.board);
+            e.update(
+                Input::default(),
+                &mut self.state.board,
+                Some(self.state.player.clone()),
+                history_limit,
+                &mut self.state.rand,
+            );
         }
 
         // check-collisions again (so we can't run through enemies):
@@ -1059,23 +1350,52 @@ impl toybox_core::State for State {
             }
         }
 
+        // If dead, reset. If alive, check to see if we have advanced to the next level.
         if dead {
             self.state.jumps = self.config.start_jumps;
             self.state.lives -= 1;
             self.state.score = pre_update_score;
             self.reset();
+        } else {
+            if self.state.board.board_complete() {
+                self.reset();
+                // Increment the level
+                self.state.level += 1;
+                // If we triggered the chase counter immediately before
+                // advancing, it will still be on and will mess up the sprites. Reset to 0.
+                self.state.chase_timer = 0;
+                // Time to paint again!
+                self.state.board = Board::fast_new();
+                // If you successfully complete a level, you can get a life back (up the maximum)
+                if self.lives() < self.config.start_lives {
+                    self.state.lives += 1;
+                }
+                if self.state.level > 2 {
+                    // Starting at level 3, there are six enemies.
+                    // We haven't observed an agent that can get to level 3 and can't find any description
+                    // of what level 3 looks like, so we are leaving this blank for now.
+                }
+                // Increase enemy speed.
+                // Make pretty later
+                let new_speed = {
+                    if self.state.level < 3 {
+                        self.config.enemy_starting_speed
+                    } else if self.state.level < 5 {
+                        self.config.enemy_starting_speed + 2
+                    } else {
+                        self.config.enemy_starting_speed + 4
+                    }
+                };
+                for e in &mut self.state.enemies {
+                    e.change_speed(new_speed);
+                }
+            }
         }
     }
 
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        output.push(Drawable::rect(
-            self.config.bg_color,
-            0,
-            0,
-            screen::GAME_SIZE.0,
-            screen::GAME_SIZE.1,
-        ));
+        output.push(Drawable::Clear(self.config.bg_color));
         if self.state.lives < 0 {
             return output;
         }
@@ -1088,10 +1408,27 @@ impl toybox_core::State for State {
             for (tx, tile) in row.iter().enumerate() {
                 let tx = tx as i32;
 
+                // Use the level-1 sprites for odd levels less than the sixth level.
+                // Use the level-2 sprites for even levels and those greater than the sixth level.
+                // We will probably want to put some of this in the config later.
+                let ghosts = self.state.level % 2 == 1 && self.state.level < 6;
+
                 if self.config.render_images {
                     let tile_sprite: &FixedSpriteData = match tile {
-                        &Tile::Painted => &images::BLOCK_TILE_PAINTED_L1,
-                        &Tile::Unpainted | &Tile::ChaseMarker => &images::BLOCK_TILE_UNPAINTED_L1,
+                        &Tile::Painted => {
+                            if ghosts {
+                                &images::BLOCK_TILE_PAINTED_L1
+                            } else {
+                                &images::BLOCK_TILE_PAINTED_L2
+                            }
+                        }
+                        &Tile::Unpainted | &Tile::ChaseMarker => {
+                            if ghosts {
+                                &images::BLOCK_TILE_UNPAINTED_L1
+                            } else {
+                                &images::BLOCK_TILE_UNPAINTED_L2
+                            }
+                        }
                         &Tile::Empty => continue,
                     };
                     output.push(Drawable::sprite(
@@ -1152,11 +1489,16 @@ impl toybox_core::State for State {
 
         let (player_x, player_y) = self.state.player.position.to_screen().pixels();
         let (player_w, player_h) = screen::PLAYER_SIZE;
+        let player_sprite = match self.state.level % 2 {
+            1 => images::PLAYER_L1.clone(),
+            0 => images::PLAYER_L2.clone(),
+            _ => unreachable!(),
+        };
         if self.config.render_images {
             output.push(Drawable::sprite(
                 offset_x + player_x - 1,
                 offset_y + player_y - 1,
-                images::PLAYER_L1.clone(),
+                player_sprite,
             ))
         } else {
             output.push(Drawable::rect(
@@ -1178,14 +1520,30 @@ impl toybox_core::State for State {
                     offset_y + y - 1,
                     if self.state.chase_timer > 0 {
                         if enemy.caught {
-                            images::ENEMY_CAUGHT_L1.clone()
+                            match self.state.level % 2 {
+                                1 => images::ENEMY_CAUGHT_L1.clone(),
+                                0 => images::ENEMY_CAUGHT_L2.clone(),
+                                _ => unreachable!(),
+                            }
                         } else {
-                            images::ENEMY_CHASE_L1.clone()
+                            match self.state.level % 2 {
+                                1 => images::ENEMY_CHASE_L1.clone(),
+                                0 => images::ENEMY_CHASE_L2.clone(),
+                                _ => unreachable!(),
+                            }
                         }
                     } else if self.state.jump_timer > 0 {
-                        images::ENEMY_JUMP_L1.clone()
+                        match self.state.level % 2 {
+                            1 => images::ENEMY_JUMP_L1.clone(),
+                            0 => images::ENEMY_JUMP_L2.clone(),
+                            _ => unreachable!(),
+                        }
                     } else {
-                        images::ENEMY_L1.clone()
+                        match self.state.level % 2 {
+                            1 => images::ENEMY_L1.clone(),
+                            0 => images::ENEMY_L2.clone(),
+                            _ => unreachable!(),
+                        }
                     },
                 ))
             } else {
@@ -1221,18 +1579,80 @@ impl toybox_core::State for State {
         serde_json::to_string(&self.state).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn config_to_json(&self) -> String {
-        serde_json::to_string(&self.config).expect("Should be no JSON Serialization Errors.")
+    fn query_json(&self, query: &str, args: &serde_json::Value) -> Result<String, QueryError> {
+        let state = &self.state;
+        Ok(match query {
+            "world_to_tile" => {
+                let world_pt: WorldPoint = serde_json::from_value(args.clone())?;
+                let tile = world_pt.to_tile();
+                serde_json::to_string(&(tile.tx, tile.ty))?
+            }
+            "tile_to_world" => {
+                let tile_pt: TilePoint = serde_json::from_value(args.clone())?;
+                let world = tile_pt.to_world();
+                serde_json::to_string(&(world.x, world.y))?
+            }
+            "num_tiles_unpainted" => {
+                let mut sum = 0;
+                for row in state.board.tiles.iter() {
+                    sum += row
+                        .iter()
+                        .filter(|t| t.walkable() && t.needs_paint())
+                        .count();
+                }
+                serde_json::to_string(&sum)?
+            }
+            "regular_mode" => {
+                serde_json::to_string(&(state.chase_timer == 0 && state.jump_timer == 0))?
+            }
+            "jump_mode" => serde_json::to_string(&(state.jump_timer > 0))?,
+            "chase_mode" => serde_json::to_string(&(state.chase_timer > 0))?,
+            "jumps_remaining" => serde_json::to_string(&(state.jumps > 0))?,
+            "num_enemies" => serde_json::to_string(&state.enemies.len())?,
+            "enemy_tiles" => {
+                let positions: Vec<(i32, i32)> = state
+                    .enemies
+                    .iter()
+                    .map(|e| {
+                        let tile = e.position.to_tile();
+                        (tile.tx, tile.ty)
+                    })
+                    .collect();
+                serde_json::to_string(&positions)?
+            }
+            "enemy_tile" => {
+                if let Some(index) = args.as_u64() {
+                    let tile = state.enemies[index as usize].position.to_tile();
+                    serde_json::to_string(&(tile.tx, tile.ty))?
+                } else {
+                    Err(QueryError::BadInputArg)?
+                }
+            }
+            "enemy_caught" => {
+                if let Some(index) = args.as_u64() {
+                    let status = state.enemies[index as usize].caught;
+                    serde_json::to_string(&status)?
+                } else {
+                    Err(QueryError::BadInputArg)?
+                }
+            }
+            "player_tile" => {
+                let tile = state.player.position.to_tile();
+                serde_json::to_string(&(tile.tx, tile.ty))?
+            }
+            _ => Err(QueryError::NoSuchQuery)?,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use toybox_core::State;
 
     #[test]
     fn test_colors_unique_in_gray() {
-        let config = Config::default();
+        let config = Amidar::default();
         let num_colors = config.colors().len();
         let uniq_grays: HashSet<u8> = config
             .colors()
@@ -1283,5 +1703,71 @@ mod tests {
     #[test]
     fn test_load_png() {
         let img = &images::PLAYER_L1;
+        assert!(img.width() > 0);
+        assert!(img.height() > 0);
+        assert!(img.find_visible_color().is_some());
+    }
+
+    #[test]
+    fn what_json_do_we_want() {
+        let data = MovementAI::EnemyPerimeterAI {
+            start: TilePoint::new(0, 0),
+        };
+        println!("{}", serde_json::to_string_pretty(&data).unwrap());
+        let data = MovementAI::EnemyTargetPlayer {
+            vision_distance: 15,
+            start: TilePoint::new(0, 0),
+            start_dir: Direction::Up,
+            dir: Direction::Up,
+            player_seen: None,
+        };
+        println!("{}", serde_json::to_string_pretty(&data).unwrap());
+    }
+
+    fn player_tile(state: &State) -> (i32, i32) {
+        serde_json::from_str(
+            &state
+                .query_json("player_tile", &serde_json::Value::Null)
+                .unwrap(),
+        )
+        .unwrap()
+    }
+    fn num_tiles_unpainted(state: &State) -> usize {
+        serde_json::from_str(
+            &state
+                .query_json("num_tiles_unpainted", &serde_json::Value::Null)
+                .unwrap(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_q_num_tiles_unpainted() {
+        let mut state = super::State::try_new(&Amidar::default()).unwrap();
+
+        let (px, py) = player_tile(&state);
+        let first = num_tiles_unpainted(&state);
+
+        let mut go_up = Input::default();
+        go_up.up = true;
+
+        // Move the user up (be a little robust to how long the animation takes.)
+        for _ in 0..5000 {
+            state.update_mut(go_up);
+            if state.score() > 0 {
+                // we must have painted something!
+                break;
+            }
+        }
+
+        let (nx, ny) = player_tile(&state);
+        if py == ny {
+            panic!("Player can't move upward!")
+        }
+        println!("Moved player to ({},{}) from ({},{})", nx, ny, px, py);
+
+        let painted_now = num_tiles_unpainted(&state);
+        println!("painted_now: {} ... before: {}", painted_now, first);
+        assert!(painted_now < first);
     }
 }

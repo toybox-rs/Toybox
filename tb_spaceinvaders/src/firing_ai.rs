@@ -1,14 +1,16 @@
 use rand::Rng;
 /// A collection of the possible firing protocols
-use space_invaders::{Config, StateCore};
+use types::{SpaceInvaders, StateCore};
 
+/// This enum represents the different enemy AI for firing in Space Invaders.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FiringAI {
+    /// The default AI trades off between aiming at the user and random firing based on config.jitter.
     TargetPlayer,
 }
 
 // Note: using the RNG makes us mutable.
-fn target_player(state: &mut StateCore, config: Config) -> u32 {
+fn target_player(state: &mut StateCore, config: &SpaceInvaders) -> u32 {
     let p = config.jitter;
     let r: f64 = state.rand.gen();
     assert!(r >= 0. && r < 1.);
@@ -21,7 +23,7 @@ fn target_player(state: &mut StateCore, config: Config) -> u32 {
     }
 }
 
-pub fn enemy_fire_lasers(state: &mut StateCore, config: Config) -> u32 {
+pub fn enemy_fire_lasers(state: &mut StateCore, config: &SpaceInvaders) -> u32 {
     match config.enemy_protocol {
         FiringAI::TargetPlayer => target_player(state, config),
     }

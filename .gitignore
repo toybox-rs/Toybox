@@ -1,4 +1,5 @@
 /openai*/*
+openai_NIPS/*
 __pycache__
 target
 *.png
@@ -13,3 +14,18 @@ install_rust.sh
 ctoybox/run_cmd_*
 venv
 openai-old
+openai-old.DS_Store
+Cargo.lock
+.DS_Store
+ctoybox/*.model.data-00000-of-00001
+ctoybox/*.model.index
+ctoybox/*.model.meta
+ctoybox/checkpoint
+ctoybox/*.modeltoybox/build
+toybox/dist
+ctoybox/toybox/build
+ctoybox/toybox/dist
+ctoybox/toybox/toybox.egg-info
+ctoybox/toybox/toybox/_native__lib.so
+models/*
+toybox-regress-models*.zip

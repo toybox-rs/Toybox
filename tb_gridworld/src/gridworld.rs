@@ -1,8 +1,7 @@
 use toybox_core::graphics::{Color, Drawable};
-use toybox_core::{AleAction, Direction, Input};
+use toybox_core::{AleAction, Direction, Input, QueryError};
 
 use serde_json;
-use std::any::Any;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,7 +11,7 @@ pub struct TileConfig {
     /// Is this tile walkable by the agent?
     pub walkable: bool,
     /// Is this a terminal/goal tile?
-    pub goal: bool,
+    pub terminal: bool,
     /// What color should this tile be?
     pub color: Color,
 }
@@ -22,7 +21,7 @@ impl TileConfig {
         TileConfig {
             reward: 0,
             walkable: false,
-            goal: false,
+            terminal: false,
             color: Color::black(),
         }
     }
@@ -30,7 +29,7 @@ impl TileConfig {
         TileConfig {
             reward: 0,
             walkable: true,
-            goal: false,
+            terminal: false,
             color: Color::white(),
         }
     }
@@ -38,7 +37,7 @@ impl TileConfig {
         TileConfig {
             reward: 1,
             walkable: true,
-            goal: false,
+            terminal: false,
             color: Color::rgb(255, 255, 0),
         }
     }
@@ -46,29 +45,39 @@ impl TileConfig {
         TileConfig {
             reward: 10,
             walkable: true,
-            goal: true,
+            terminal: true,
             color: Color::rgb(0, 255, 0),
+        }
+    }
+    fn death() -> TileConfig {
+        TileConfig {
+            reward: -10,
+            walkable: true,
+            terminal: true,
+            color: Color::rgb(255, 0, 0),
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    pub game_size: (i32, i32),
+pub struct GridWorld {
     pub grid: Vec<String>,
     pub tiles: HashMap<char, TileConfig>,
     pub reward_becomes: char,
     pub player_color: Color,
     pub player_start: (i32, i32),
+    /// Does this world support diagonal movement?
+    pub diagonal_support: bool,
 }
 
-impl Default for Config {
+impl Default for GridWorld {
     fn default() -> Self {
         let mut tiles = HashMap::new();
         tiles.insert('1', TileConfig::wall());
         tiles.insert('0', TileConfig::floor());
         tiles.insert('R', TileConfig::reward());
         tiles.insert('G', TileConfig::goal());
+        tiles.insert('D', TileConfig::death());
 
         let grid = vec![
             "111111111".to_owned(),
@@ -76,40 +85,46 @@ impl Default for Config {
             "101111101".to_owned(),
             "100010001".to_owned(),
             "10001R111".to_owned(),
-            "1000100G1".to_owned(),
+            "100D100G1".to_owned(),
             "111111111".to_owned(),
         ];
 
-        let width = grid[0].len() as i32;
-        let height = grid.len() as i32;
-        Config {
-            game_size: (width, height),
+        GridWorld {
             player_color: Color::rgb(255, 0, 0),
             player_start: (2, 4),
             reward_becomes: '0',
             grid,
             tiles,
+            diagonal_support: false,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
+    pub config: GridWorld,
+    pub state: StateCore,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateCore {
     pub game_over: bool,
     pub score: i32,
+    pub step: usize,
     pub reward_becomes: usize,
     pub tiles: Vec<TileConfig>,
     pub grid: Vec<Vec<usize>>,
     pub player: (i32, i32),
-    pub player_color: Color,
 }
-impl State {
+
+impl StateCore {
+    /// Compute the size of the grid for our own usage here.
     fn size(&self) -> (i32, i32) {
         let height = self.grid.len() as i32;
         let width = self.grid[0].len() as i32;
         (width, height)
     }
-    fn from_config(config: &Config) -> State {
+    fn from_config(config: &GridWorld) -> StateCore {
         let mut tiles = Vec::new();
         let mut grid = Vec::new();
 
@@ -121,20 +136,20 @@ impl State {
         }
         for row in &config.grid {
             let mut grid_row = Vec::new();
-            for (x, ch) in row.chars().enumerate() {
+            for ch in row.chars() {
                 let tile_id = char_to_index[&ch];
                 grid_row.push(tile_id);
             }
             grid.push(grid_row);
         }
 
-        State {
+        StateCore {
             game_over: false,
+            step: 0,
             score: 0,
             reward_becomes: char_to_index[&config.reward_becomes],
             tiles,
             grid,
-            player_color: config.player_color,
             player: config.player_start,
         }
     }
@@ -151,6 +166,34 @@ impl State {
     fn walkable(&self, tx: i32, ty: i32) -> bool {
         self.get_tile(tx, ty).map(|t| t.walkable).unwrap_or(false)
     }
+    fn terminal(&self, tx: i32, ty: i32) -> bool {
+        self.get_tile(tx, ty).map(|t| t.terminal).unwrap_or(false)
+    }
+    /// Take a step if the destination is walkable.
+    fn walk_once(&mut self, dx: i32, dy: i32) {
+        let (px, py) = self.player;
+        let dest = (px + dx, py + dy);
+        if self.walkable(dest.0, dest.1) {
+            self.arrive(dest.0, dest.1)
+        }
+    }
+
+    /// Can move up and left (Northwest?)
+    /// No No Yes Yes Yes
+    /// XX .X ..  .X  ..
+    /// X@ X@ X@  .@  .@
+    ///
+    /// Or in words: you can move diagonally if the destination is free AND you are not blocked on both vertical and horizontal roads.
+    fn walk_diagonal(&mut self, dx: i32, dy: i32) {
+        let (px, py) = self.player;
+
+        if self.walkable(px + dx, py + dy)
+            && (self.walkable(px + dx, py) || self.walkable(px, py + dy))
+        {
+            self.arrive(px + dx, py + dy)
+        }
+    }
+
     fn collect_reward(&mut self, tx: i32, ty: i32) -> i32 {
         let y = ty as usize;
         let x = tx as usize;
@@ -161,40 +204,46 @@ impl State {
         }
         reward
     }
+    /// Move to a new location.
+    fn arrive(&mut self, x: i32, y: i32) {
+        self.player = (x, y);
+
+        // check terminal before "collect_reward" which removes the reward from the map.
+        if self.terminal(x, y) {
+            self.game_over = true;
+        }
+
+        self.collect_reward(x, y);
+    }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct GridWorld {
-    config: Config,
-}
-impl Default for GridWorld {
-    fn default() -> Self {
-        GridWorld {
-            config: Config::default(),
-        }
-    }
-}
 impl toybox_core::Simulation for GridWorld {
-    fn as_any(&self) -> &Any {
-        self
-    }
-    fn reset_seed(&mut self, seed: u32) {}
+    fn reset_seed(&mut self, _seed: u32) {}
+
+    /// Compute the size of the grid for determining how big the world should be.
     fn game_size(&self) -> (i32, i32) {
-        self.config.game_size
+        let height = self.grid.len() as i32;
+        let width = self.grid[0].len() as i32;
+        (width, height)
     }
 
     fn legal_action_set(&self) -> Vec<AleAction> {
-        vec![
+        let mut actions = vec![
             AleAction::NOOP,
             AleAction::LEFT,
             AleAction::RIGHT,
             AleAction::UP,
             AleAction::DOWN,
-        ]
+        ];
+        actions.sort();
+        actions
     }
 
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new(State::from_config(&self.config))
+        Box::new(State {
+            state: StateCore::from_config(&self),
+            config: self.clone(),
+        })
     }
 
     fn new_state_from_json(
@@ -205,61 +254,99 @@ impl toybox_core::Simulation for GridWorld {
         Ok(Box::new(state))
     }
 
-    fn new_state_config_from_json(
-        &self,
-        json_config: &str,
-        json_state: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
-        // Not sure what's up with Config for now, so let's just ignore it.
-        self.new_state_from_json(json_state)
+    fn to_json(&self) -> String {
+        serde_json::to_string(self).expect("GridWorld should be JSON-serializable!")
+    }
+
+    fn from_json(&self, json_str: &str) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+        let config: GridWorld = serde_json::from_str(json_str)?;
+        Ok(Box::new(config))
+    }
+}
+
+/// Enumeration that supports diagonal movement.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+enum DiagonalDir {
+    NE,
+    N,
+    NW,
+    E,
+    W,
+    SE,
+    S,
+    SW,
+}
+impl DiagonalDir {
+    /// Read an input struct and turn it into a diagonal direction.
+    fn from_input(buttons: Input) -> Option<DiagonalDir> {
+        match (buttons.left, buttons.up, buttons.right, buttons.down) {
+            (true, false, false, false) => Some(DiagonalDir::W),
+            (true, true, false, false) => Some(DiagonalDir::NW),
+            (false, true, false, false) => Some(DiagonalDir::N),
+            (false, true, true, false) => Some(DiagonalDir::NE),
+            (false, false, true, false) => Some(DiagonalDir::E),
+            (false, false, true, true) => Some(DiagonalDir::SE),
+            (false, false, false, true) => Some(DiagonalDir::S),
+            (true, false, false, true) => Some(DiagonalDir::SW),
+            _ => None,
+        }
     }
 }
 
 impl toybox_core::State for State {
-    fn as_any(&self) -> &Any {
-        self
-    }
     fn lives(&self) -> i32 {
-        if self.game_over {
-            1
-        } else {
+        if self.state.game_over {
             0
+        } else {
+            1
         }
     }
     fn score(&self) -> i32 {
-        self.score
+        self.state.score
     }
+
     fn update_mut(&mut self, buttons: Input) {
         // Must take an action in GridWorld.
         if buttons.is_empty() {
             return;
         }
-        if let Some(dir) = Direction::from_input(buttons) {
-            let (dx, dy) = dir.delta();
-            let (px, py) = self.player;
-            let dest = (px + dx, py + dy);
+        self.state.step += 1;
 
-            if self.walkable(dest.0, dest.1) {
-                self.player = dest.clone();
-                self.collect_reward(dest.0, dest.1);
+        if self.config.diagonal_support {
+            if let Some(ddir) = DiagonalDir::from_input(buttons) {
+                match ddir {
+                    DiagonalDir::N => self.state.walk_once(0, -1),
+                    DiagonalDir::S => self.state.walk_once(0, 1),
+                    DiagonalDir::E => self.state.walk_once(1, 0),
+                    DiagonalDir::W => self.state.walk_once(-1, 0),
+                    DiagonalDir::NW => self.state.walk_diagonal(-1, -1),
+                    DiagonalDir::NE => self.state.walk_diagonal(1, -1),
+                    DiagonalDir::SW => self.state.walk_diagonal(-1, 1),
+                    DiagonalDir::SE => self.state.walk_diagonal(1, 1),
+                }
+            }
+        } else {
+            if let Some(dir) = Direction::from_input(buttons) {
+                let (dx, dy) = dir.delta();
+                self.state.walk_once(dx, dy);
             }
         }
     }
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
-        let (w, h) = self.size();
-        output.push(Drawable::rect(Color::black(), 0, 0, w, h));
+        output.push(Drawable::Clear(Color::black()));
 
-        for (y, row) in self.grid.iter().enumerate() {
-            for (x, cell) in row.iter().enumerate() {
-                let tile = &self.tiles[*cell];
+        let (width, height) = self.state.size();
+        for y in 0..height {
+            for x in 0..width {
+                let tile = self.state.get_tile(x, y).expect("Tile type should exist!");
                 output.push(Drawable::rect(tile.color, x as i32, y as i32, 1, 1));
             }
         }
         output.push(Drawable::rect(
-            self.player_color,
-            self.player.0,
-            self.player.1,
+            self.config.player_color,
+            self.state.player.0,
+            self.state.player.1,
             1,
             1,
         ));
@@ -270,7 +357,17 @@ impl toybox_core::State for State {
         serde_json::to_string(self).expect("Should be no JSON Serialization Errors.")
     }
 
-    fn config_to_json(&self) -> String {
-        panic!("No config on the state of GridWorld");
+    fn query_json(&self, query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
+        Ok(match query {
+            "xy" => {
+                let (px, py) = self.state.player;
+                serde_json::to_string(&(px, py))?
+            }
+            "xyt" => {
+                let (px, py) = self.state.player;
+                serde_json::to_string(&(px, py, self.state.step))?
+            }
+            _ => Err(QueryError::NoSuchQuery)?,
+        })
     }
 }

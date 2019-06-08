@@ -3,6 +3,8 @@
 extern crate amidar;
 extern crate breakout;
 extern crate libc;
+extern crate serde;
+extern crate serde_json;
 extern crate toybox;
 extern crate toybox_core;
 
@@ -17,12 +19,6 @@ pub struct WrapSimulator {
 pub struct WrapState {
     pub state: Box<toybox_core::State>,
 }
-
-mod qamidar;
-pub use qamidar::*;
-
-mod qbreakout;
-pub use qbreakout::*;
 
 mod core;
 pub use core::*;

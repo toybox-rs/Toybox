@@ -1,4 +1,4 @@
-use super::screen::{LEFT_GAME_DOT_COLOR, LIVES_DISPLAY_COLOR, RIGHT_GAME_DOT_COLOR};
+use space_invaders::screen::{LEFT_GAME_DOT_COLOR, LIVES_DISPLAY_COLOR, RIGHT_GAME_DOT_COLOR};
 use toybox_core::graphics::{load_digit_sprites, Drawable, FixedSpriteData};
 
 const SET: char = 'X';

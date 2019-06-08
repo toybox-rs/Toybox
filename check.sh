@@ -2,11 +2,15 @@
 
 set -eu
 
-cargo build -p toybox-core
-cargo test -p toybox-core
-cargo build -p toybox
-cargo test -p toybox
-cargo build -p ctoybox
-cargo test -p ctoybox
 cargo fmt --all -- --check
+cargo test
+cargo build --release
+
+if [ ! -e toybox-regress-models.zip ]; then
+  wget https://jjfoley.me/static/toybox-regress-models-16-april-2019.zip -O toybox-regress-models.zip
+  unzip toybox-regress-models.zip
+fi
+
+# required for gym env registration
+cd ctoybox && (../scripts/utils/unit_tests.sh && ../scripts/utils/regress.sh)
 

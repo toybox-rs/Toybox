@@ -1,8 +1,3 @@
-extern crate serde;
-extern crate serde_derive;
-extern crate serde_json;
-
-extern crate png;
 extern crate toybox_core;
 
 pub use toybox_core::graphics;
@@ -16,7 +11,7 @@ pub use toybox_core::State;
 pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, String> {
     let y: Result<Box<Simulation>, _> = match name.to_lowercase().as_str() {
         #[cfg(feature = "amidar")]
-        "amidar" => Ok(Box::new(amidar::Amidar)),
+        "amidar" => Ok(Box::new(amidar::Amidar::default())),
         #[cfg(feature = "breakout")]
         "breakout" => Ok(Box::new(breakout::Breakout::default())),
         #[cfg(feature = "space_invaders")]
@@ -52,8 +47,6 @@ extern crate breakout;
 /// Gridworld
 #[cfg(feature = "gridworld")]
 extern crate gridworld;
-/// Queries
-pub mod queries;
 /// Space Invaders logic defined in this module.
 #[cfg(feature = "space_invaders")]
 extern crate space_invaders;

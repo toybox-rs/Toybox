@@ -2,6 +2,7 @@
 name = "ctoybox"
 version = "0.1.0"
 authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
+build = "build.rs"
 
 [lib]
 name = "ctoybox"
@@ -9,6 +10,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 libc = "0.2"
+serde = "*"
+serde_json = "*"
 amidar = {path = "../tb_amidar", version="*"}
 breakout = {path = "../tb_breakout", version="*"}
 toybox = {path = "../toybox", version="*"}
@@ -17,3 +20,5 @@ toybox = {path = "../toybox", version="*"}
 version = "*"
 path = "../core"
 
+[build-dependencies]
+cbindgen = "0.5"

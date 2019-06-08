@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from PIL import Image
 import argparse
 import atari_py
 import os
@@ -11,6 +12,18 @@ def play(args, ale, actions):
   actions_taken = []
   legal_actions = ale.getLegalActionSet()
   frame_num = 0
+
+  # known bug for amidar ALE RGB rendering: 
+  # solution: skip rendering on the first three frames
+  if args.game == 'amidar': 
+    while not ale.game_over() and frame_num < 240:
+      index = frame_num if actions else \
+      (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
+      a = (actions or legal_actions)[index]
+      actions_taken.append(a)
+      ale.act(a)    
+      frame_num += 1
+
   while not ale.game_over() and frame_num < args.num_frames:
     index = frame_num if actions else \
     (frame_num % (len(legal_actions) * repeat_actions)) // repeat_actions
@@ -19,9 +32,10 @@ def play(args, ale, actions):
     ale.act(a)    
     filename = 'frame%s.png' % str(frame_num).zfill(4)
     frame_num += 1
-    ale.saveScreenPNG(str.encode(args.output + os.sep + filename))
+    img = Image.fromarray(ale.getScreenRGB2(), 'RGB')
+    img.save(args.output + os.sep + filename, format='png')
   return actions_taken
-  
+
 def record(actions):
   with open('actions', 'w') as f:
     f.write("\n".join([str(a) for a in actions]))
@@ -33,6 +47,7 @@ def main(args):
   if args.game not in all_games:
     starts_with = [g for g in all_games if g.startswith(args.game[0])]
     print('%s not found; did you mean:\n%s' % (args.game, '\t'.join(starts_with)))
+    print(all_games)
     exit(0)
 
   actions = None
@@ -43,6 +58,7 @@ def main(args):
   game_path = atari_py.get_game_path(args.game)
 
   ale = ALEInterface()
+  __USE_SDL = True
   ale.setInt(b'random_seed', args.seed)
   ale.setFloat(b'repeat_action_probability', 0.0)
   ale.loadROM(str.encode(game_path))
@@ -74,6 +90,6 @@ if __name__ == '__main__':
     type=bool,
     default=False
   )
-  
+
   args = parser.parse_args()
   main(args)

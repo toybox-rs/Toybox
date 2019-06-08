@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
 from gym import Env, error, spaces, utils
-from gym.spaces import np_random
 from gym.utils import seeding
+try:
+    from gym.spaces import np_random
+except ImportError:
+    np_random = seeding.np_random
 from toybox.envs.atari.constants import ACTION_MEANING, ACTION_LOOKUP
 from gym.envs.atari import AtariEnv
 from gym import utils
 
 import numpy as np
+from numpy import random
 
 class MockALE():
     def __init__(self, toybox):
@@ -19,7 +23,8 @@ class MockALE():
         return self.toybox.get_score()
 
     def game_over(self):
-        return self.toybox.game_over()
+        # Note that this is to match baselines / atari_py and not what videogames would expect.
+        return self.toybox.get_lives() <= 0
 
     def saveScreenPNG(self, name):
         # Has to be bytes for ALE
@@ -43,7 +48,10 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.np_random = np_random
         self.ale = MockALE(toybox)
         utils.EzPickle.__init__(self, game, 'human', frameskip, repeat_action_probability)
-
+        
+        # By default, we don't need actions passed in:
+        if actions is None:
+            actions = toybox.get_legal_action_set()
         assert(actions is not None)
         self._action_set = actions
         self._obs_type = 'image'
@@ -61,10 +69,6 @@ class ToyboxBaseEnv(AtariEnv, ABC):
             high=self._pixel_high, 
             shape=self._dim, 
             dtype='uint8')
-    
-    @abstractmethod
-    def _action_to_input(self, action):
-        raise NotImplementedError
     
     def seed(self, seed=None):
         """
@@ -101,15 +105,10 @@ class ToyboxBaseEnv(AtariEnv, ABC):
     
         # Sometimes the action_index is a numpy integer...
         #print('Action index and type', action_index, type(action_index))
-        #assert(type(action_index) == int)
         assert(action_index < len(self._action_set))
         assert(type(self._action_set)== list)
     
-        # Convert the input action (string or int) into the ctypes struct.
-        # action = self._action_to_input(\
-        #     self._action_set[int(action_index)])
-        # action.button1 = True
-        self.toybox.apply_ale_action(action_index)
+        self.toybox.apply_ale_action(self._action_set[action_index])
         obs = self._get_obs()
         
         
@@ -119,7 +118,8 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.score = score
     
         # Check whether the episode is done
-        done = self.toybox.game_over()
+        # use "ale" semantics here
+        done = self.ale.game_over()
     
         # Send back dignostic information
         info['lives'] = self.toybox.get_lives()

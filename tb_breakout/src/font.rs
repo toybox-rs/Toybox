@@ -1,11 +1,17 @@
 use toybox_core::graphics::{load_digit_sprites, Color, Drawable, FixedSpriteData};
 
+/// The breakout font is represented with this SET character for filled in pixels.
 const SET: char = '1';
+/// The breakout font is represented with this IGNORE character for transparent pixels.
 const IGNORE: char = '.';
+/// Each digit in the breakout font has this width.
 pub const DIGIT_WIDTH: i32 = 24;
+/// Each digit in the breakout font has this height.
+#[cfg(test)]
 pub const DIGIT_HEIGHT: i32 = 12;
 
 lazy_static! {
+    /// The score display in Breakout uses this font.
     static ref DIGIT_SPRITES: Vec<FixedSpriteData> = load_digit_sprites(
         include_str!("resources/digit_sprites.txt"),
         Color::rgb(144, 144, 144),

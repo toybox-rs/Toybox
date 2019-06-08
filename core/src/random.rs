@@ -32,9 +32,9 @@ impl Gen {
         result
     }
     /// Generate next 32 pseudo-random bits.
-    // pub fn _next_u32(&mut self) -> u32 {
-    //     self._next_u64() as u32
-    // }
+    pub fn _next_u32(&mut self) -> u32 {
+        self._next_u64() as u32
+    }
     /// Create a generator from a single, 32-bit seed.
     pub fn new_from_seed(seed: u32) -> Gen {
         Gen::new([0x193a6754a8a7d469 ^ (seed as u64), 0x97830e05113ba7bb])
