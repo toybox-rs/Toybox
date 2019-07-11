@@ -1,4 +1,4 @@
-# The Reinforcement Learning Toybox [![Build Status](https://travis-ci.com/jjfiv/toybox.svg?token=wqGZxUYsDSPaq1jz2zn6&branch=master)](https://travis-ci.com/jjfiv/toybox)
+# The Reinforcement Learning Toybox [![Build Status](https://travis-ci.com/jjfiv/toybox.svg?token=wqGZxUYsDSPaq1jz2zn6&branch=master)](https://travis-ci.com/KDL-umass/toybox)
 
 A set of games designed for testing deep RL agents.
 
