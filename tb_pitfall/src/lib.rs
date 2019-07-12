@@ -11,3 +11,6 @@ extern crate lazy_static;
 // This module contains the core logic of the game 
 mod pitfall;
 mod types;
+
+pub use types::Pitfall;
+pub use types::State;

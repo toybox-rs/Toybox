@@ -1,5 +1,5 @@
 [package]
-name = "tb_pitfall"
+name = "pitfall"
 version = "0.1.0"
 authors = ["kclary <kclary@cs.umass.edu>"]
 

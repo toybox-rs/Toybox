@@ -4,6 +4,10 @@ use types::*;
 
 use serde_json;
 
+use toybox_core::graphics::Drawable;
+use toybox_core::Input;
+use toybox_core::QueryError;
+
 mod screen { 
    pub const SEAFOAM: (u8, u8, u8) = (1, 2, 3); //TODO : Numbers
    pub const GROUND_OFFSET: u8 = 14; 
@@ -46,7 +50,10 @@ impl toybox_core::Simulation for Pitfall {
     }
 
     fn new_game(&mut self) -> Box<toybox_core::State> {
-        Box::new()
+        Box::new(State{
+            state : StateCore::from_config(&self),
+            config: self.clone(),
+        })
     }
 
     fn game_size(&self) -> (i32,i32) {
@@ -71,5 +78,30 @@ impl toybox_core::State for State {
         42
     }
 
-    
+    fn update_mut(&mut self, buttons: Input) {
+
+    }
+
+    fn draw(&self) -> Vec<Drawable> {
+        Vec::new()
+    }
+
+    fn to_json(&self) -> String{
+        serde_json::to_string(self).expect("Pitfall should be JSON-serializable!")
+
+    }
+
+    fn query_json(&self, _query: &str, _args: &serde_json::Value) -> Result<String,QueryError>{
+        Err(QueryError::NoSuchQuery)
+    }
+}
+
+
+impl StateCore{
+    fn from_config(config: &Pitfall) -> StateCore {
+        StateCore{
+            lives: 5,
+            player: Player {x: 50 , y:50}
+        }
+    }
 }

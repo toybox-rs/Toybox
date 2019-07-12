@@ -18,6 +18,7 @@ pub fn get_simulation_by_name(name: &str) -> Result<Box<Simulation>, String> {
         "space_invaders" => Ok(Box::new(space_invaders::SpaceInvaders::default())),
         #[cfg(feature = "gridworld")]
         "gridworld" => Ok(Box::new(gridworld::GridWorld::default())),
+        "pitfall" => Ok(Box::new(pitfall::Pitfall::default())),
         _ => Err(format!(
             "Cannot construct game: `{}`. Try any of {:?}.",
             name, GAME_LIST
@@ -36,6 +37,7 @@ pub const GAME_LIST: &[&str] = &[
     "space_invaders",
     #[cfg(feature = "gridworld")]
     "gridworld",
+    "pitfall"
 ];
 
 /// Amidar defined in this module.
@@ -50,3 +52,5 @@ extern crate gridworld;
 /// Space Invaders logic defined in this module.
 #[cfg(feature = "space_invaders")]
 extern crate space_invaders;
+
+extern crate pitfall;
