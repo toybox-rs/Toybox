@@ -27,7 +27,7 @@ for tb_game in `ls | grep tb`; do
 		echo "Found a public struct in $tb_game/src/lib.rs"
 		exit -1
 	fi
-	if [[ -z $(grep "pub struct" $tb_game/src/$game.rs) ]]; then 
+	if [[ ! -z $(grep "pub struct" $tb_game/src/$game.rs) ]]; then 
 		echo "Found a public struct in $tb_game/src/$game.rs"
 		exit -1 
 	fi
