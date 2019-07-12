@@ -261,7 +261,6 @@ impl Tile {
     }
 }
 
-
 impl MovementAI {
     /// Resetting the mob AI state after player death.
     fn reset(&mut self) {
@@ -1056,7 +1055,6 @@ impl State {
         }
     }
 }
-
 
 impl toybox_core::Simulation for Amidar {
     fn reset_seed(&mut self, seed: u32) {
