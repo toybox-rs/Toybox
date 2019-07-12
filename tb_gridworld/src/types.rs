@@ -1,4 +1,4 @@
-use serde::{Serialize,Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use toybox_core::graphics::Color;
 
@@ -27,11 +27,11 @@ pub struct GridWorld {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
     pub config: GridWorld,
-    pub state: StateCore,
+    pub frame: FrameState,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateCore {
+pub struct FrameState {
     pub game_over: bool,
     pub score: i32,
     pub step: usize,
@@ -53,4 +53,3 @@ pub enum DiagonalDir {
     S,
     SW,
 }
-
