@@ -2,6 +2,14 @@
 name = "tb_pitfall"
 version = "0.1.0"
 authors = ["kclary <kclary@cs.umass.edu>"]
-edition = "2018"
 
 [dependencies]
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
+lazy_static = "*"
+rand  = "*"
+
+[dependencies.toybox-core]
+version = "*"
+path = "../core"

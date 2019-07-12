@@ -3,10 +3,9 @@ use toybox_core::random;
 use types::*;
 
 use serde_json;
-use rand::seq::SliceRandom;
 
 mod screen { 
-   pub const SEAFOAM: (u8, u8, u8) = (x, y, z); 
+   pub const SEAFOAM: (u8, u8, u8) = (1, 2, 3); //TODO : Numbers
    pub const GROUND_OFFSET: u8 = 14; 
 }
 
@@ -41,10 +40,36 @@ impl toybox_core::Simulation for Pitfall {
     fn to_json(&self) -> String {
         serde_json::to_string(self).expect("Pitfall should be JSON-serializable!")
     }
+
+    fn reset_seed(&mut self, seed:u32){
+
+    }
+
+    fn new_game(&mut self) -> Box<toybox_core::State> {
+        Box::new()
+    }
+
+    fn game_size(&self) -> (i32,i32) {
+        (100,100)
+    }
+
+    fn legal_action_set(&self) -> Vec<toybox_core::AleAction>{
+        Vec::new()
+    }
+
 }
 
 impl State { 
 } 
 
 impl toybox_core::State for State { 
+    fn lives(&self) -> i32{
+        1
+    }
+
+    fn score(&self) -> i32{
+        42
+    }
+
+    
 }
