@@ -2,7 +2,9 @@
 
 ///
 #[derive(Debug,Clone, Serialize, Deserialize)]
-pub struct Pitfall; 
+pub struct Pitfall {
+  pub screen: (i32 , i32),
+}
 
 #[derive(Debug,Clone, Serialize, Deserialize)]
 pub struct StateCore{

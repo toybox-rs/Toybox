@@ -5,6 +5,7 @@ use types::*;
 use serde_json;
 
 use toybox_core::graphics::Drawable;
+use toybox_core::graphics::Color;
 use toybox_core::Input;
 use toybox_core::QueryError;
 
@@ -19,7 +20,8 @@ impl Pitfall {
 impl Default for Pitfall { 
     fn default() -> Self {
        Pitfall {
-          // instantiate all of the stuff
+           screen: (200,200),,
+          // TODO instantiate all of the stuff
       }
     }
 }
@@ -79,11 +81,28 @@ impl toybox_core::State for State {
     }
 
     fn update_mut(&mut self, buttons: Input) {
-
+        if buttons.left {
+            self.state.player.x -= 1;
+        } else if buttons.right {
+            self.state.player.x +=1;
+        } else if buttons.up {
+            self.state.player.y -= 1;
+        } else if buttons.down {
+            self.state.player.y +=1;
+        }
     }
 
     fn draw(&self) -> Vec<Drawable> {
-        Vec::new()
+        let mut output = Vec::new();
+        output.push(Drawable::Clear(Color::black()));
+
+        let player_color =Color::rgb(255, 0, 0);
+        output.push(Drawable::rect(player_color,
+            self.state.player.x as i32,
+            self.state.player.y as i32,
+            10, 10));
+
+        output
     }
 
     fn to_json(&self) -> String{
