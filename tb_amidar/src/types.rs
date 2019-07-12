@@ -1,29 +1,36 @@
+use serde::{Deserialize, Serialize};
+use toybox_core::graphics::Color;
+use toybox_core::random;
+use toybox_core::Direction;
+
+use std::collections::{HashSet, VecDeque};
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Amidar {
     pub rand: random::Gen,
-    board: Vec<String>,
+    pub board: Vec<String>,
     pub player_start: TilePoint,
-    bg_color: Color,
-    player_color: Color,
-    unpainted_color: Color,
-    painted_color: Color,
-    enemy_color: Color,
-    inner_painted_color: Color,
-    start_lives: i32,
-    start_jumps: i32,
-    render_images: bool,
-    chase_time: i32,
-    chase_score_bonus: i32,
-    jump_time: i32,
-    box_bonus: i32,
+    pub bg_color: Color,
+    pub player_color: Color,
+    pub unpainted_color: Color,
+    pub painted_color: Color,
+    pub enemy_color: Color,
+    pub inner_painted_color: Color,
+    pub start_lives: i32,
+    pub start_jumps: i32,
+    pub render_images: bool,
+    pub chase_time: i32,
+    pub chase_score_bonus: i32,
+    pub jump_time: i32,
+    pub box_bonus: i32,
     /// This should be false if you ever use a non-default board.
-    default_board_bugs: bool,
-    enemies: Vec<MovementAI>,
-    level: i32,
+    pub default_board_bugs: bool,
+    pub enemies: Vec<MovementAI>,
+    pub level: i32,
     /// How many previous junctions should the player and enemies remember?
-    history_limit: u32,
-    enemy_starting_speed: i32,
-    player_speed: i32,
+    pub history_limit: u32,
+    pub enemy_starting_speed: i32,
+    pub player_speed: i32,
 }
 
 #[derive(Debug, Clone)]
@@ -99,9 +106,9 @@ pub struct Mob {
     pub ai: MovementAI,
     pub position: WorldPoint,
     pub caught: bool,
-    speed: i32,
-    step: Option<TilePoint>,
-    history: VecDeque<u32>,
+    pub speed: i32,
+    pub step: Option<TilePoint>,
+    pub history: VecDeque<u32>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

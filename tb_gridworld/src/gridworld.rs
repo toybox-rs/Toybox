@@ -1,6 +1,8 @@
 use toybox_core::graphics::{Color, Drawable};
 use toybox_core::{AleAction, Direction, Input, QueryError};
 
+use types::{DiagonalDir, FrameState, GridWorld, State, TileConfig};
+
 use serde_json;
 use std::collections::HashMap;
 
@@ -77,14 +79,14 @@ impl Default for GridWorld {
     }
 }
 
-impl StateCore {
+impl FrameState {
     /// Compute the size of the grid for our own usage here.
     fn size(&self) -> (i32, i32) {
         let height = self.grid.len() as i32;
         let width = self.grid[0].len() as i32;
         (width, height)
     }
-    fn from_config(config: &GridWorld) -> StateCore {
+    fn from_config(config: &GridWorld) -> FrameState {
         let mut tiles = Vec::new();
         let mut grid = Vec::new();
 
@@ -103,7 +105,7 @@ impl StateCore {
             grid.push(grid_row);
         }
 
-        StateCore {
+        FrameState {
             game_over: false,
             step: 0,
             score: 0,
@@ -201,7 +203,7 @@ impl toybox_core::Simulation for GridWorld {
 
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State {
-            state: StateCore::from_config(&self),
+            frame: FrameState::from_config(&self),
             config: self.clone(),
         })
     }
@@ -243,14 +245,14 @@ impl DiagonalDir {
 
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
-        if self.state.game_over {
+        if self.frame.game_over {
             0
         } else {
             1
         }
     }
     fn score(&self) -> i32 {
-        self.state.score
+        self.frame.score
     }
 
     fn update_mut(&mut self, buttons: Input) {
@@ -258,25 +260,25 @@ impl toybox_core::State for State {
         if buttons.is_empty() {
             return;
         }
-        self.state.step += 1;
+        self.frame.step += 1;
 
         if self.config.diagonal_support {
             if let Some(ddir) = DiagonalDir::from_input(buttons) {
                 match ddir {
-                    DiagonalDir::N => self.state.walk_once(0, -1),
-                    DiagonalDir::S => self.state.walk_once(0, 1),
-                    DiagonalDir::E => self.state.walk_once(1, 0),
-                    DiagonalDir::W => self.state.walk_once(-1, 0),
-                    DiagonalDir::NW => self.state.walk_diagonal(-1, -1),
-                    DiagonalDir::NE => self.state.walk_diagonal(1, -1),
-                    DiagonalDir::SW => self.state.walk_diagonal(-1, 1),
-                    DiagonalDir::SE => self.state.walk_diagonal(1, 1),
+                    DiagonalDir::N => self.frame.walk_once(0, -1),
+                    DiagonalDir::S => self.frame.walk_once(0, 1),
+                    DiagonalDir::E => self.frame.walk_once(1, 0),
+                    DiagonalDir::W => self.frame.walk_once(-1, 0),
+                    DiagonalDir::NW => self.frame.walk_diagonal(-1, -1),
+                    DiagonalDir::NE => self.frame.walk_diagonal(1, -1),
+                    DiagonalDir::SW => self.frame.walk_diagonal(-1, 1),
+                    DiagonalDir::SE => self.frame.walk_diagonal(1, 1),
                 }
             }
         } else {
             if let Some(dir) = Direction::from_input(buttons) {
                 let (dx, dy) = dir.delta();
-                self.state.walk_once(dx, dy);
+                self.frame.walk_once(dx, dy);
             }
         }
     }
@@ -284,17 +286,17 @@ impl toybox_core::State for State {
         let mut output = Vec::new();
         output.push(Drawable::Clear(Color::black()));
 
-        let (width, height) = self.state.size();
+        let (width, height) = self.frame.size();
         for y in 0..height {
             for x in 0..width {
-                let tile = self.state.get_tile(x, y).expect("Tile type should exist!");
+                let tile = self.frame.get_tile(x, y).expect("Tile type should exist!");
                 output.push(Drawable::rect(tile.color, x as i32, y as i32, 1, 1));
             }
         }
         output.push(Drawable::rect(
             self.config.player_color,
-            self.state.player.0,
-            self.state.player.1,
+            self.frame.player.0,
+            self.frame.player.1,
             1,
             1,
         ));
@@ -308,12 +310,12 @@ impl toybox_core::State for State {
     fn query_json(&self, query: &str, _args: &serde_json::Value) -> Result<String, QueryError> {
         Ok(match query {
             "xy" => {
-                let (px, py) = self.state.player;
+                let (px, py) = self.frame.player;
                 serde_json::to_string(&(px, py))?
             }
             "xyt" => {
-                let (px, py) = self.state.player;
-                serde_json::to_string(&(px, py, self.state.step))?
+                let (px, py) = self.frame.player;
+                serde_json::to_string(&(px, py, self.frame.step))?
             }
             _ => Err(QueryError::NoSuchQuery)?,
         })
