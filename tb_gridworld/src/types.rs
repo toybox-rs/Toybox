@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use toybox_core::graphics::Color;
 
+/// The tile behaviors in a GridWorld are configurable.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileConfig {
     /// What reward (if any) is given or taken by passing this tile?
@@ -14,30 +15,48 @@ pub struct TileConfig {
     pub color: Color,
 }
 
+/// The initial game state is configurable.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GridWorld {
+    /// How is the board laid out? List of rows.
     pub grid: Vec<String>,
+    /// How are tiles defined?
     pub tiles: HashMap<char, TileConfig>,
+    /// When you take a reward, it must change tile type.
     pub reward_becomes: char,
+    /// What color is the player?
     pub player_color: Color,
+    /// Where does the player start?
     pub player_start: (i32, i32),
     /// Does this world support diagonal movement?
     pub diagonal_support: bool,
 }
+
+/// The game state is composed of a configuration and the current frame.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct State {
+    /// The initial game state.
     pub config: GridWorld,
+    /// The current frame state.
     pub frame: FrameState,
 }
 
+/// This represents the mutable state of the gridworld system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FrameState {
+    /// True if you have encountered a terminal tile.
     pub game_over: bool,
+    /// How much reward has been earned (cumulative).
     pub score: i32,
+    /// How many steps has this simulation run for?
     pub step: usize,
-    pub reward_becomes: usize,
-    pub tiles: Vec<TileConfig>,
-    pub grid: Vec<Vec<usize>>,
+    /// When you take a reward, it must change tile type.
+    pub reward_becomes: char,
+    /// How are tiles defined?
+    pub tiles: HashMap<char, TileConfig>,
+    /// How is the board laid out? List of rows.
+    pub grid: Vec<String>,
+    /// The player position.
     pub player: (i32, i32),
 }
 

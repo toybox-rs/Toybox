@@ -87,43 +87,23 @@ impl FrameState {
         (width, height)
     }
     fn from_config(config: &GridWorld) -> FrameState {
-        let mut tiles = Vec::new();
-        let mut grid = Vec::new();
-
-        let mut char_to_index = HashMap::new();
-        for (ch, desc) in &config.tiles {
-            let id = tiles.len();
-            char_to_index.insert(ch, id);
-            tiles.push(desc.clone());
-        }
-        for row in &config.grid {
-            let mut grid_row = Vec::new();
-            for ch in row.chars() {
-                let tile_id = char_to_index[&ch];
-                grid_row.push(tile_id);
-            }
-            grid.push(grid_row);
-        }
-
         FrameState {
             game_over: false,
             step: 0,
             score: 0,
-            reward_becomes: char_to_index[&config.reward_becomes],
-            tiles,
-            grid,
+            reward_becomes: config.reward_becomes,
+            tiles: config.tiles.clone(),
+            grid: config.grid.clone(),
             player: config.player_start,
         }
     }
-    fn get_tile(&self, tx: i32, ty: i32) -> Option<&TileConfig> {
+    fn get_tile(&self, tx: i32, ty: i32) -> Option<TileConfig> {
         let (w, h) = self.size();
         if tx < 0 || ty < 0 || tx >= w || ty >= h {
             return None;
         }
-        let y = ty as usize;
-        let x = tx as usize;
-        let tile_id = self.grid[y][x];
-        Some(&self.tiles[tile_id])
+        let tile_id = self.get_tile_id(tx, ty);
+        Some(self.tiles[&tile_id].clone())
     }
     fn walkable(&self, tx: i32, ty: i32) -> bool {
         self.get_tile(tx, ty).map(|t| t.walkable).unwrap_or(false)
@@ -156,13 +136,25 @@ impl FrameState {
         }
     }
 
-    fn collect_reward(&mut self, tx: i32, ty: i32) -> i32 {
+    fn get_tile_id(&self, tx: i32, ty: i32) -> char {
         let y = ty as usize;
         let x = tx as usize;
-        let tile_id = self.grid[y][x];
-        let reward = self.tiles[tile_id].reward;
+        self.grid[y].chars().nth(x).expect("get_tile_id private method got bad coordinate!")
+    }
+
+    fn set_tile_id(&mut self, tx: i32, ty: i32, new_id: char) {
+        let y = ty as usize;
+        let x = tx as usize;
+        let mut row: Vec<char> = self.grid[y].chars().collect();
+        row[x] = new_id;
+        self.grid[y] = row.into_iter().collect()
+    }
+
+    fn collect_reward(&mut self, tx: i32, ty: i32) -> i32 {
+        let tile_id = self.get_tile_id(tx, ty);
+        let reward = self.tiles[&tile_id].reward;
         if reward != 0 {
-            self.grid[y][x] = self.reward_becomes;
+            self.set_tile_id(tx, ty, self.reward_becomes);
         }
         reward
     }
