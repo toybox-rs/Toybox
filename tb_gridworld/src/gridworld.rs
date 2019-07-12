@@ -4,18 +4,6 @@ use toybox_core::{AleAction, Direction, Input, QueryError};
 use serde_json;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TileConfig {
-    /// What reward (if any) is given or taken by passing this tile?
-    pub reward: i32,
-    /// Is this tile walkable by the agent?
-    pub walkable: bool,
-    /// Is this a terminal/goal tile?
-    pub terminal: bool,
-    /// What color should this tile be?
-    pub color: Color,
-}
-
 impl TileConfig {
     fn wall() -> TileConfig {
         TileConfig {
@@ -59,16 +47,6 @@ impl TileConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GridWorld {
-    pub grid: Vec<String>,
-    pub tiles: HashMap<char, TileConfig>,
-    pub reward_becomes: char,
-    pub player_color: Color,
-    pub player_start: (i32, i32),
-    /// Does this world support diagonal movement?
-    pub diagonal_support: bool,
-}
 
 impl Default for GridWorld {
     fn default() -> Self {
@@ -98,23 +76,6 @@ impl Default for GridWorld {
             diagonal_support: false,
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct State {
-    pub config: GridWorld,
-    pub state: StateCore,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StateCore {
-    pub game_over: bool,
-    pub score: i32,
-    pub step: usize,
-    pub reward_becomes: usize,
-    pub tiles: Vec<TileConfig>,
-    pub grid: Vec<Vec<usize>>,
-    pub player: (i32, i32),
 }
 
 impl StateCore {
@@ -264,18 +225,6 @@ impl toybox_core::Simulation for GridWorld {
     }
 }
 
-/// Enumeration that supports diagonal movement.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum DiagonalDir {
-    NE,
-    N,
-    NW,
-    E,
-    W,
-    SE,
-    S,
-    SW,
-}
 impl DiagonalDir {
     /// Read an input struct and turn it into a diagonal direction.
     fn from_input(buttons: Input) -> Option<DiagonalDir> {
