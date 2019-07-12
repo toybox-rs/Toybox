@@ -5,6 +5,7 @@ extern crate toybox_core;
 extern crate serde_derive;
 
 mod gridworld;
+mod types;
 
-pub use gridworld::GridWorld;
-pub use gridworld::State;
+pub use types::GridWorld;
+pub use types::State;

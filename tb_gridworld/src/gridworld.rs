@@ -1,6 +1,8 @@
 use toybox_core::graphics::{Color, Drawable};
 use toybox_core::{AleAction, Direction, Input, QueryError};
 
+use types::{TileConfig,GridWorld,State,StateCore,DiagonalDir};
+
 use serde_json;
 use std::collections::HashMap;
 

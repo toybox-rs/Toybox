@@ -1,3 +1,7 @@
+use serde::{Serialize,Deserialize};
+use std::collections::HashMap;
+use toybox_core::graphics::Color;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileConfig {
     /// What reward (if any) is given or taken by passing this tile?
@@ -39,7 +43,7 @@ pub struct StateCore {
 
 /// Enumeration that supports diagonal movement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-enum DiagonalDir {
+pub enum DiagonalDir {
     NE,
     N,
     NW,
