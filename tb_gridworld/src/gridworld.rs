@@ -47,7 +47,6 @@ impl TileConfig {
     }
 }
 
-
 impl Default for GridWorld {
     fn default() -> Self {
         let mut tiles = HashMap::new();

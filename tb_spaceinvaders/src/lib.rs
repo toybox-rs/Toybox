@@ -11,7 +11,7 @@ extern crate rand;
 mod destruction;
 mod firing_ai;
 mod font;
-mod space_invaders;
+mod spaceinvaders;
 mod types;
 
 // All types are essentially "public" API.
