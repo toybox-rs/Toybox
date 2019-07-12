@@ -28,3 +28,4 @@ ctoybox/toybox/toybox.egg-info
 ctoybox/toybox/toybox/_native__lib.so
 models/*
 toybox-regress-models*.zip
+ctoybox/*.model
