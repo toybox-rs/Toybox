@@ -139,7 +139,10 @@ impl FrameState {
     fn get_tile_id(&self, tx: i32, ty: i32) -> char {
         let y = ty as usize;
         let x = tx as usize;
-        self.grid[y].chars().nth(x).expect("get_tile_id private method got bad coordinate!")
+        self.grid[y]
+            .chars()
+            .nth(x)
+            .expect("get_tile_id private method got bad coordinate!")
     }
 
     fn set_tile_id(&mut self, tx: i32, ty: i32, new_id: char) {
