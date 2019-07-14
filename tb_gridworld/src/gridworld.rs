@@ -157,7 +157,8 @@ impl FrameState {
         let tile_id = self.get_tile_id(tx, ty);
         let reward = self.tiles[&tile_id].reward;
         if reward != 0 {
-            self.set_tile_id(tx, ty, self.reward_becomes);
+            let transition = self.reward_becomes;
+            self.set_tile_id(tx, ty, transition);
         }
         reward
     }
