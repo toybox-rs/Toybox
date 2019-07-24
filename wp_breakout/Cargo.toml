@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 cfg-if = "0.1.2"
-wasm-bindgen = "0.2"
+wasm-bindgen = "=0.2.43"
 breakout = {path = "../tb_breakout", version="*"}
 toybox = {path = "../toybox", version="*"}
 

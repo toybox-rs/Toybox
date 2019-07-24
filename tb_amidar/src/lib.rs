@@ -9,6 +9,7 @@ extern crate rand;
 
 pub mod amidar;
 mod digit_sprites;
+mod types;
 
-pub use amidar::Amidar;
-pub use amidar::State;
+pub use types::Amidar;
+pub use types::State;
