@@ -26,7 +26,7 @@ if __name__ == '__main__':
     pygame.init()
 
     with Toybox(args.game) as tb:
-        if args.partial_config != "null":    
+        if args.partial_config != "null":
             with Intervention(tb, args.game) as intervention:
                 intervention.set_partial_config(args.partial_config)
 
@@ -50,6 +50,7 @@ if __name__ == '__main__':
         while not quit:
             # close human_play on game over
             if tb.game_over():
+                print("tb.game_over()")
                 break
             for event in pygame.event.get():
                 if event.type == QUIT:
@@ -69,7 +70,7 @@ if __name__ == '__main__':
             player_input.down = bool(key_state[K_DOWN] or key_state[K_s])
             player_input.button1 = bool(key_state[K_z] or key_state[K_SPACE])
             player_input.button2 = bool(key_state[K_x] or key_state[K_RSHIFT] or key_state[K_LSHIFT])
-                        
+
             tb.apply_action(player_input)
             if args.query is not None:
                 print(args.query, tb.query_state_json(args.query, args.query_args))
