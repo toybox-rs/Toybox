@@ -86,6 +86,9 @@ class AmidarIntervention(Intervention):
 
         return total_unpainted
 
+    def start_lives(self): 
+        return self.config['start_lives']
+
         
     def player_tile(self):
         return self.state['player']['position']
