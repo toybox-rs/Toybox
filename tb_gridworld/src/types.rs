@@ -2,6 +2,18 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use toybox_core::graphics::Color;
 
+// GridWorld enemies, to be simple, have a list of positions that they cycle through in order.
+// They cause death.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Enemy {
+    // List of (x,y) positions for this enemy.
+    pub positions: Vec<(i32, i32)>,
+    // Probably set this to zero by default. Which position should it start in?
+    pub current_time: u32,
+    // What color should it appear as?
+    pub color: Color,
+}
+
 /// The tile behaviors in a GridWorld are configurable.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileConfig {
@@ -30,6 +42,8 @@ pub struct GridWorld {
     pub player_start: (i32, i32),
     /// Does this world support diagonal movement?
     pub diagonal_support: bool,
+    /// Does this world have enemies?
+    pub enemies: Vec<Enemy>,
 }
 
 /// The game state is composed of a configuration and the current frame.
@@ -58,6 +72,8 @@ pub struct FrameState {
     pub grid: Vec<String>,
     /// The player position.
     pub player: (i32, i32),
+    /// Does this world have enemies? Where have they moved to?
+    pub enemies: Vec<Enemy>,
 }
 
 /// Enumeration that supports diagonal movement.

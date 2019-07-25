@@ -1,7 +1,7 @@
 use toybox_core::graphics::{Color, Drawable};
 use toybox_core::{AleAction, Direction, Input, QueryError};
 
-use types::{DiagonalDir, FrameState, GridWorld, State, TileConfig};
+use types::{DiagonalDir, Enemy, FrameState, GridWorld, State, TileConfig};
 
 use serde_json;
 use std::collections::HashMap;
@@ -59,22 +59,29 @@ impl Default for GridWorld {
         tiles.insert('D', TileConfig::death());
 
         let grid = vec![
-            "111111111".to_owned(),
-            "1000R0001".to_owned(),
-            "101111101".to_owned(),
-            "100010001".to_owned(),
-            "10001R111".to_owned(),
-            "100D100G1".to_owned(),
-            "111111111".to_owned(),
+            "111111111".to_owned(), // 0
+            "1000R0001".to_owned(), // 1
+            "101111101".to_owned(), // 2
+            "100010001".to_owned(), // 3
+            "100010001".to_owned(), // 4
+            "100010001".to_owned(), // 5
+            "10001R111".to_owned(), // 6
+            "100D100G1".to_owned(), // 7
+            "111111111".to_owned(), // 8
         ];
 
         GridWorld {
             player_color: Color::rgb(255, 0, 0),
-            player_start: (2, 4),
+            player_start: (2, 7),
             reward_becomes: '0',
             grid,
             tiles,
             diagonal_support: false,
+            enemies: vec![Enemy {
+                positions: vec![(1, 4), (2, 4), (3, 4), (2, 4)],
+                current_time: 0,
+                color: Color::rgb(255, 0, 255),
+            }],
         }
     }
 }
@@ -95,6 +102,7 @@ impl FrameState {
             tiles: config.tiles.clone(),
             grid: config.grid.clone(),
             player: config.player_start,
+            enemies: config.enemies.clone(),
         }
     }
     fn get_tile(&self, tx: i32, ty: i32) -> Option<TileConfig> {
@@ -173,6 +181,26 @@ impl FrameState {
 
         self.collect_reward(x, y);
     }
+    fn check_enemy_death(&mut self) {
+        if self.game_over {
+            return;
+        }
+        for e in self.enemies.iter() {
+            let (ex, ey) = e.positions[e.current_time as usize];
+            let (px, py) = self.player;
+            if ex == px && ey == py {
+                self.game_over = true;
+                break;
+            }
+        }
+    }
+
+    fn move_enemies(&mut self) {
+        for e in self.enemies.iter_mut() {
+            e.current_time += 1;
+            e.current_time %= e.positions.len() as u32;
+        }
+    }
 }
 
 impl toybox_core::Simulation for GridWorld {
@@ -242,7 +270,7 @@ impl DiagonalDir {
 impl toybox_core::State for State {
     fn lives(&self) -> i32 {
         if self.frame.game_over {
-            0
+            -1000
         } else {
             1
         }
@@ -252,12 +280,23 @@ impl toybox_core::State for State {
     }
 
     fn update_mut(&mut self, buttons: Input) {
+        if self.frame.game_over {
+            return;
+        }
         // Must take an action in GridWorld.
         if buttons.is_empty() {
             return;
         }
         self.frame.step += 1;
 
+        // Check enemy<->player collision.
+        self.frame.check_enemy_death();
+        // Move enemies.
+        self.frame.move_enemies();
+        // Check again.
+        self.frame.check_enemy_death();
+
+        // Move player.
         if self.config.diagonal_support {
             if let Some(ddir) = DiagonalDir::from_input(buttons) {
                 match ddir {
@@ -277,10 +316,15 @@ impl toybox_core::State for State {
                 self.frame.walk_once(dx, dy);
             }
         }
+        // Check enemy<->player collision again!
+        self.frame.check_enemy_death();
     }
     fn draw(&self) -> Vec<Drawable> {
         let mut output = Vec::new();
         output.push(Drawable::Clear(Color::black()));
+        if self.frame.game_over {
+            return output;
+        }
 
         let (width, height) = self.frame.size();
         for y in 0..height {
@@ -289,6 +333,12 @@ impl toybox_core::State for State {
                 output.push(Drawable::rect(tile.color, x as i32, y as i32, 1, 1));
             }
         }
+
+        for e in self.frame.enemies.iter() {
+            let (ex, ey) = e.positions[e.current_time as usize];
+            output.push(Drawable::rect(e.color, ex, ey, 1, 1));
+        }
+
         output.push(Drawable::rect(
             self.config.player_color,
             self.frame.player.0,
