@@ -1,4 +1,7 @@
+use rand::Rng;
+use rand_core::RngCore;
 use toybox_core::graphics::{Color, Drawable};
+use toybox_core::random;
 use toybox_core::{AleAction, Direction, Input, QueryError};
 
 use types::{DiagonalDir, Enemy, FrameState, GridWorld, State, TileConfig};
@@ -11,7 +14,7 @@ impl TileConfig {
         TileConfig {
             reward: 0,
             walkable: false,
-            terminal: false,
+            terminal: 0.0,
             color: Color::black(),
         }
     }
@@ -19,7 +22,7 @@ impl TileConfig {
         TileConfig {
             reward: 0,
             walkable: true,
-            terminal: false,
+            terminal: 0.0,
             color: Color::white(),
         }
     }
@@ -27,7 +30,7 @@ impl TileConfig {
         TileConfig {
             reward: 1,
             walkable: true,
-            terminal: false,
+            terminal: 0.0,
             color: Color::rgb(255, 255, 0),
         }
     }
@@ -35,7 +38,7 @@ impl TileConfig {
         TileConfig {
             reward: 10,
             walkable: true,
-            terminal: true,
+            terminal: 1.0,
             color: Color::rgb(0, 255, 0),
         }
     }
@@ -43,8 +46,16 @@ impl TileConfig {
         TileConfig {
             reward: -10,
             walkable: true,
-            terminal: true,
+            terminal: 1.0,
             color: Color::rgb(255, 0, 0),
+        }
+    }
+    fn half_death() -> TileConfig {
+        TileConfig {
+            reward: -10,
+            walkable: true,
+            terminal: 0.5,
+            color: Color::rgb(100, 100, 100),
         }
     }
 }
@@ -57,6 +68,7 @@ impl Default for GridWorld {
         tiles.insert('R', TileConfig::reward());
         tiles.insert('G', TileConfig::goal());
         tiles.insert('D', TileConfig::death());
+        tiles.insert('H', TileConfig::half_death());
 
         let grid = vec![
             "111111111".to_owned(), // 0
@@ -66,7 +78,7 @@ impl Default for GridWorld {
             "100010001".to_owned(), // 4
             "100010001".to_owned(), // 5
             "10001R111".to_owned(), // 6
-            "100D100G1".to_owned(), // 7
+            "100D10HG1".to_owned(), // 7
             "111111111".to_owned(), // 8
         ];
 
@@ -82,6 +94,7 @@ impl Default for GridWorld {
                 current_time: 0,
                 color: Color::rgb(255, 0, 255),
             }],
+            rand: random::Gen::new_from_seed(42),
         }
     }
 }
@@ -93,7 +106,7 @@ impl FrameState {
         let width = self.grid[0].len() as i32;
         (width, height)
     }
-    fn from_config(config: &GridWorld) -> FrameState {
+    fn from_config(config: &mut GridWorld) -> FrameState {
         FrameState {
             game_over: false,
             step: 0,
@@ -103,6 +116,7 @@ impl FrameState {
             grid: config.grid.clone(),
             player: config.player_start,
             enemies: config.enemies.clone(),
+            rand: random::Gen::new_from_seed(config.rand.next_u32()),
         }
     }
     fn get_tile(&self, tx: i32, ty: i32) -> Option<TileConfig> {
@@ -116,8 +130,8 @@ impl FrameState {
     fn walkable(&self, tx: i32, ty: i32) -> bool {
         self.get_tile(tx, ty).map(|t| t.walkable).unwrap_or(false)
     }
-    fn terminal(&self, tx: i32, ty: i32) -> bool {
-        self.get_tile(tx, ty).map(|t| t.terminal).unwrap_or(false)
+    fn terminal(&self, tx: i32, ty: i32) -> f64 {
+        self.get_tile(tx, ty).map(|t| t.terminal).unwrap_or(0.0)
     }
     /// Take a step if the destination is walkable.
     fn walk_once(&mut self, dx: i32, dy: i32) {
@@ -175,11 +189,20 @@ impl FrameState {
         self.player = (x, y);
 
         // check terminal before "collect_reward" which removes the reward from the map.
-        if self.terminal(x, y) {
+        let terminal = self.terminal(x, y);
+        if terminal == 0.0 {
+            self.collect_reward(x, y);
+        } else if terminal == 1.0 {
             self.game_over = true;
+            self.collect_reward(x, y);
+        } else {
+            let p: f64 = self.rand.gen_range(0.0, 1.0);
+            println!("p={}, terminal={}", p, terminal);
+            if p < terminal {
+                self.game_over = true;
+                self.collect_reward(x, y);
+            }
         }
-
-        self.collect_reward(x, y);
     }
     fn check_enemy_death(&mut self) {
         if self.game_over {
@@ -204,7 +227,9 @@ impl FrameState {
 }
 
 impl toybox_core::Simulation for GridWorld {
-    fn reset_seed(&mut self, _seed: u32) {}
+    fn reset_seed(&mut self, seed: u32) {
+        self.rand.reset_seed(seed);
+    }
 
     /// Compute the size of the grid for determining how big the world should be.
     fn game_size(&self) -> (i32, i32) {
@@ -227,7 +252,7 @@ impl toybox_core::Simulation for GridWorld {
 
     fn new_game(&mut self) -> Box<toybox_core::State> {
         Box::new(State {
-            frame: FrameState::from_config(&self),
+            frame: FrameState::from_config(self),
             config: self.clone(),
         })
     }

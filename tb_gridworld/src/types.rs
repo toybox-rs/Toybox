@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use toybox_core::graphics::Color;
+use toybox_core::random;
 
 // GridWorld enemies, to be simple, have a list of positions that they cycle through in order.
 // They cause death.
@@ -18,11 +19,15 @@ pub struct Enemy {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TileConfig {
     /// What reward (if any) is given or taken by passing this tile?
+    /// Death is defined as negative reward, winning is positive reward.
     pub reward: i32,
     /// Is this tile walkable by the agent?
     pub walkable: bool,
-    /// Is this a terminal/goal tile?
-    pub terminal: bool,
+    /// The probability this tile acts as a terminal/goal tile. 
+    /// p=0.0 -> never, false
+    /// p=1.0 -> always, true
+    /// p=0.5 to support "Patrol Gridworld"
+    pub terminal: f64,
     /// What color should this tile be?
     pub color: Color,
 }
@@ -44,6 +49,8 @@ pub struct GridWorld {
     pub diagonal_support: bool,
     /// Does this world have enemies?
     pub enemies: Vec<Enemy>,
+    /// Random number generator used to seed new games.
+    pub rand: random::Gen
 }
 
 /// The game state is composed of a configuration and the current frame.
@@ -74,6 +81,8 @@ pub struct FrameState {
     pub player: (i32, i32),
     /// Does this world have enemies? Where have they moved to?
     pub enemies: Vec<Enemy>,
+    /// Random number generator used to determine probabilistic tile terminals.
+    pub rand: random::Gen
 }
 
 /// Enumeration that supports diagonal movement.

@@ -17,6 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('game', type=str, help='try one of amidar, breakout, space_invaders')
     parser.add_argument('--scale', type=int, default=2)
     parser.add_argument('--fps', type=int, default=32)
+    parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--query', type=str, default=None)
     parser.add_argument('--query_args', type=str, default="null")
     parser.add_argument('--partial_config', type=str, default="null")
@@ -40,6 +41,10 @@ if __name__ == '__main__':
         with open('human_play_state.json', 'w') as fp:
             print(json.dumps(state_json, indent=4, sort_keys=True), file=fp)
 
+        if args.seed is not None:
+            tb.set_seed(args.seed)
+            tb.new_game()
+
         dim = (w*args.scale,h*args.scale)
 
         pygame.display.set_mode(dim)
@@ -50,7 +55,7 @@ if __name__ == '__main__':
         while not quit:
             # close human_play on game over
             if tb.game_over():
-                print("tb.game_over()")
+                print("tb.game_over(): score={}".format(tb.get_score()))
                 break
             for event in pygame.event.get():
                 if event.type == QUIT:
