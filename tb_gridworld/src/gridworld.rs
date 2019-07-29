@@ -4,77 +4,48 @@ use toybox_core::graphics::{Color, Drawable};
 use toybox_core::random;
 use toybox_core::{AleAction, Direction, Input, QueryError};
 
-use types::{DiagonalDir, Enemy, FrameState, GridWorld, State, TileConfig};
+use types::{DiagonalDir, Enemy, FrameState, GridWorld, State, TileBehavior};
 
 use serde_json;
 use std::collections::HashMap;
 
-impl TileConfig {
-    fn wall() -> TileConfig {
-        TileConfig {
-            reward: 0,
-            walkable: false,
-            terminal: 0.0,
-            color: Color::black(),
-        }
-    }
-    fn floor() -> TileConfig {
-        TileConfig {
-            reward: 0,
-            walkable: true,
-            terminal: 0.0,
-            color: Color::white(),
-        }
-    }
-    fn reward() -> TileConfig {
-        TileConfig {
-            reward: 1,
-            walkable: true,
-            terminal: 0.0,
-            color: Color::rgb(255, 255, 0),
-        }
-    }
-    fn goal() -> TileConfig {
-        TileConfig {
-            reward: 10,
-            walkable: true,
-            terminal: 1.0,
-            color: Color::rgb(0, 255, 0),
-        }
-    }
-    fn death() -> TileConfig {
-        TileConfig {
-            reward: -10,
-            walkable: true,
-            terminal: 1.0,
-            color: Color::rgb(255, 0, 0),
-        }
-    }
-    fn half_death() -> TileConfig {
-        TileConfig {
-            reward: -10,
-            walkable: true,
-            terminal: 0.5,
-            color: Color::rgb(100, 100, 100),
-        }
-    }
-}
-
 impl Default for GridWorld {
+    /// The default game features as many behaviors as possible!
     fn default() -> Self {
         let mut tiles = HashMap::new();
-        tiles.insert('1', TileConfig::wall());
-        tiles.insert('0', TileConfig::floor());
-        tiles.insert('R', TileConfig::reward());
-        tiles.insert('G', TileConfig::goal());
-        tiles.insert('D', TileConfig::death());
-        tiles.insert('H', TileConfig::half_death());
+        tiles.insert('1', TileBehavior::Wall);
+        tiles.insert('0', TileBehavior::Floor);
+        tiles.insert('R', TileBehavior::ReceiveReward(1));
+        tiles.insert('G', TileBehavior::WinGame);
+        tiles.insert('D', TileBehavior::LoseGame);
+        tiles.insert(
+            'H',
+            TileBehavior::MaybeLoseGame(0.5, Color::rgb(100, 100, 100)),
+        );
+        let door_color = Color::rgb(150, 150, 150);
+        tiles.insert(
+            'X',
+            TileBehavior::Door {
+                switch_id: 1,
+                open: door_color,
+                closed: door_color,
+            },
+        );
+        tiles.insert(
+            'Y',
+            TileBehavior::DoorSwitch {
+                switch_id: 1,
+                state: false,
+                on_color: Color::rgb(150, 250, 150),
+                off_color: Color::rgb(250, 150, 150),
+            },
+        );
 
         let grid = vec![
             "111111111".to_owned(), // 0
             "1000R0001".to_owned(), // 1
-            "101111101".to_owned(), // 2
-            "100010001".to_owned(), // 3
+            "1X1111101".to_owned(), // 2
+            "100Y10001".to_owned(), // 3
             "100010001".to_owned(), // 4
             "100010001".to_owned(), // 5
             "10001R111".to_owned(), // 6
@@ -83,9 +54,7 @@ impl Default for GridWorld {
         ];
 
         GridWorld {
-            player_color: Color::rgb(255, 0, 0),
             player_start: (2, 7),
-            reward_becomes: '0',
             grid,
             tiles,
             diagonal_support: false,
@@ -95,6 +64,18 @@ impl Default for GridWorld {
                 color: Color::rgb(255, 0, 255),
             }],
             rand: random::Gen::new_from_seed(42),
+
+            // Now colors are more-or-less configurable.
+            player_color: Color::rgb(255, 0, 0),
+            wall_color: Color::black(),
+            win_color: Color::rgb(0, 255, 0),
+            lose_color: Color::rgb(255, 0, 0),
+            floor_color: Color::white(),
+            reward_color: Color::rgb(255, 255, 0),
+
+            // This is probably a hyperparameter anyway, so moved to config.
+            lose_reward: -100,
+            win_reward: 100,
         }
     }
 }
@@ -107,38 +88,114 @@ impl FrameState {
         (width, height)
     }
     fn from_config(config: &mut GridWorld) -> FrameState {
+        let mut tile_states = Vec::new();
+
+        for row in config.grid.iter() {
+            let mut row_states = Vec::new();
+            for tile in row.chars() {
+                row_states.push(config.tiles[&tile].clone());
+            }
+            tile_states.push(row_states);
+        }
+
         FrameState {
             game_over: false,
             step: 0,
             score: 0,
-            reward_becomes: config.reward_becomes,
-            tiles: config.tiles.clone(),
-            grid: config.grid.clone(),
+            grid: tile_states,
             player: config.player_start,
             enemies: config.enemies.clone(),
             rand: random::Gen::new_from_seed(config.rand.next_u32()),
         }
     }
-    fn get_tile(&self, tx: i32, ty: i32) -> Option<TileConfig> {
+    fn get_tile_mut(&mut self, tx: i32, ty: i32) -> Option<&mut TileBehavior> {
         let (w, h) = self.size();
         if tx < 0 || ty < 0 || tx >= w || ty >= h {
             return None;
         }
-        let tile_id = self.get_tile_id(tx, ty);
-        Some(self.tiles[&tile_id].clone())
+        self.grid
+            .get_mut(ty as usize)
+            .and_then(|row| row.get_mut(tx as usize))
+    }
+    fn get_tile(&self, tx: i32, ty: i32) -> Option<&TileBehavior> {
+        let (w, h) = self.size();
+        if tx < 0 || ty < 0 || tx >= w || ty >= h {
+            return None;
+        }
+        self.grid
+            .get(ty as usize)
+            .and_then(|row| row.get(tx as usize))
+    }
+    fn tile_color(&self, tile: &TileBehavior, config: &GridWorld) -> Color {
+        match tile {
+            TileBehavior::DoorSwitch {
+                state,
+                on_color,
+                off_color,
+                ..
+            } => {
+                if *state {
+                    *on_color
+                } else {
+                    *off_color
+                }
+            }
+            TileBehavior::ReceiveReward { .. } => config.reward_color,
+            TileBehavior::LoseGame => config.lose_color,
+            TileBehavior::WinGame => config.win_color,
+            TileBehavior::MaybeLoseGame(_, color) => *color,
+            TileBehavior::Wall => config.wall_color,
+            TileBehavior::Floor => config.floor_color,
+            TileBehavior::Door {
+                switch_id,
+                open,
+                closed,
+            } => {
+                if self.get_switch_state(*switch_id) {
+                    open.clone()
+                } else {
+                    closed.clone()
+                }
+            }
+        }
+    }
+    fn get_switch_state(&self, of_switch_id: u32) -> bool {
+        for row in self.grid.iter() {
+            for tile in row.iter() {
+                if let TileBehavior::DoorSwitch {
+                    switch_id, state, ..
+                } = tile
+                {
+                    if *switch_id == of_switch_id {
+                        return *state;
+                    }
+                }
+            }
+        }
+        panic!("switch_state({}) switch does not exist!", of_switch_id);
     }
     fn walkable(&self, tx: i32, ty: i32) -> bool {
-        self.get_tile(tx, ty).map(|t| t.walkable).unwrap_or(false)
-    }
-    fn terminal(&self, tx: i32, ty: i32) -> f64 {
-        self.get_tile(tx, ty).map(|t| t.terminal).unwrap_or(0.0)
+        if let Some(behavior) = self.get_tile(tx, ty) {
+            match behavior {
+                TileBehavior::LoseGame
+                | TileBehavior::WinGame
+                | TileBehavior::MaybeLoseGame(_, _) => true,
+                TileBehavior::DoorSwitch { .. } => true,
+                TileBehavior::ReceiveReward { .. } => true,
+                TileBehavior::Wall => false,
+                TileBehavior::Floor => true,
+                TileBehavior::Door { switch_id, .. } => self.get_switch_state(*switch_id),
+            }
+        } else {
+            false
+        }
     }
     /// Take a step if the destination is walkable.
-    fn walk_once(&mut self, dx: i32, dy: i32) {
+    fn walk_once(&mut self, dx: i32, dy: i32, config: &GridWorld) {
         let (px, py) = self.player;
         let dest = (px + dx, py + dy);
         if self.walkable(dest.0, dest.1) {
-            self.arrive(dest.0, dest.1)
+            self.arrive(dest.0, dest.1, config)
         }
     }
 
@@ -148,62 +205,54 @@ impl FrameState {
     /// X@ X@ X@  .@  .@
     ///
     /// Or in words: you can move diagonally if the destination is free AND you are not blocked on both vertical and horizontal roads.
-    fn walk_diagonal(&mut self, dx: i32, dy: i32) {
+    fn walk_diagonal(&mut self, dx: i32, dy: i32, config: &GridWorld) {
         let (px, py) = self.player;
 
         if self.walkable(px + dx, py + dy)
             && (self.walkable(px + dx, py) || self.walkable(px, py + dy))
         {
-            self.arrive(px + dx, py + dy)
+            self.arrive(px + dx, py + dy, config)
         }
     }
 
-    fn get_tile_id(&self, tx: i32, ty: i32) -> char {
-        let y = ty as usize;
-        let x = tx as usize;
-        self.grid[y]
-            .chars()
-            .nth(x)
-            .expect("get_tile_id private method got bad coordinate!")
-    }
-
-    fn set_tile_id(&mut self, tx: i32, ty: i32, new_id: char) {
-        let y = ty as usize;
-        let x = tx as usize;
-        let mut row: Vec<char> = self.grid[y].chars().collect();
-        row[x] = new_id;
-        self.grid[y] = row.into_iter().collect()
-    }
-
-    fn collect_reward(&mut self, tx: i32, ty: i32) -> i32 {
-        let tile_id = self.get_tile_id(tx, ty);
-        let reward = self.tiles[&tile_id].reward;
-        if reward != 0 {
-            let transition = self.reward_becomes;
-            self.set_tile_id(tx, ty, transition);
-        }
-        reward
-    }
     /// Move to a new location.
-    fn arrive(&mut self, x: i32, y: i32) {
+    fn arrive(&mut self, x: i32, y: i32, config: &GridWorld) {
         self.player = (x, y);
 
-        // check terminal before "collect_reward" which removes the reward from the map.
-        let terminal = self.terminal(x, y);
-        if terminal == 0.0 {
-            self.collect_reward(x, y);
-        } else if terminal == 1.0 {
-            self.game_over = true;
-            self.collect_reward(x, y);
-        } else {
-            let p: f64 = self.rand.gen_range(0.0, 1.0);
-            println!("p={}, terminal={}", p, terminal);
-            if p < terminal {
+        // There should be a tile here for you to arrive!
+        match self.get_tile(x, y).unwrap().clone() {
+            TileBehavior::Wall | TileBehavior::Floor | TileBehavior::Door { .. } => {}
+            TileBehavior::LoseGame => {
+                self.score += config.lose_reward;
                 self.game_over = true;
-                self.collect_reward(x, y);
+            }
+            TileBehavior::WinGame => {
+                self.score += config.win_reward;
+                self.game_over = true;
+            }
+            TileBehavior::MaybeLoseGame(terminal, _) => {
+                let p: f64 = self.rand.gen_range(0.0, 1.0);
+                println!("p={}, terminal={}", p, terminal);
+                if p < terminal {
+                    self.game_over = true;
+                    self.score += config.lose_reward;
+                }
+            }
+            TileBehavior::ReceiveReward(amt) => {
+                self.score += amt;
+                *self.get_tile_mut(x, y).unwrap() = TileBehavior::Floor;
+            }
+            TileBehavior::DoorSwitch { state, .. } => {
+                let orig_state = state;
+                if let TileBehavior::DoorSwitch { ref mut state, .. } =
+                    self.get_tile_mut(x, y).unwrap()
+                {
+                    *state = !orig_state;
+                }
             }
         }
     }
+
     fn check_enemy_death(&mut self) {
         if self.game_over {
             return;
@@ -325,20 +374,20 @@ impl toybox_core::State for State {
         if self.config.diagonal_support {
             if let Some(ddir) = DiagonalDir::from_input(buttons) {
                 match ddir {
-                    DiagonalDir::N => self.frame.walk_once(0, -1),
-                    DiagonalDir::S => self.frame.walk_once(0, 1),
-                    DiagonalDir::E => self.frame.walk_once(1, 0),
-                    DiagonalDir::W => self.frame.walk_once(-1, 0),
-                    DiagonalDir::NW => self.frame.walk_diagonal(-1, -1),
-                    DiagonalDir::NE => self.frame.walk_diagonal(1, -1),
-                    DiagonalDir::SW => self.frame.walk_diagonal(-1, 1),
-                    DiagonalDir::SE => self.frame.walk_diagonal(1, 1),
+                    DiagonalDir::N => self.frame.walk_once(0, -1, &self.config),
+                    DiagonalDir::S => self.frame.walk_once(0, 1, &self.config),
+                    DiagonalDir::E => self.frame.walk_once(1, 0, &self.config),
+                    DiagonalDir::W => self.frame.walk_once(-1, 0, &self.config),
+                    DiagonalDir::NW => self.frame.walk_diagonal(-1, -1, &self.config),
+                    DiagonalDir::NE => self.frame.walk_diagonal(1, -1, &self.config),
+                    DiagonalDir::SW => self.frame.walk_diagonal(-1, 1, &self.config),
+                    DiagonalDir::SE => self.frame.walk_diagonal(1, 1, &self.config),
                 }
             }
         } else {
             if let Some(dir) = Direction::from_input(buttons) {
                 let (dx, dy) = dir.delta();
-                self.frame.walk_once(dx, dy);
+                self.frame.walk_once(dx, dy, &self.config);
             }
         }
         // Check enemy<->player collision again!
@@ -355,7 +404,13 @@ impl toybox_core::State for State {
         for y in 0..height {
             for x in 0..width {
                 let tile = self.frame.get_tile(x, y).expect("Tile type should exist!");
-                output.push(Drawable::rect(tile.color, x as i32, y as i32, 1, 1));
+                output.push(Drawable::rect(
+                    self.frame.tile_color(tile, &self.config),
+                    x as i32,
+                    y as i32,
+                    1,
+                    1,
+                ));
             }
         }
 

@@ -3,33 +3,46 @@ use std::collections::HashMap;
 use toybox_core::graphics::Color;
 use toybox_core::random;
 
-// GridWorld enemies, to be simple, have a list of positions that they cycle through in order.
-// They cause death.
+/// GridWorld enemies, to be simple, have a list of positions that they cycle through in order.
+/// They cause death.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Enemy {
-    // List of (x,y) positions for this enemy.
+    /// List of (x,y) positions for this enemy.
     pub positions: Vec<(i32, i32)>,
-    // Probably set this to zero by default. Which position should it start in?
+    /// Probably set this to zero by default. Which position should it start in?
     pub current_time: u32,
-    // What color should it appear as?
+    /// What color should it appear as?
     pub color: Color,
 }
 
-/// The tile behaviors in a GridWorld are configurable.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TileConfig {
-    /// What reward (if any) is given or taken by passing this tile?
-    /// Death is defined as negative reward, winning is positive reward.
-    pub reward: i32,
-    /// Is this tile walkable by the agent?
-    pub walkable: bool,
-    /// The probability this tile acts as a terminal/goal tile. 
-    /// p=0.0 -> never, false
-    /// p=1.0 -> always, true
-    /// p=0.5 to support "Patrol Gridworld"
-    pub terminal: f64,
-    /// What color should this tile be?
-    pub color: Color,
+pub enum TileBehavior {
+    /// A character here is the tile-identifier of the walkability to toggle.
+    /// The first color
+    DoorSwitch {
+        switch_id: u32,
+        state: bool,
+        on_color: Color,
+        off_color: Color,
+    },
+    /// Door: a maybe-walkable tile, connected to a switch.
+    Door {
+        switch_id: u32,
+        open: Color,
+        closed: Color,
+    },
+    /// Receive One-Time Reward: becomes floor after.
+    ReceiveReward(i32),
+    /// Lose by stepping here.
+    LoseGame,
+    /// Win by stepping here.
+    WinGame,
+    /// Lose game with some probability.
+    MaybeLoseGame(f64, Color),
+    /// Not-walkable.
+    Wall,
+    /// Walkable tile.
+    Floor,
 }
 
 /// The initial game state is configurable.
@@ -38,11 +51,7 @@ pub struct GridWorld {
     /// How is the board laid out? List of rows.
     pub grid: Vec<String>,
     /// How are tiles defined?
-    pub tiles: HashMap<char, TileConfig>,
-    /// When you take a reward, it must change tile type.
-    pub reward_becomes: char,
-    /// What color is the player?
-    pub player_color: Color,
+    pub tiles: HashMap<char, TileBehavior>,
     /// Where does the player start?
     pub player_start: (i32, i32),
     /// Does this world support diagonal movement?
@@ -50,7 +59,24 @@ pub struct GridWorld {
     /// Does this world have enemies?
     pub enemies: Vec<Enemy>,
     /// Random number generator used to seed new games.
-    pub rand: random::Gen
+    pub rand: random::Gen,
+    /// Reward Difference on Lose:
+    pub lose_reward: i32,
+    /// Reward Difference on Win:
+    pub win_reward: i32,
+
+    /// What color is the player?
+    pub player_color: Color,
+    /// Win tile color:
+    pub win_color: Color,
+    /// Lose tile color:
+    pub lose_color: Color,
+    /// Wall tile color:
+    pub wall_color: Color,
+    /// Floor tile color:
+    pub floor_color: Color,
+    /// One-time reward color:
+    pub reward_color: Color,
 }
 
 /// The game state is composed of a configuration and the current frame.
@@ -71,18 +97,14 @@ pub struct FrameState {
     pub score: i32,
     /// How many steps has this simulation run for?
     pub step: usize,
-    /// When you take a reward, it must change tile type.
-    pub reward_becomes: char,
-    /// How are tiles defined?
-    pub tiles: HashMap<char, TileConfig>,
     /// How is the board laid out? List of rows.
-    pub grid: Vec<String>,
+    pub grid: Vec<Vec<TileBehavior>>,
     /// The player position.
     pub player: (i32, i32),
     /// Does this world have enemies? Where have they moved to?
     pub enemies: Vec<Enemy>,
     /// Random number generator used to determine probabilistic tile terminals.
-    pub rand: random::Gen
+    pub rand: random::Gen,
 }
 
 /// Enumeration that supports diagonal movement.
