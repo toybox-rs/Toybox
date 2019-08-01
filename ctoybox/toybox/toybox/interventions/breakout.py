@@ -159,7 +159,6 @@ class BreakoutIntervention(Intervention):
         self.state['paddle']['position']['y'] = pos['y'] 
         self.state['paddle']['position']['x'] = pos['x']
 
-    
 # Intervention tests
     # all the constants!
     # vanishing ball: after hitting the ball, make the ball disappear 
