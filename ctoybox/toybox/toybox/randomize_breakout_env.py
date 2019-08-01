@@ -1,12 +1,11 @@
 import random
 import math
 
-import toybox
-#from toybox import Toybox
-from toybox.toybox import Toybox
-#from toybox.envs.atari.base import ToyboxBaseEnv
-#from toybox.envs.atari.amidar import AmidarEnv
-#from toybox.envs.atari.breakout import BreakoutEnv
+from abc import ABC
+from toybox import Toybox
+from interventions import *
+#import toybox
+#from toybox.toybox import Toybox
 
 
 def get_starting_state_json(): 
@@ -14,24 +13,37 @@ def get_starting_state_json():
 	tb = Toybox('breakout')
 
 	# export JSON
-	breakout_json = tb.to_json()
+	breakout_json = tb.to_state_json()
 	return breakout_json, tb
 
 
-def select_ball_state(tb, state_json): 
+def select_ball_state(tb, state_json, extreme=False): 
 	# get window size
-	game_size = (tb.get_height(), tb.get_width())
+	# currently hard-coded to default
+	game_size = (123, 216)
+	if extreme: 
+		# all Breakout board available
+		# set x, y location
+		state_json["balls"][0]["position"]["x"] = int(random.random() * game_size[1]) + 12
+		state_json["balls"][0]["position"]["y"] = int(random.random() * game_size[0]) + 25
+	else: 
+		# only space under the bricks available
+		state_json["balls"][0]["position"]["x"] = int(random.random() * game_size[1]) + 12
+		state_json["balls"][0]["position"]["y"] = int(random.random() * 40) + 80
+
 
 	# set x, y location
-	state_json["ball"]["position"]["x"] = int(random.random() * game_size[1])
-	state_json["ball"]["position"]["y"] = int(random.random() * game_size[0])
+	print(state_json["balls"][0]["position"])
+
+	# use default velocity, acceleration settings
+	#speed = tb.to_config_json()["ball_speed_slow"]
+	speed = 2.0
+	# select random ball angle
+	angle = math.radians(random.random() * 360)
 
 	# set angle
-	direction = random.random() * 360
-	# convert to radians, polar
-
-	# set velocity
-	# set accelleration
+	state_json["balls"][0]["velocity"]["y"] = speed * math.sin(math.radians(angle))
+	state_json["balls"][0]["velocity"]["x"] = speed * math.cos(math.radians(angle))
 
 	return state_json
 
@@ -54,17 +66,63 @@ def set_default_concepts(tb, state_json):
 
 
 def set_bricks(tb, state_json, p = 0.5): 
-	# random configuration of bricks
-	for brick in range(len(state_json["bricks"])):
-		state_json["bricks"][brick]["alive"] = True if random.random() > p else False
+	# sample from partial ordering of bricks 
+	
+	# this function assumes state_json represents a state with a full set of bricks
+	total_bricks = len(state_json["bricks"])
+
+	# hard-coding defaults for now
+	num_cols = 18
+	num_rows = 6
+
+	# choose a number of bricks to remove
+	num_bricks_to_remove = random.random()*total_bricks*.5
+	print(num_bricks_to_remove)
+
+	# store IDs for reachable bricks - those in bottom row to start
+	reachable_bricks = set([num_rows*i + num_rows-1 for i in range(num_cols)])
+
+	while num_bricks_to_remove > 0 and not len(reachable_bricks) == 0:
+		b = random.sample(reachable_bricks, 1)[0]
+		reachable_bricks.remove(b)
+		if state_json['bricks'][b]['alive']:
+			# remove brick
+			state_json['bricks'][b]['alive'] = False
+			# decrement count to remove
+			num_bricks_to_remove -= 1
+
+			# update reachable bricks 
+			# make sure to exclude cases where we removed a diagonal brick 
+			# and subsequent removals are not reachable
+			b_row = state_json["bricks"][b]["row"]
+			b_col = state_json["bricks"][b]["col"]
+			open_below = b_row == num_rows-1
+			if not open_below: 
+				below_brick = b + 1
+				open_below = not state_json["bricks"][below_brick]["alive"]
+				
+			if open_below:
+				for i in range(-1,1): 
+					for j in range(-1,2): 
+						if not (i == j and i == 0): 
+							row = b_row + i 
+							col = b_col + j 
+
+							if row >= 0 and row < num_rows and col >= 0 and col < num_cols: 
+								b_id = num_rows*col + row
+								reachable_bricks.add(b_id)
+
 	return state_json
 
 
-def select_paddle_state(tb, state_json): 
+def select_paddle_state(tb, state_json, extreme): 
 	# paddle position
-
-	# paddle size
-
+	if extreme: 
+		# sample from full x axis
+		state_json["paddle"]["position"]["x"] = 120 + int(random.random()*100 - 5) 
+	else:
+		# add +- 5 pixels
+		state_json["paddle"]["position"]["x"] = 120 + int(random.random()*10 - 5) 
 	return state_json 
 
 
@@ -78,20 +136,23 @@ def set_score(tb, state_json):
 	return state_json
 
 
-def generate_state(): 
+def generate_state(extreme=False): 
 	breakout_json, tb = get_starting_state_json()
-	breakout_json = select_ball_state(tb, breakout_json)
+
+	breakout_json = select_ball_state(tb, breakout_json, extreme)
 	breakout_json = select_num_lives(tb, breakout_json)
-	breakout_json = set_bricks(tb, breakout_json)
+	breakout_json = set_bricks(tb, breakout_json, 0.5)
 	breakout_json = set_score(tb, breakout_json)
-	breakout_json = select_paddle_state(tb, breakout_json)
+	breakout_json = select_paddle_state(tb, breakout_json, extreme)
 
 	return breakout_json, tb
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
+	print("random breakout state") 
+
 	breakout_json, tb = generate_state()
-	tb.write_json(breakout_json)
+	tb.write_state_json(breakout_json)
 	tb.save_frame_image("test_random_gen_breakout.png")
 
 
