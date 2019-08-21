@@ -1,4 +1,3 @@
 gym
-tensorflow
 scipy
 opencv-python

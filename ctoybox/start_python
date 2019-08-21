@@ -1,7 +1,8 @@
 #!/bin/bash
 # RUN THIS command FROM CTOYBOX.
-pip3 install -q -r REQUIREMENTS.txt --user
-export PYTHONPATH=${PWD}/baselines:${PWD}/toybox:${PYTHONPATH}
+#pip3 install -q -r REQUIREMENTS.txt --user
+source venv/bin/activate
+export PYTHONPATH=${PWD}/baselines:${PWD}/toybox:${PYTHONPATH}:${PWD}/rl_algorithms
 export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/../target/release
 export LIBCTOYBOX=${PWD}/..
 echo "PYTHONPATH $PYTHONPATH"
