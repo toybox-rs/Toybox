@@ -8,7 +8,7 @@ serde = "*"
 serde_json = "*"
 serde_derive = "*"
 lazy_static = "*"
-rand = "*"
+rand = "0.6.3"
 ordered-float = "1.0.1"
 
 [dependencies.toybox-core]
