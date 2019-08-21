@@ -7,7 +7,7 @@ cargo test
 cargo build --release
 
 if [ ! -e toybox-regress-models.zip ]; then
-  wget https://jjfoley.me/static/toybox-regress-models-16-april-2019.zip -O toybox-regress-models.zip
+  wget https://static.jjfoley.me/toybox-regress-models-16-april-2019.zip -O toybox-regress-models.zip
   unzip toybox-regress-models.zip
 fi
 
