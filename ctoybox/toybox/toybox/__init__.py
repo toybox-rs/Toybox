@@ -2,6 +2,7 @@ import toybox.toybox as toybox
 import toybox.envs as envs
 import toybox.interventions as interventions
 import toybox.sample_tests as sample_tests
+import toybox.testing as testing
 
 try: 
     from gym.envs.registration import register

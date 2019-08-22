@@ -18,7 +18,7 @@ def build_native(spec):
 setup(
     name='toybox',
     version='0.1.0',
-    packages=['toybox', 'toybox.envs', 'toybox.envs.atari', 'toybox.interventions', 'toybox.sample_tests'],
+    packages=['toybox', 'toybox.envs', 'toybox.envs.atari', 'toybox.interventions', 'toybox.sample_tests', 'toybox.testing'],
     zip_safe=False,
     platforms='any',
     setup_requires=['milksnake'],
