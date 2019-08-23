@@ -86,12 +86,18 @@ class AmidarIntervention(Intervention):
 
         return total_unpainted
 
+
+    def num_tiles_painted(self):
+        return len([tile for tile in self.state['board']['tiles'] if tile == 'Painted'])
         
     def player_tile(self):
         return self.state['player']['position']
 
     def num_enemies(self):
         return len(self.state['enemies'])
+
+    def get_level(self):
+        return self.config['level']
 
     def jumps_remaining(self):
         return self.state['jumps']
@@ -116,6 +122,7 @@ class AmidarIntervention(Intervention):
 
 
     def set_tile_paint(self, tid, paint=True):
+        self.dirty_state = True
         tiles = self.state['board']['tiles']
         assert self.check_is_tile(tid)
 
@@ -123,7 +130,8 @@ class AmidarIntervention(Intervention):
         self.state['board']['tiles'][tid['ty']][tid['tx']] = label
 
 
-    # def set_box(self, bid, paint=True, include_tiles=True, allow_chase=True): 
+    # def set_box(self, bid, paint=True, include_tiles=True, allow_chase=True):
+    #     self.dirty_state = True
     #     box = self.state['board']['boxes'][bid]
     #     box['painted'] = paint
 
@@ -176,11 +184,13 @@ class AmidarIntervention(Intervention):
 
 
     # def chase_react(self): 
+    #     self.dirty_state = True
     #     if self.check_chase_condition(): 
     #         self.set_mode('chase')
 
 
     # def set_player_tile(self, pos):
+    #     self.dirty_state = True
     #     # check the input formatting
     #     assert Intervention.check_position(self, pos, ['x','y'])
 
@@ -195,6 +205,7 @@ class AmidarIntervention(Intervention):
 
 
     # def set_enemy_tile(self, eid, pos):
+    #     self.dirty_state = True
     #     assert Intervention.check_position(self, pos, ['x', 'y'])
 
     #     self.state['enemies'][eid]['position']['x'] = pos['x']
@@ -202,6 +213,7 @@ class AmidarIntervention(Intervention):
 
 
     # def set_enemy_tiles(self, eids, pos_list):
+    #     self.dirty_state = True
     #     assert len(eids) == len(pos_list)
 
     #     for i, eid in enumerate(eids): 
@@ -210,7 +222,7 @@ class AmidarIntervention(Intervention):
 
     def set_mode(self, mode_id='regular', set_time=None): 
         assert mode_id in ['jump', 'chase', 'regular']
-
+        self.dirty_state = True
         if mode_id == 'jump': 
             self.state['jump_timer'] = self.config['jump_time'] if set_time is None else set_time
         elif mode_id == 'chase': 
@@ -229,6 +241,7 @@ class AmidarIntervention(Intervention):
 
 
     def set_enemy_protocol(self, eid, protocol='EnemyAmidarMvmt', **kwargs):
+        self.dirty_state = True
         assert 'ai' in self.state['enemies'][eid].keys()
 
         new_protocol = {}
@@ -317,6 +330,7 @@ class AmidarIntervention(Intervention):
 
     
     def set_enemy_protocols(self, eids, protocols=None):
+        self.dirty_state = True
         if protocols is None: 
             protocols = ['EnemyAmidarMvmt']*len(eids) 
         assert len(eids) == len(protocols)
@@ -326,6 +340,7 @@ class AmidarIntervention(Intervention):
 
 
     def add_enemy(self, pos, ai='EnemyLookupAI', **kwargs): 
+        self.dirty_state = True
         new_e = {}
 
         # append kwargs, fill in with defaults
@@ -350,17 +365,20 @@ class AmidarIntervention(Intervention):
 
 
     def remove_enemy(self, eid):
+        self.dirty_state = True
         assert eid < self.num_enemies() and eid >=0 
         enemies = [self.state['enemies'][i] for i in range(len(self.state['enemies'])) if i != eid]
         self.state['enemies'] = enemies
 
 
     def set_n_jumps(self, n):  
+        self.dirty_state = True      
         assert n >= 0
         self.state['jumps'] = n
 
 
     def set_n_lives(self, n):
+        self.dirty_state = True
         assert n > 0 
         self.state['lives'] = n
 

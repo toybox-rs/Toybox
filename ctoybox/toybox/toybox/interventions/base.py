@@ -14,6 +14,7 @@ class Intervention(ABC):
     self.state = None
     self.config = None
     self.dirty_config = False
+    self.dirty_state = False
     self.game_name = game_name
 
     assert tb.game_name == game_name
@@ -29,10 +30,12 @@ class Intervention(ABC):
   def __exit__(self, exec_type, exc_value, traceback):
     # commit the JSON
 
-    self.toybox.write_config_json(self.config)
-    if self.dirty_config: 
+    if self.dirty_config:
+      self.toybox.write_config_json(self.config)
+      print("new_game!")
       self.toybox.new_game()
-    else: 
+    elif self.dirty_state:
+      print("write_state_json!")
       self.toybox.write_state_json(self.state)
 
     self.state = None

@@ -6,6 +6,7 @@ import gym
 
 import multiprocessing
 import sys
+import time
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import make_vec_env
@@ -77,43 +78,41 @@ def setUpToybox(testclass, env_id, seed):
   
     testclass.env = env
     testclass.turtle = _get_turtle(env)
+    testclass.toybox = testclass.turtle.toybox
 
 def tearDownToybox(testclass):
     testclass.env.close()
 
-def runTest(testclass):
+def stepEnv(env, action):
+  obs, _, done, info = env.step(action)
+  return obs, done[0], info
+
+def runTest(test, model):
     dat = [('trained_env', 'trial', 'step', 'mvmt', 'score')]
     def add_dat(env=None, trial=None, step=None, mvmt=None, score=None):
         assert (env and trial and step and mvmt and score)
         dat.append((env, trial, step, mvmt, score))
 
-    for trial in range(testclass.trials):
+    trials_data = []
+    for trial in range(test.trials):
       # for each trial, record the score at mod 10 steps 
-      n_steps = 0
-      num_lives = testclass.turtle.ale.lives()
-      done = False
-      while n_steps < testclass.timeout and not done:
-        action = testclass.takeAction()
-        num_lives = testclass.turtle.ale.lives()                
-        obs, _, done, info = testclass.env.step(action)
-        testclass.obs = obs
-        testclass.env.render()
-        import time
-        time.sleep(1/30.0)
-        done = done.all() and num_lives == 1
+      test.tick = 0
+      test.done = False
+      while not test.isDone():
+        if test.shouldIntervene():
+          test.intervene()
+        action = test.takeAction(model)
+        obs, done, info = test.stepEnv(action)
+        test.obs = obs
+        test.env.render()
+        #time.sleep(1/60.0)
         score = info[0]['score']
-        if n_steps % testclass.record_period == 0:
-          # d = (extra_args['load_path'], trial, n_steps, prot, score)
-          # print("{}\t{}\t{}\t{}\t{}".format(*d))
-          # dat.append(d)
-          n_steps += 1
-          #('trained_env', 'trial', 'step', 'mvmt', 'score')
-          testclass.obs = testclass.env.reset()
-          if testclass.reset_config:
-            testclass.turtle.toybox.write_config_json(testclass.reset_config)
-
-    with open('amidar_no_enemies_{}.tsv'.format(extra_args['load_path']), 'w') as fp:
-        for row in dat:
-            fp.write("{}\t{}\t{}\t{}\t{}\n".format(*row))
-
-    
+        test.tick += 1
+        if (test.tick % test.record_period) == 0:
+          print("{}\t{}\t{}".format(trial, test.tick, test.timeout, score))
+      test.getToybox().new_game()
+      test.obs = test.resetEnv() # note that EpisodicLifeEnv fucks you over here; toybox doesn't see the reset!
+      if test.reset_config:
+        test.toybox.write_config_json(test.reset_config)
+      trials_data.append(test.onTrialEnd())
+    test.onTestEnd(trials_data)    

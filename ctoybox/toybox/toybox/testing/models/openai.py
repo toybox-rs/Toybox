@@ -19,12 +19,12 @@ def _get_learn_function_defaults(alg, env_type):
     return kwargs
 
 
-def setUpPPO2(cls, env, seed, model_path):
+def getPPO2(env, seed, model_path):
   learn = _get_learn_function('ppo2')
   alg_kwargs = _get_learn_function_defaults('ppo2', 'atari')
   alg_kwargs['network'] = 'cnn'
   alg_kwargs['load_path'] = model_path
-  cls.model = learn(env=env, seed=seed, total_timesteps=0, **alg_kwargs)
+  return learn(env=env, seed=seed, total_timesteps=0, **alg_kwargs)
 
-def takeAction(self):
-  return self.model.step(self.obs)[0]
+def takeAction(self, model):
+  return model.step(self.obs)[0]  
