@@ -83,21 +83,18 @@ def setUpToybox(testclass, env_id, seed):
 def tearDownToybox(testclass):
     testclass.env.close()
 
-def stepEnv(env, action):
-  obs, _, done, info = env.step(action)
+def stepEnv(self, action):
+  obs, _, done, info = self.env.step(action)
+  self.done = done if type(done) == 'bool' else done.any()
   return obs, done[0], info
 
 def runTest(test, model):
-    dat = [('trained_env', 'trial', 'step', 'mvmt', 'score')]
-    def add_dat(env=None, trial=None, step=None, mvmt=None, score=None):
-        assert (env and trial and step and mvmt and score)
-        dat.append((env, trial, step, mvmt, score))
-
     trials_data = []
     for trial in range(test.trials):
       # for each trial, record the score at mod 10 steps 
       test.tick = 0
       test.done = False
+      trial_data = []
       while not test.isDone():
         if test.shouldIntervene():
           test.intervene()
@@ -105,14 +102,19 @@ def runTest(test, model):
         obs, done, info = test.stepEnv(action)
         test.obs = obs
         test.env.render()
-        #time.sleep(1/60.0)
-        score = info[0]['score']
+        time.sleep(1/30.0)
+        metric = test.getMetric(info)
+        # score = info[0]['score']
         test.tick += 1
-        if (test.tick % test.record_period) == 0:
-          print("{}\t{}\t{}".format(trial, test.tick, test.timeout, score))
-      test.getToybox().new_game()
-      test.obs = test.resetEnv() # note that EpisodicLifeEnv fucks you over here; toybox doesn't see the reset!
-      if test.reset_config:
-        test.toybox.write_config_json(test.reset_config)
-      trials_data.append(test.onTrialEnd())
+        if (test.tick % test.recordInterval) == 0:
+          datum = (trial, test.tick, test.timeout, metric)
+          print(datum)
+          trial_data.append(datum)
+      print('do we ever get here?')
+      time.sleep(1)
+      if test.toReset:
+        test.resetConfig(test.toReset)
+        #test.toybox.write_config_json(test.reset_config)
+      trials_data.append(test.onTrialEnd(trial_data))
+      test.obs = test.resetEnv() #  EpisodicLifeEnv problems
     test.onTestEnd(trials_data)    

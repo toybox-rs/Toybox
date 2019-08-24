@@ -88,16 +88,27 @@ class AmidarIntervention(Intervention):
 
 
     def num_tiles_painted(self):
-        return len([tile for tile in self.state['board']['tiles'] if tile == 'Painted'])
+        return sum([sum([int(tile == 'Painted') for tile in row]) for row in self.state['board']['tiles']])
+
         
     def player_tile(self):
         return self.state['player']['position']
+
+    def get_enemies(self):
+        return self.state['enemies']
+    
+    def get_enemy_ids(self):
+        print('WARNING: need actual ids in the rust')
+        return range(self.num_enemies())
 
     def num_enemies(self):
         return len(self.state['enemies'])
 
     def get_level(self):
         return self.config['level']
+
+    def get_lives(self):
+        return self.state['lives']
 
     def jumps_remaining(self):
         return self.state['jumps']

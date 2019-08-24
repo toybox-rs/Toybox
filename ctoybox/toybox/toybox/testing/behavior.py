@@ -34,8 +34,8 @@ class BehavioralFixture(unittest.TestCase):
     self.obs = self.env.reset()
     self.trials = trials
     self.timeout = timeout
-    self.record_period = record_period
-    self.reset_config = None
+    self.recordInterval = record_period
+    self.toReset = None
     self.model = None
   
   def hasTimedOut(self):
