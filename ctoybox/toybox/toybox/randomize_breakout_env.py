@@ -1,16 +1,14 @@
 import random
 import math
 
+import toybox
 from abc import ABC
-from toybox import Toybox
-from interventions import *
-#import toybox
-#from toybox.toybox import Toybox
+from toybox.interventions import *
 
 
 def get_starting_state_json(): 
 	# start a toybox instance 
-	tb = Toybox('breakout')
+	tb = toybox.toybox.Toybox('breakout')
 
 	# export JSON
 	breakout_json = tb.to_state_json()

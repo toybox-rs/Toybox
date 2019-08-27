@@ -4,7 +4,7 @@ import numpy
 
 import toybox
 #from toybox import Toybox
-from toybox.toybox import Toybox
+from toybox import Toybox
 from toybox.toybox.interventions import AmidarIntervention 
 #from toybox.envs.atari.base import ToyboxBaseEnv
 #from toybox.envs.atari.amidar import AmidarEnv
@@ -104,7 +104,7 @@ def select_enemy_states(tb, state_json, extreme):
 	for enemy in range(AmidarIntervention.num_enemies(tb)):
 		if extreme: 
 			# select random tile for each enemy from lookup protocol positions; use AmidarMvmt protocol
-			
+
 		else: 
 			# select random tile; keep configuration of enemies locked
 
