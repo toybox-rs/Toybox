@@ -21,7 +21,7 @@ if [ ! -e toybox-regress-models.zip ]; then
 fi
 
 # install toybox library package locally
-cd toybox_cffi && pyo3-pack develop -b cffi --release && cd -
+cd toybox_cffi && pyo3-pack build -b cffi --release && cd - && pip install target/wheels/toybox_cffi*.wheel
 
 # run core Toybox API Tests: (includes interventions)
 cd toybox_api_py && python3 setup.py install && ./test.sh && cd -
