@@ -1,6 +1,10 @@
 openai_NIPS/*
 __pycache__
 target
+build
+dist
+*.egg-info
+*.venv
 *.png
 images
 .env
@@ -30,5 +34,5 @@ models/*
 toybox-regress-models*.zip
 ctoybox/*.model
 *~
-ctoybox/human_play_*.json
+human_play_*.json
 /check-venv

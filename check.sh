@@ -5,8 +5,10 @@ source check-venv/bin/activate
 
 set -eu
 
-pip install -r ctoybox/REQUIREMENTS.txt
+# scripts should do this later for us but frontload on travis...
 pip install -r toybox_cffi/requirements.txt
+pip install -r toybox_api_py/requirements.txt
+pip install -r toybox_envs_py/requirements.txt
 pip install tensorflow
 
 cargo fmt --all -- --check
@@ -18,6 +20,15 @@ if [ ! -e toybox-regress-models.zip ]; then
   unzip toybox-regress-models.zip
 fi
 
+# install toybox library package locally
+cd toybox_cffi && pyo3-pack -b cffi develop --release && cd -
+
+# run core Toybox API Tests: (includes interventions)
+cd toybox_api_py && python3 setup.py install && ./test.sh && cd -
+
+# run Toybox Gym API Tests:
+cd toybox_envs_py && python3 setup.py install && ./test.sh && cd -
+
 # required for gym env registration
-cd ctoybox && (../scripts/utils/unit_tests.sh && ../scripts/utils/regress.sh)
+cd ctoybox && ../scripts/utils/regress.sh
 

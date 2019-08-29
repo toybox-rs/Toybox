@@ -1,4 +1,6 @@
 import toybox
+# register toybox environments!
+import toybox_envs
 
 import time
 import sys

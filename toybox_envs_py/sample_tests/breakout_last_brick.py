@@ -1,7 +1,13 @@
 import toybox_envs
+from toybox_envs.atari.base import ToyboxBaseEnv
+from toybox_envs.atari.amidar import AmidarEnv
+from toybox_envs.atari.breakout import BreakoutEnv
 
 import time
 import sys
+import csv
+import matplotlib as mpl
+import matplotlib.cm as cm
 import multiprocessing
 import os.path as osp
 import gym
@@ -10,7 +16,6 @@ import tensorflow as tf
 import numpy as np
 from scipy.stats import sem
 from statistics import stdev
-from PIL import Image
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -21,7 +26,37 @@ from importlib import import_module
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common import atari_wrappers, retro_wrappers
 
-from baselines.common.atari_wrappers import SampleEnvs
+
+# Hot patch atari env so we can get the score
+# This is exactly the same, except we put the result of act into the info
+from gym.envs.atari import AtariEnv
+def hotpatch_step(self, a):
+    reward = 0.0
+    action = self._action_set[a]
+    # Since reward appears to be incremental, dynamically add an instance variable to track.
+    # So there's a __getattribute__ function, but no __hasattribute__ function? Bold, Python.
+    try:
+        self.score = self.score
+    except AttributeError:
+        self.score = 0.0
+
+    if isinstance(self.frameskip, int):
+        num_steps = self.frameskip
+    else:
+        num_steps = self.np_random.randint(self.frameskip[0], self.frameskip[1])
+    
+    for _ in range(num_steps):
+        reward += self.ale.act(action)
+    ob = self._get_obs()
+    done = self.ale.game_over()
+    # Update score
+
+    score = self.score
+    self.score = 0.0 if done else self.score + reward
+    # Return score as part of info
+    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
+
+AtariEnv.step = hotpatch_step
 
 try:
     from mpi4py import MPI
@@ -67,14 +102,10 @@ def train(args, extra_args):
     seed = args.seed
 
     learn = get_learn_function(args.alg)
-    
     alg_kwargs = get_learn_function_defaults(args.alg, env_type)
     alg_kwargs.update(extra_args)
-    if 'weights' in alg_kwargs:
-        del alg_kwargs['weights']
 
-    env = build_env(args, extra_args)
-
+    env = build_env(args)
 
     if args.network:
         alg_kwargs['network'] = args.network
@@ -94,7 +125,7 @@ def train(args, extra_args):
     return model, env
 
 
-def build_env(args, extra_args):
+def build_env(args):
     ncpu = multiprocessing.cpu_count()
     if sys.platform == 'darwin': ncpu //= 2
     nenv = args.num_env or ncpu
@@ -108,12 +139,12 @@ def build_env(args, extra_args):
         if alg == 'acer':
             env = make_vec_env(env_id, env_type, nenv, seed)
         elif alg == 'deepq':
-            env = atari_wrappers.make_atari(env_id, None)
+            env = atari_wrappers.make_atari(env_id)
             env.seed(seed)
             env = bench.Monitor(env, logger.get_dir())
-            env = atari_wrappers.wrap_deepmind(env, frame_stack=True)
+            env = atari_wrappers.wrap_deepmind(env, frame_stack=True, scale=True)
         elif alg == 'trpo_mpi':
-            env = atari_wrappers.make_atari(env_id, None)
+            env = atari_wrappers.make_atari(env_id)
             env.seed(seed)
             env = bench.Monitor(env, logger.get_dir() and osp.join(logger.get_dir(), str(rank)))
             env = atari_wrappers.wrap_deepmind(env)
@@ -121,8 +152,8 @@ def build_env(args, extra_args):
             env.seed(seed)
         else:
             frame_stack_size = 4
-            weights = extra_args['weights'] if 'weights' in extra_args else None
-            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=weights), frame_stack_size)
+            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed), frame_stack_size)
+
     return env
 
 
@@ -166,7 +197,19 @@ def get_learn_function_defaults(alg, env_type):
         kwargs = {}
     return kwargs
 
+# from https://stackoverflow.com/questions/40948069/color-range-python
+def convert_to_rgb(minimum, maximum, value):
+    norm = mpl.colors.Normalize(vmin=minimum, vmax=maximum)
+    cmap = cm.hot
 
+    m = cm.ScalarMappable(norm=norm, cmap=cmap)
+    print(m.to_rgba(value))
+
+    norm = (value - minimum)/(maximum - minimum)
+    (r, g, b) = colorsys.hsv_to_rgb(norm, 1.0, 1.0)
+    R, G, B = int(255 * r), int(255 * g), int(255 * b)
+
+    return R, G, B
 
 def parse_cmdline_kwargs(args):
     '''
@@ -185,7 +228,6 @@ def parse_cmdline_kwargs(args):
 
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
-
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -200,54 +242,90 @@ def main():
     model, env = train(args, extra_args)
     env.close()
 
-    if args.save_path is not None and rank == 0:
-        save_path = osp.expanduser(args.save_path)
-        model.save(save_path)
 
-    if args.play:
-        logger.log("Running trained model")
-        env = build_env(args, extra_args)
-        obs = env.reset()
-        turtle = atari_wrappers.get_turtle(env)
-        scores = []
-        session_scores = set()
+    logger.log("Running trained model")
+    env = build_env(args)
+    obs = env.reset()
+    turtle = atari_wrappers.get_turtle(env)
+    if not isinstance(turtle, ToyboxBaseEnv): 
+            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
+
+    # get total number of bricks
+    n_bricks = turtle.toybox.rstate.breakout_bricks_remaining()
+
+    n_trials = 30
+    #brick_info = [["brick_id", "avg_steps", "median_steps", "std_dev_steps", "n_successes"]]
+    brick_info = []
+
+    # get initial state
+    start_state = turtle.toybox.to_json()
+
+    # for each brick, remove and run n_trials to determine number of steps until success (or death)
+    for brick in range(n_bricks): 
+        # remove all bricks
+        for b in range(n_bricks): 
+            start_state["bricks"][b]["alive"] = False
+
+        # turn on single brick
+        start_state["bricks"][brick]["alive"] = True
+        # get bricks core
+        brick_score = start_state["bricks"][brick]["points"]
+
+        # load env from manipulated state
+        turtle.toybox.write_json(start_state)
+
+        # n trials 
         num_games = 0
-        # This is a hack to get the starting screen, which throws an error in ALE for amidar
-        num_steps = -1
+        n_steps = 0
+        step_counts = []
+        successes = 0
 
-        while num_games < 100:
+        # stop game after 4 minutes of human gameplay
+        max_steps = 7200
+
+        while num_games < n_trials:
             actions = model.step(obs)[0]
+            n_steps += 1
+
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
-            #done = done and (num_lives == 1 or turtle.ale.game_over())
             #env.render()
-            #time.sleep(1.0/60.0)
-            done = num_lives == 1 and done 
-            #done = done.any() if isinstance(done, np.ndarray) else done
 
-            if isinstance(info, list) or isinstance(info, tuple):
-                session_scores.add(np.average([d['score'] for d in info]))
-            elif isinstance(info, dict):
-                session_scores.add(['score'])
-            else:
-                session_scores.add(-1)
+            bricks_remaining = info[0]['score'] < brick_score       
+            done = (num_lives == 1 and done) or not bricks_remaining
 
-            if done:
+            if done or n_steps > 7200:
                 num_games += 1
-                score = max(session_scores)
-                scores.append(score)
-                session_scores = set()
 
-                print("game %s: %s" % (num_games, score))
                 obs = env.reset()
-                session_scores = set()
+                turtle.toybox.write_json(start_state)
+
+                step_counts.append(n_steps)
+                n_steps = 0
+
+                if not bricks_remaining: 
+                    successes += 1
+
+        avg = np.average(step_counts)
+        med = np.median(step_counts)
+        print("brick %s: avg %s steps, %s median steps, %s/%s successes" % (brick, avg, med, successes, n_trials))
+        brick_info.append([brick, avg, med, stdev(step_counts), successes])
+
+        with open('last_brick.tsv', 'w') as fp:
+            for row in brick_info:
+                print('\t'.join([str(x) for x in row]), file=fp)
 
 
-        print("Avg score: %f" % np.average(scores))
-        print("Median score: %f" % np.median(scores))
-        print("Std error score: %f" % sem(scores))
-        print("Std dev score: %f" % stdev(scores))
-        env.close()
+
+   # create image from brick clearing performance in steps
+    # for brick in range(n_bricks): 
+    #     start_state["bricks"][brick]["alive"] = True
+    #     r,g,b = rgb(0,max,value)
+    #     start_state["bricks"][brick]["color"]["r"] = r
+    #     start_state["bricks"][brick]["color"]["g"] = g
+    #     start_state["bricks"][brick]["color"]["b"] = b
+
+    env.close()
 
 if __name__ == '__main__':
     main()

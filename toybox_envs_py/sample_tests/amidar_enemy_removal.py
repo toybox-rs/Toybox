@@ -1,7 +1,11 @@
 import toybox_envs
+from toybox_envs.atari import ToyboxBaseEnv
+from toybox_envs.atari import AmidarEnv
+from toybox_envs.atari import BreakoutEnv
 
 import time
 import sys
+import csv
 import multiprocessing
 import os.path as osp
 import gym
@@ -10,7 +14,6 @@ import tensorflow as tf
 import numpy as np
 from scipy.stats import sem
 from statistics import stdev
-from PIL import Image
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -21,7 +24,37 @@ from importlib import import_module
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common import atari_wrappers, retro_wrappers
 
-from baselines.common.atari_wrappers import SampleEnvs
+
+# Hot patch atari env so we can get the score
+# This is exactly the same, except we put the result of act into the info
+from gym.envs.atari import AtariEnv
+def hotpatch_step(self, a):
+    reward = 0.0
+    action = self._action_set[a]
+    # Since reward appears to be incremental, dynamically add an instance variable to track.
+    # So there's a __getattribute__ function, but no __hasattribute__ function? Bold, Python.
+    try:
+        self.score = self.score
+    except AttributeError:
+        self.score = 0.0
+
+    if isinstance(self.frameskip, int):
+        num_steps = self.frameskip
+    else:
+        num_steps = self.np_random.randint(self.frameskip[0], self.frameskip[1])
+    
+    for _ in range(num_steps):
+        reward += self.ale.act(action)
+    ob = self._get_obs()
+    done = self.ale.game_over()
+    # Update score
+
+    score = self.score
+    self.score = 0.0 if done else self.score + reward
+    # Return score as part of info
+    return ob, reward, done, {"ale.lives": self.ale.lives(), "score": score}
+
+AtariEnv.step = hotpatch_step
 
 try:
     from mpi4py import MPI
@@ -67,14 +100,10 @@ def train(args, extra_args):
     seed = args.seed
 
     learn = get_learn_function(args.alg)
-    
     alg_kwargs = get_learn_function_defaults(args.alg, env_type)
     alg_kwargs.update(extra_args)
-    if 'weights' in alg_kwargs:
-        del alg_kwargs['weights']
 
-    env = build_env(args, extra_args)
-
+    env = build_env(args)
 
     if args.network:
         alg_kwargs['network'] = args.network
@@ -94,7 +123,7 @@ def train(args, extra_args):
     return model, env
 
 
-def build_env(args, extra_args):
+def build_env(args):
     ncpu = multiprocessing.cpu_count()
     if sys.platform == 'darwin': ncpu //= 2
     nenv = args.num_env or ncpu
@@ -108,12 +137,12 @@ def build_env(args, extra_args):
         if alg == 'acer':
             env = make_vec_env(env_id, env_type, nenv, seed)
         elif alg == 'deepq':
-            env = atari_wrappers.make_atari(env_id, None)
+            env = atari_wrappers.make_atari(env_id)
             env.seed(seed)
             env = bench.Monitor(env, logger.get_dir())
-            env = atari_wrappers.wrap_deepmind(env, frame_stack=True)
+            env = atari_wrappers.wrap_deepmind(env, frame_stack=True, scale=True)
         elif alg == 'trpo_mpi':
-            env = atari_wrappers.make_atari(env_id, None)
+            env = atari_wrappers.make_atari(env_id)
             env.seed(seed)
             env = bench.Monitor(env, logger.get_dir() and osp.join(logger.get_dir(), str(rank)))
             env = atari_wrappers.wrap_deepmind(env)
@@ -121,8 +150,8 @@ def build_env(args, extra_args):
             env.seed(seed)
         else:
             frame_stack_size = 4
-            weights = extra_args['weights'] if 'weights' in extra_args else None
-            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=weights), frame_stack_size)
+            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed), frame_stack_size)
+
     return env
 
 
@@ -166,8 +195,6 @@ def get_learn_function_defaults(alg, env_type):
         kwargs = {}
     return kwargs
 
-
-
 def parse_cmdline_kwargs(args):
     '''
     convert a list of '='-spaced command-line arguments to a dictionary, evaluating python objects when possible
@@ -185,7 +212,6 @@ def parse_cmdline_kwargs(args):
 
 def main():
     # configure logger, disable logging in child MPI processes (with rank > 0)
-
     arg_parser = common_arg_parser()
     args, unknown_args = arg_parser.parse_known_args()
     extra_args = parse_cmdline_kwargs(unknown_args)
@@ -200,54 +226,65 @@ def main():
     model, env = train(args, extra_args)
     env.close()
 
-    if args.save_path is not None and rank == 0:
-        save_path = osp.expanduser(args.save_path)
-        model.save(save_path)
 
-    if args.play:
-        logger.log("Running trained model")
-        env = build_env(args, extra_args)
+    logger.log("Running trained model")
+    env = build_env(args)
+    turtle = atari_wrappers.get_turtle(env)
+    if not isinstance(turtle, ToyboxBaseEnv): 
+            raise ValueError("Not a ToyboxBaseEnv; cannot export state to JSON", turtle)
+
+    n_trials = 30
+    max_steps = 5e6
+    record_period = 10
+    # get initial config
+    config = turtle.toybox.config_to_json()
+    # turn off jumps
+
+    def run_test(config, prot):
+        print('Running %s' % prot)
         obs = env.reset()
-        turtle = atari_wrappers.get_turtle(env)
-        scores = []
-        session_scores = set()
-        num_games = 0
-        # This is a hack to get the starting screen, which throws an error in ALE for amidar
-        num_steps = -1
-
-        while num_games < 100:
-            actions = model.step(obs)[0]
+        for trial in range(n_trials):
+            # for each trial, record the score at mod 10 steps 
+            n_steps = 0
             num_lives = turtle.ale.lives()
-            obs, _, done, info = env.step(actions)
-            #done = done and (num_lives == 1 or turtle.ale.game_over())
-            #env.render()
-            #time.sleep(1.0/60.0)
-            done = num_lives == 1 and done 
-            #done = done.any() if isinstance(done, np.ndarray) else done
+            done = False
 
-            if isinstance(info, list) or isinstance(info, tuple):
-                session_scores.add(np.average([d['score'] for d in info]))
-            elif isinstance(info, dict):
-                session_scores.add(['score'])
-            else:
-                session_scores.add(-1)
-
-            if done:
-                num_games += 1
-                score = max(session_scores)
-                scores.append(score)
-                session_scores = set()
-
-                print("game %s: %s" % (num_games, score))
-                obs = env.reset()
-                session_scores = set()
+            while n_steps < max_steps and not done:
+                action = model.step(obs)[0]
+                num_lives = turtle.ale.lives()
+                obs, _, done, info = env.step(action)
+                env.render()
+                time.sleep(1/30.0)
+                done = done and num_lives == 1
+                score = info[0]['score']
+                if n_steps % record_period == 0:
+                    d = (extra_args['load_path'], trial, n_steps, prot, score)
+                    #print("{}\t{}\t{}\t{}\t{}".format(*d))
+                    dat.append(d)
+                n_steps += 1
+            #('trained_env', 'trial', 'step', 'mvmt', 'score')
+            
+            obs = env.reset()
+            turtle.toybox.write_config_json(config)
 
 
-        print("Avg score: %f" % np.average(scores))
-        print("Median score: %f" % np.median(scores))
-        print("Std error score: %f" % sem(scores))
-        print("Std dev score: %f" % stdev(scores))
-        env.close()
+    dat = [('trained_env', 'trial', 'step', 'mvmt', 'score')]
+    def add_dat(env=None, trial=None, step=None, mvmt=None, score=None):
+        assert (env and trial and step and mvmt and score)
+        dat.append((env, trial, step, mvmt, score))
+
+    # First test: Amidar movement
+    # Copied from https://github.com/KDL-umass/Amidar/blob/master/amidar/resources/test_states/start_state.json
+    config['enemies'] = []
+
+    # Load up enemies
+    turtle.toybox.write_config_json(config)
+    run_test(config, 'No Enemies')
+    with open('amidar_no_enemies_{}.tsv'.format(extra_args['load_path']), 'w') as fp:
+        for row in dat:
+            fp.write("{}\t{}\t{}\t{}\t{}\n".format(*row))
+
+    env.close()
 
 if __name__ == '__main__':
     main()

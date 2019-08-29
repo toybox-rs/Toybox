@@ -1,4 +1,4 @@
-from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox_envs.atari.base import ToyboxBaseEnv
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv

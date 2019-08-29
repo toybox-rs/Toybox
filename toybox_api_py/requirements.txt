@@ -1,0 +1,4 @@
+cffi
+pillow
+numpy
+pygame
