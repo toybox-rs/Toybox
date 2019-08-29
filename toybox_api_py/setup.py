@@ -1,11 +1,11 @@
 from setuptools import setup, find_packages
 
-toybox_py_version = '0.1.0'
+toybox_py_version = '0.2.0'
 toybox_cffi_version = '0.1.0'
 
 dependencies = ["toybox_cffi=={0}".format(toybox_cffi_version)]
 with open('requirements.txt', 'r') as fp:
-    dependencies = [line.strip() for line in fp.readlines()]
+    dependencies.extend([line.strip() for line in fp.readlines()])
 
 setup(
     name='toybox_api',
