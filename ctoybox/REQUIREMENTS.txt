@@ -1,6 +1,11 @@
-tensorflow
-gym[atari]
+gym==0.10.5
 tensorboard
 pygame
 cffi
-
+pillow
+atari_py
+opencv-python
+joblib
+mpi4py
+six
+scipy

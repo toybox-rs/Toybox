@@ -5,7 +5,7 @@
 # > cargo build -p toybox-core
 members = [
   "core",
-  "ctoybox",
+  "toybox_cffi",
   "toybox",
   "tb_amidar",
   "tb_breakout",

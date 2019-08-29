@@ -1,7 +1,5 @@
 #![crate_type = "dylib"]
 
-extern crate amidar;
-extern crate breakout;
 extern crate libc;
 extern crate serde;
 extern crate serde_json;

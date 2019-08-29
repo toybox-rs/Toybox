@@ -31,3 +31,4 @@ toybox-regress-models*.zip
 ctoybox/*.model
 *~
 ctoybox/human_play_*.json
+/check-venv

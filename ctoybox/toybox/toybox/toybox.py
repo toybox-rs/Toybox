@@ -7,14 +7,15 @@ import time
 import json
 
 try:
-    from toybox._native import ffi, lib
+    from toybox_cffi import ffi, lib
 except:
     # should be ModuleNotFoundError, but this is not available on the version of python on travis
     print('Global setup not found...trying local development install...')
     platform = platform.system() 
+    LIB_NAME = "toybox_cffi"
     lib_env_var = 'LIBCTOYBOX'
-    lib_dylib = 'libctoybox.dylib'
-    lib_so = 'libctoybox.so'
+    lib_dylib = 'lib{0}.dylib'.format(LIB_NAME)
+    lib_so = 'lib{0}.so'.format(LIB_NAME)
 
     _lib_prefix = os.environ[lib_env_var] if lib_env_var in os.environ else '..'
 

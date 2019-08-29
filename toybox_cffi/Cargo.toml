@@ -1,19 +1,18 @@
 [package]
-name = "ctoybox"
+name = "toybox_cffi"
 version = "0.1.0"
 authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
 build = "build.rs"
+homepage = "https://github.com/KDL-umass/Toybox"
 
 [lib]
-name = "ctoybox"
+name = "toybox_cffi"
 crate-type = ["cdylib"]
 
 [dependencies]
 libc = "0.2"
-serde = "*"
-serde_json = "*"
-amidar = {path = "../tb_amidar", version="*"}
-breakout = {path = "../tb_breakout", version="*"}
+serde = "1"
+serde_json = "1"
 toybox = {path = "../toybox", version="*"}
 
 [dependencies.toybox-core]
