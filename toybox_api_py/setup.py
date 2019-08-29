@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
-toybox_py_version = '0.2.0'
-toybox_cffi_version = '0.1.0'
+toybox_py_version = '0.2.0-dev'
+toybox_cffi_version = '0.1.0-dev'
 
 dependencies = ["toybox_cffi=={0}".format(toybox_cffi_version)]
 with open('requirements.txt', 'r') as fp:
