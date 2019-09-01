@@ -6,7 +6,6 @@ extern crate toybox_core;
 extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
-extern crate rand;
 
 mod destruction;
 mod firing_ai;

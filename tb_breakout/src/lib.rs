@@ -10,7 +10,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
 extern crate ordered_float;
-extern crate rand;
 
 /// This module contains a 2d body (position, velocity) used in Breakout.
 mod body2d;

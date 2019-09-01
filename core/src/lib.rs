@@ -15,7 +15,8 @@ pub use input::Input;
 mod direction;
 pub use direction::Direction;
 
-extern crate rand_core;
+pub extern crate rand_core;
+pub extern crate rand;
 
 /// This enum defines failure conditions for a query_json call.
 #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]

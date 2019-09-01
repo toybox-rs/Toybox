@@ -1,4 +1,4 @@
-use rand::Rng;
+use toybox_core::random::Rng;
 /// A collection of the possible firing protocols
 use types::{SpaceInvaders, StateCore};
 

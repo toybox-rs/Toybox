@@ -7,7 +7,7 @@ use toybox_core::random;
 use toybox_core::{AleAction, Direction, Input, QueryError};
 use types::*;
 
-use rand::seq::SliceRandom;
+use toybox_core::random::SliceRandom;
 
 // Window constants:
 pub mod screen {

@@ -1,4 +1,6 @@
-use rand_core::{impls, Error, RngCore};
+pub use rand_core::{impls, Error, RngCore};
+pub use rand::seq::SliceRandom;
+pub use rand::Rng;
 
 /// This implementation is a xoroshiro128+ that is serde serializable.
 #[derive(Debug, Clone, Serialize, Deserialize)]

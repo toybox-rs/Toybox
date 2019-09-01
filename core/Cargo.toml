@@ -4,9 +4,15 @@ version = "0.1.0"
 authors = ["John Foley <jfoley@cs.umass.edu>"]
 
 [dependencies]
+png = "*"
 serde = "*"
 serde_json = "*"
 serde_derive = "*"
-png = "*"
-rand = "0.6.3"
-rand_core = "0.3.0"
+
+[dependencies.rand_core]
+version = "0.3.0"
+features = ["alloc"]
+
+[dependencies.rand]
+version = "0.6.3" 
+features = ["alloc"]

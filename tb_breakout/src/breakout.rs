@@ -5,13 +5,13 @@ use ordered_float::NotNan;
 use toybox_core;
 use toybox_core::graphics::{Color, Drawable};
 use toybox_core::random;
+use toybox_core::random::{Rng, SliceRandom};
 use toybox_core::{AleAction, Input, QueryError};
 
 use serde_json;
 
 use types::*;
 
-use rand::seq::SliceRandom;
 
 /// This module contains constants derived from observation and measurement of the Atari 2600 game.
 mod screen {
