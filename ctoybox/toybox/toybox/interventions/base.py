@@ -32,10 +32,10 @@ class Intervention(ABC):
 
     if self.dirty_config:
       self.toybox.write_config_json(self.config)
-      print("new_game!")
+      # print("new_game!")
       self.toybox.new_game()
     elif self.dirty_state:
-      print("write_state_json!")
+      # print("write_state_json!")
       self.toybox.write_state_json(self.state)
 
     self.state = None
@@ -54,7 +54,15 @@ class Intervention(ABC):
               self.dirty_config = True
 
 
+  def getScore(self):
+    return self.state['score']
+
+
   def check_position(self, pdict, key_ls): 
+    # Note from etosch: I added an assert False because there are other 
+    # ways to express this idea that are built into Python. We should phase out 
+    # use of this function 
+    assert False
     # check that pdict is a dictionary containing the keys in list ls
     assert isinstance(pdict, dict)
     assert all([k in pdict.keys() for k in key_ls])

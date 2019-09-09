@@ -1,33 +1,22 @@
 import unittest
+from abc import ABC, abstractmethod
 
-class BehavioralFixture(unittest.TestCase):
+class BehavioralFixture(unittest.TestCase, ABC):
 
   @classmethod
   def setUpClass(cls):
-    print("setUpClass")
     cls.setUpEnv()
-    cls.setUpModel()
 
-  @classmethod
+  @abstractmethod
   def setUpEnv(cls):
     pass
 
   @classmethod
-  def setUpModel(cls):
-    pass
-
-  @classmethod
   def tearDownClass(cls):
-    print("tearDownClass")
     cls.tearDownEnv()
-    cls.tearDownModel()
 
-  @classmethod
+  @abstractmethod
   def tearDownEnv(cls):
-    pass
-
-  @classmethod
-  def tearDownModel(cls):
     pass
 
   def setUp(self, trials=30, timeout=5e6, record_period=10):
@@ -41,14 +30,43 @@ class BehavioralFixture(unittest.TestCase):
   def hasTimedOut(self):
     return self.tick > self.timeout
 
-  def log_after_episode(self):
+  @abstractmethod
+  def onTrialEnd(self):
     assert False 
 
-  def log_step(self):
+  @abstractmethod
+  def onTestEnd(self):
     assert False
 
-  def takeAction(self):
+  @abstractmethod
+  def takeAction(self, model):
     assert False
 
   def getToybox(self):
     return self.toybox
+
+  @abstractmethod
+  def stepEnv(self):
+    assert false
+
+  @abstractmethod
+  def resetEnv(self):
+    assert false
+
+  def runTest(self, model):
+      trials_data = []
+      for trial in range(self.trials):
+        # for each trial, record the score at mod 10 steps 
+        self.tick = 0
+        while not self.isDone():
+          if self.shouldIntervene():
+            self.intervene()
+          self.takeAction(model)
+          self.stepEnv()
+          self.env.render()
+          #time.sleep(1/30.0)
+        if self.toReset:
+          self.resetConfig(self.toReset)
+        trials_data.append(self.onTrialEnd())
+        self.resetEnv() #  EpisodicLifeEnv problems
+      self.onTestEnd(trials_data)    
