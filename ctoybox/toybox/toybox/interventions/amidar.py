@@ -10,6 +10,7 @@ class AmidarIntervention(Intervention):
     def __init__(self, tb, game_name='amidar'):
         # check that the simulation in tb matches the game name.
         Intervention.__init__(self, tb, game_name)
+        # set numpy random seed to config random seed 
 
     ### helper functions ###
     def check_tile_position(self, tdict):
@@ -28,6 +29,7 @@ class AmidarIntervention(Intervention):
         if not in_bounds: 
             return False
         # make sure tile is walkable
+        #print(self.state['board']['tiles'][tile_pos['ty']][tile_pos['tx']])
         walkable = self.state['board']['tiles'][tile_pos['ty']][tile_pos['tx']] != "Empty"
         return in_bounds and walkable
 
@@ -125,62 +127,21 @@ class AmidarIntervention(Intervention):
         label = "Painted" if paint else "Unpainted"
         self.state['board']['tiles'][tid['ty']][tid['tx']] = label
 
+    def reset_board_paint_state(self): 
+        # get board painted tile ids
+        for i in range(len(self.state['board']['tiles'])): 
+            for j in range(len(self.state['board']['tiles'][i])): 
+                self.state['board']['tiles'][i][j] = "Unpainted" if self.state['board']['tiles'][i][j] =="Painted" else self.state['board']['tiles'][i][j]
 
-    # def set_box(self, bid, paint=True, include_tiles=True, allow_chase=True): 
-    #     box = self.state['board']['boxes'][bid]
-    #     box['painted'] = paint
+    def empty_board_paint_config(self, allow_chickens=False): 
+        self.reset_board_paint_state()
+        remove_chars = ['p']
+        if not allow_chickens: 
+            remove_chars.append('c')
 
-    #     if allow_chase: 
-    #         # if we allow the intervention to trigger chasing, 
-    #         # we only want to do so if it was not already triggered 
-    #         allow_chase = allow_chase and not self.check_chase_condition()
-
-    #     if include_tiles: 
-    #         tx_left = box['top_left']['tx']
-    #         ty_left = box['top_left']['ty']
-    #         tx_right = box['bottom_right']['tx']
-    #         ty_right = box['bottom_right']['ty']
-
-    #         for i in range(tx_left, tx_right+1): 
-    #             for j in range(ty_left, ty_right+1):
-    #                 if self.state['board']['tiles'][i][j] != "Empty": 
-    #                     self.state['board']['tiles'][i][j] = "Painted"
-
-    #     if allow_chase: 
-    #         self.chase_react()
-
-
-    # def check_chase_condition(self): 
-    #     chase = False
-    #     continue_check = True
-
-    #     for box in self.state['board']['boxes']: 
-    #         if box['triggers_chase']: 
-    #             tx_left = box['top_left']['tx']
-    #             ty_left = box['top_left']['ty']
-    #             tx_right = box['bottom_right']['tx']
-    #             ty_right = box['bottom_right']['ty']
-
-    #             all_painted = True
-    #             for i in range(tx_left, tx_right+1): 
-    #                 for j in range(ty_left, ty_right+1):
-    #                     if self.state['board']['tiles'][i][j] != "Empty": 
-    #                         all_painted &= self.state['board']['tiles'][i][j] == "Painted"
-    #                     if not all_painted: 
-    #                         continue_check = False
-    #                         break
-    #                 if not continue_check:
-    #                     break
-
-    #         if not continue_check: 
-    #             break
-
-    #     return all_painted
-
-
-    # def chase_react(self): 
-    #     if self.check_chase_condition(): 
-    #         self.set_mode('chase')
+        for i in range(len(self.config['board'])): 
+            for c in remove_chars: 
+                self.config['board'][i] = self.config['board'][i].replace(c, "=")
 
 
     # def set_player_tile(self, pos):
