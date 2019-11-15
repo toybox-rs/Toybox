@@ -104,6 +104,49 @@ class SampleEnvs(gym.Wrapper):
         info['samples'] = SE_samples
         return res
 
+class RogueEnvs(gym.Wrapper):
+
+    def __init__(self, env, rogue_config):
+        """Randomizes game element(s) according to pre-specified configuration file"""
+        print('Starting env:', turtle)
+        turtle = get_turtle(env)
+        with AmidarGenerative(turtle) as res:
+            res.set_partial_config(rogue_config)
+            new_vars = res.config["randomize"].keys()
+            print('\tparams:', res.config[new_vars])
+
+        gym.Wrapper.__init__(self, env)
+
+        SE_samples[turtle] += 1
+        print('SampleEnvs map', SE_samples)
+
+    def __del__(self):
+        print('Samples encountered:\n', SE_samples)
+
+    def reset(self, **kwargs):
+        # reset procedural elements 
+        turtle = get_turtle(env)
+        # get interventional env open 
+        params = {}
+        with AmidarGenerative(turtle) as res:
+            res.resample_state()
+            print('resetting to env:', env)
+            new_vars = res.config["randomize"].keys()
+            print('\tparams:', res.config[new_vars])
+
+
+        gym.Wrapper.__init__(self, env)
+        self.env.reset(**kwargs)
+        SE_samples[get_turtle(env)] += 1 
+        obs, _, _, _ = self.env.step(0)
+        return obs
+
+    def step(self, action):
+        res = self.env.step(action)
+        info = res[-1]
+        info['samples'] = SE_samples
+        return res
+
 
 class NoopResetEnv(gym.Wrapper):
     def __init__(self, env, noop_max=30):
