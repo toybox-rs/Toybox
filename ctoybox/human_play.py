@@ -1,6 +1,7 @@
 import toybox, sys
 from toybox.toybox import Toybox, Input
 from toybox.interventions.base import *
+from toybox.generative.amidar import * 
 
 import numpy as np
 import argparse
@@ -27,7 +28,7 @@ if __name__ == '__main__':
 
     with Toybox(args.game) as tb:
         if args.partial_config != "null":    
-            with Intervention(tb, args.game) as intervention:
+            with AmidarGenerative(tb, args.game) as intervention:
                 intervention.set_partial_config(args.partial_config)
 
         w = tb.get_width()
