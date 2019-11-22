@@ -42,13 +42,23 @@ class Intervention(ABC):
   def set_partial_config(self, fname): 
     import os
 
+    print(fname, os.path.isfile(fname))
     if os.path.isfile(fname): 
       with open(fname) as f:
           data = json.load(f)
+          self.dirty_config = True
           for k in data.keys(): 
+            print("Checking", k)
             if k in self.config.keys():
               self.config[k] = data[k]
-              self.dirty_config = True
+              print("Substituted", k)
+
+            elif k == "randomize": 
+              # error: randomization interventions should only be applied through a Generative object
+              print("config error: randomization interventions should only be applied through a Generative object")
+            else: 
+              print(k, "not found")
+
 
 
   def check_position(self, pdict, key_ls): 
