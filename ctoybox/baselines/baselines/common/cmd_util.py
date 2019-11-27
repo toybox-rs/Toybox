@@ -103,6 +103,7 @@ def common_arg_parser():
     parser.add_argument('--reward_scale', help='Reward scale factor. Default: 1.0', default=1.0, type=float)
     parser.add_argument('--save_path', help='Path to save trained model to', default=None, type=str)
     parser.add_argument('--play', default=False, action='store_true')
+    parser.add_argument('--partial_config', help='Load partial game configuration rules', default=None, type=str)
     return parser
 
 def robotics_arg_parser():
