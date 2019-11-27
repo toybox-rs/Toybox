@@ -20,14 +20,14 @@ if __name__ == '__main__':
     parser.add_argument('--fps', type=int, default=32)
     parser.add_argument('--query', type=str, default=None)
     parser.add_argument('--query_args', type=str, default="null")
-    parser.add_argument('--partial_config', type=str, default="null")
+    parser.add_argument('--partial_config', type=str, default=None)
 
     args = parser.parse_args()
     print('Starting up: '+args.game)
     pygame.init()
 
     with Toybox(args.game) as tb:
-        if args.partial_config != "null":    
+        if args.partial_config:    
             with AmidarGenerative(tb, args.game) as intervention:
                 intervention.set_partial_config(args.partial_config)
 
