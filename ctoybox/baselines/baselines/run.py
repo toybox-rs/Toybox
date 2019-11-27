@@ -1,4 +1,6 @@
 import toybox
+from toybox.interventions.base import *
+from toybox.generative.amidar import * 
 
 import time
 import sys
@@ -74,7 +76,7 @@ def train(args, extra_args):
         del alg_kwargs['weights']
 
     env = build_env(args, extra_args)
-
+    # use RogueEnv for a custom config file
 
     if args.network:
         alg_kwargs['network'] = args.network
@@ -127,6 +129,8 @@ def build_env(args, extra_args):
 
 
 def get_env_type(env_id):
+#   print(_game_envs.keys())
+#   print(env_id)
     if env_id in _game_envs.keys():
         env_type = env_id
         env_id = [g for g in _game_envs[env_type]][0]
@@ -207,8 +211,12 @@ def main():
     if args.play:
         logger.log("Running trained model")
         env = build_env(args, extra_args)
-        obs = env.reset()
         turtle = atari_wrappers.get_turtle(env)
+        if args.partial_config: 
+                with AmidarGenerative(turtle.toybox, turtle.toybox.game_name) as intervention:
+                    intervention.set_partial_config(args.partial_config)
+        turtle = atari_wrappers.get_turtle(env)
+        obs = env.reset()
         scores = []
         session_scores = set()
         num_games = 0
@@ -220,7 +228,7 @@ def main():
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             #done = done and (num_lives == 1 or turtle.ale.game_over())
-            #env.render()
+#            env.render()
             #time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
             #done = done.any() if isinstance(done, np.ndarray) else done
