@@ -210,6 +210,7 @@ def main():
 
     if args.play:
         logger.log("Running trained model")
+        print("Running trained model", flush=True)
         env = build_env(args, extra_args)
         turtle = atari_wrappers.get_turtle(env)
         if args.partial_config: 
@@ -246,15 +247,15 @@ def main():
                 scores.append(score)
                 session_scores = set()
 
-                print("game %s: %s" % (num_games, score))
+                print("game %s: %s" % (num_games, score), flush=True)
                 obs = env.reset()
                 session_scores = set()
 
 
-        print("Avg score: %f" % np.average(scores))
-        print("Median score: %f" % np.median(scores))
-        print("Std error score: %f" % sem(scores))
-        print("Std dev score: %f" % stdev(scores))
+        print("Avg score: %f" % np.average(scores), flush=True)
+        print("Median score: %f" % np.median(scores), flush=True)
+        print("Std error score: %f" % sem(scores), flush=True)
+        print("Std dev score: %f" % stdev(scores), flush=True)
         env.close()
 
 if __name__ == '__main__':
