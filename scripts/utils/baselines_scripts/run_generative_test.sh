@@ -11,7 +11,7 @@ partition="titanx-long"
 
 models=`cat neurips_models_amidar`
 xs=$(seq 0 33);
-yx=$(seq 0 33);
+ys=$(seq 0 33);
 
 
 # make sure we have all the pip dependencies we want installed
@@ -30,13 +30,13 @@ for model in $models; do
 	minfo=$(echo $model | tr "." "\n")
 	minfo=($minfo)
 	env=${minfo[0]}
-	alg=${model[1]}
-	nsteps=${model[2]}
-	seed=${model[3]}
-	dt=${model[4]}
+	alg=${minfo[1]}
+	nsteps=${minfo[2]}
+	seed=${minfo[3]}
+	dt=${minfo[4]}
 
     for x in $xs; do 
-    	for y in $yx; do 
+    	for y in $ys; do 
     		uid=$env.$alg.$steps.$seed.$x.$y
             echo "Processing model $uid"
 
