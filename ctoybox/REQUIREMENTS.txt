@@ -1,5 +1,5 @@
 tensorflow
-gym[atari]
+gym[atari]=="0.10.5"
 tensorboard
 pygame
 cffi
