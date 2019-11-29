@@ -41,7 +41,7 @@ for model in $models; do
             echo "Processing model $uid"
 
             dest=run_cmd_$uid.sh
-            conf=trial_config_x_$x_y_$y.json
+            conf=trial_config_x_${x}_y_${y}.json
 
             logdir=$logs/$uid
             mkdir -p $logdir
