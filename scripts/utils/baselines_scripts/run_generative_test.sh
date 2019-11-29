@@ -7,7 +7,7 @@ logs=$work1/ijcai20/logs
 
 mkdir -p $logs
 
-partition="titanx-long"
+partition="titanx-short"
 
 models=`cat neurips_models_amidar`
 xs=$(seq 0 33);
@@ -31,7 +31,7 @@ for model in $models; do
 	minfo=($minfo)
 	env=${minfo[0]}
 	alg=${minfo[1]}
-	nsteps=${minfo[2]}
+	steps=${minfo[2]}
 	seed=${minfo[3]}
 	dt=${minfo[4]}
 
