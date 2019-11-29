@@ -78,10 +78,10 @@ for model in $models; do
 #SBATCH -e $uid.err
 #SBATCH --mem=16g
 
-OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python -m baselines.run --alg=$alg --seed=$seed --env=$env --num_timesteps=0 --load_path=$e_work1/$model"
+OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python -m baselines.run --alg=$alg --env=$env --num_timesteps=0 --load_path=$e_work1/$model --partial_config=$conf"
 		    echo "$cmd"
-		    #echo "$cmd" > $dest
-		    #sbatch -p $partition --gres=gpu:1 $dest
+		    echo "$cmd" > $dest
+		    sbatch -p $partition --gres=gpu:1 $dest
         done;
     done;
 done
