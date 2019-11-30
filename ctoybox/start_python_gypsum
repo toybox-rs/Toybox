@@ -1,0 +1,20 @@
+#!/bin/bash
+# RUN THIS command FROM CTOYBOX.
+#pip3 install -q -r REQUIREMENTS.txt
+unset PYTHONPATH
+
+export PYTHONPATH=${PWD}/baselines:${PWD}/toybox:${PYTHONPATH}
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/../target/release
+export LIBCTOYBOX=${PWD}/..
+echo "PYTHONPATH $PYTHONPATH"
+echo "LD_LIBRARY_PATH $LD_LIBRARY_PATH"
+echo "LIBCTOYBOX $LIBCTOYBOX"
+
+module purge
+module add cuda90 cudnn/7.3-cuda_9.0 slurm python3/3.6.6-1810 openmpi/gcc hdf5
+
+module unload cudnn/7.0-cuda_9.0
+module load cudnn/7.3-cuda_9.0
+module list
+
+python3 "$@"
