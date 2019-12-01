@@ -7,8 +7,8 @@ def collect_all_valid_tiles(partial_config=None):
         with AmidarGenerative(tb) as intervention:
             if partial_config:    
                 intervention.set_partial_config(partial_config)
-            xmax = len(intervention.config["board"])
-            ymax = len(intervention.config["board"][0])
+            xmax = len(intervention.config["board"][0])
+            ymax = len(intervention.config["board"])
 
         candidates = []
         for x in range(xmax):
