@@ -22,6 +22,9 @@ class AmidarGenerative(AmidarIntervention):
         if os.path.isfile(fname): 
             with open(fname) as f:
                 data = json.load(f)
+        else: 
+            print(fname, "not found; cannot load config")
+            raise FileNotFoundError
         self.dirty_config = True
         for k in data.keys(): 
             if k in self.config.keys():
@@ -36,7 +39,7 @@ class AmidarGenerative(AmidarIntervention):
         	assert len(self.config[var+'.choices']) > 0
 
         self.resample_state()                
-        print(self.config)
+        print(self.config, flush=True)
 
 
     def set_procedure(self, data):
