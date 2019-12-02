@@ -76,7 +76,6 @@ def train(args, extra_args):
         del alg_kwargs['weights']
 
     env = build_env(args, extra_args)
-    # use RogueEnv for a custom config file
 
     if args.network:
         alg_kwargs['network'] = args.network
@@ -125,6 +124,13 @@ def build_env(args, extra_args):
             frame_stack_size = 4
             weights = extra_args['weights'] if 'weights' in extra_args else None
             env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=weights), frame_stack_size)
+
+        # assign custom configuration to Toybox if argument provided 
+        turtle = atari_wrappers.get_turtle(env)
+        if args.partial_config: 
+                with AmidarGenerative(turtle.toybox, turtle.toybox.game_name) as intervention:
+                    intervention.set_partial_config(args.partial_config)
+
     return env
 
 
@@ -212,10 +218,7 @@ def main():
         logger.log("Running trained model")
         print("Running trained model", flush=True)
         env = build_env(args, extra_args)
-        turtle = atari_wrappers.get_turtle(env)
-        if args.partial_config: 
-                with AmidarGenerative(turtle.toybox, turtle.toybox.game_name) as intervention:
-                    intervention.set_partial_config(args.partial_config)
+        
         turtle = atari_wrappers.get_turtle(env)
         obs = env.reset()
         scores = []
@@ -229,7 +232,7 @@ def main():
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             #done = done and (num_lives == 1 or turtle.ale.game_over())
-#            env.render()
+            env.render()
             #time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
             #done = done.any() if isinstance(done, np.ndarray) else done
