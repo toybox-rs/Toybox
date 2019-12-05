@@ -9,6 +9,7 @@ import numpy as np
 
 mvmt_protocols = ['EnemyLookupAI', 'EnemyPerimeterAI', 'EnemyAmidarMvmt', 'EnemyTargetPlayer', 'EnemyRandomMvmt']
 generative_support = ['player_start']
+generative_utilities = ['choices', 'weights', 'vars']
 
 class AmidarGenerative(AmidarIntervention):
 
@@ -35,25 +36,29 @@ class AmidarGenerative(AmidarIntervention):
                 self.set_procedure(data[k])
 
         # assert for all random elements: choice and weight lists in config are defined 
-        for var in self.config['randomize'].keys(): 
-        	assert len(self.config[var+'.choices']) > 0
+        for var in self.config['randomize']['vars']:
+            assert len(self.config["randomize"]["choices"][var]) > 0
 
         self.resample_state()                
-        print(self.config, flush=True)
+        print("setting config:", self.config, flush=True)
 
 
     def set_procedure(self, data):
         # load randomized variable choices 
         # assign to game generator 
+        self.config["randomize"]["choices"] = {}
+        self.config["randomize"]["weights"] = {}
+        self.config["randomize"]["vars"] = []
         for var in [k for k in data.keys() if k in generative_support]:
-            if var == 'player_start':      
+            if var == 'player_start':     
+                self.config["randomize"]["vars"].append(var)
                 var_list, weighted_choice = self.unload_starting_position(data[var])
                 # unload choices 
-                self.config[var+".choices"] = var_list
+                self.config["randomize"]["choices"][var] = var_list
                 # unload weights
-                self.config[var+".weights"] = weighted_choice if weighted_choice is not None else []
+                self.config["randomize"]["weights"][var] = weighted_choice if weighted_choice is not None else []
                
-        for var in [k for k in data.keys() if not k in generative_support]:    
+        for var in [k for k in data.keys() if not k in generative_support and not k in generative_utilities]:    
             print('Randomizer not supported:', var)
 
 
@@ -80,6 +85,9 @@ class AmidarGenerative(AmidarIntervention):
         load_keys = [k for k in data.keys()]
         var_list = []
         for load_protocol in load_keys: 
+            if load_protocol == 'inf':
+                all_tiles, all_pos = self.collect_all_valid_tiles()
+                var_list.extend(all_tiles)
             if load_protocol == 'rect_range': 
                 pass
                 #var_list.extend(list(itertools.product(data[load_protocol]['y1']:data[load_protocol]['y2'],data[load_protocol]['x1']:data[load_protocol]['x2'])))
@@ -105,13 +113,51 @@ class AmidarGenerative(AmidarIntervention):
         return var_list, None
 
 
-    def resample_state(self): 
-        for var in self.config["randomize"]: 
-            if self.config[var+".weights"] != []: 
-                print("weights:", self.config[var+".weights"])
-                self.config[var] = np.random.choice(self.config[var+".choices"], p=self.config[var+".weights"])
+    def resample_state(self, randomize={}):
+        SE_config = {}          
+        if not bool(randomize): 
+            if "randomize" in self.config.keys():
+                randomize = self.config["randomize"]
             else: 
-                self.config[var] = np.random.choice(self.config[var+".choices"])
+                print("No random elements; returning")
+                return {}
+
+        for var in randomize['vars']: 
+            if var in randomize["weights"].keys() and len(randomize["weights"][var]) > 0: 
+                print("weights:", randomize["weights"][var])
+                self.config[var] = np.random.choice(randomize["choices"][var], p=randomize["weights"][var])
+                print(self.config[var])
+            else: 
+                self.config[var] = np.random.choice(randomize["choices"][var])
+                print(self.config[var])
+            SE_config[var] = self.config[var]
+        return SE_config
+
+
+    def collect_all_valid_tiles(self): 
+        # use current config state 
+        xmax = len(self.config["board"][0])
+        ymax = len(self.config["board"])
+
+        candidates = []
+        for x in range(xmax):
+            for y in range(ymax):
+                candidates.append((x,y))
+
+        valid_pos = []
+        valid_tiles = []
+
+        pos = {'tx': -1, 'ty': -1}
+        for x_y in candidates: 
+            pos['tx'] = x_y[0]
+            pos['ty'] = x_y[1]
+
+            if self.check_is_tile(pos): 
+                valid_pos.append(pos)
+                valid_tiles.append(x_y)
+
+        return valid_tiles, valid_pos
+
 
 
 
