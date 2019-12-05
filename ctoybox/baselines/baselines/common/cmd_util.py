@@ -19,7 +19,7 @@ from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.retro_wrappers import RewardScaler
 
 
-def make_vec_env(env_id, env_type, num_env, seed, weights=[], wrapper_kwargs=None, start_index=0, reward_scale=1.0):
+def make_vec_env(env_id, env_type, num_env, seed, weights=[], rogue=False, rogue_config="", wrapper_kwargs=None, start_index=0, reward_scale=1.0):
     """
     Create a wrapped, monitored SubprocVecEnv for Atari and MuJoCo.
     """
@@ -27,7 +27,7 @@ def make_vec_env(env_id, env_type, num_env, seed, weights=[], wrapper_kwargs=Non
     mpi_rank = MPI.COMM_WORLD.Get_rank() if MPI else 0
     def make_env(rank): # pylint: disable=C0111
         def _thunk():
-            env = make_atari(env_id, weights) if env_type == 'atari' else gym.make(env_id)
+            env = make_atari(env_id, weights, rogue, rogue_config) if env_type == 'atari' else gym.make(env_id)
             env.seed(seed + 10000*mpi_rank + rank if seed is not None else None)
             env = Monitor(env,
                           logger.get_dir() and os.path.join(logger.get_dir(), str(mpi_rank) + '.' + str(rank)),
@@ -104,6 +104,8 @@ def common_arg_parser():
     parser.add_argument('--save_path', help='Path to save trained model to', default=None, type=str)
     parser.add_argument('--play', default=False, action='store_true')
     parser.add_argument('--partial_config', help='Load partial game configuration rules', default=None, type=str)
+    parser.add_argument('--show', default=False, action='store_true')
+    parser.add_argument('--rogue', default=False, action='store_true')
     return parser
 
 def robotics_arg_parser():
