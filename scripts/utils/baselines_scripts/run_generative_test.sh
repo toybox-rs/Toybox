@@ -53,7 +53,7 @@ for model in $models; do
     njobs=$((njobs + 1))
     echo $njobs
     
-    if [ $njobs -ge 0 ] && [ $njobs -lt 120 ]; then
+    if [ $njobs -ge 0 ] && [ $njobs -lt 240 ]; then
         for xy_pair in $xys; do
             xy=$(echo $xy_pair | tr "," " ")
             xy=($xy)
