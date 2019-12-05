@@ -1,4 +1,5 @@
 from toybox.envs.atari.base import ToyboxBaseEnv
+from toybox.generative.amidar import *
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.vec_env.dummy_vec_env import DummyVecEnv
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
@@ -104,44 +105,52 @@ class SampleEnvs(gym.Wrapper):
         info['samples'] = SE_samples
         return res
 
-class RogueEnvs(gym.Wrapper):
+class RogueEnv(gym.Wrapper):
 
-    def __init__(self, env, rogue_config):
+    def __init__(self, env, rogue_config=None):
         """Randomizes game element(s) according to pre-specified configuration file"""
-        print('Starting env:', turtle)
-        turtle = get_turtle(env)
-        with AmidarGenerative(turtle) as res:
-            res.set_partial_config(rogue_config)
-            new_vars = res.config["randomize"].keys()
-            print('\tparams:', res.config[new_vars])
+        self.env = env
+        self.config_file = rogue_config
+        self.randomize = {}
+        turtle = get_turtle(self.env)
 
-        gym.Wrapper.__init__(self, env)
+        gym.Wrapper.__init__(self, self.env)
+        print('Starting rogue env:', turtle)
+        with AmidarGenerative(turtle.toybox) as res:
+            if rogue_config: 
+                res.set_partial_config(self.config_file)
+                assert "randomize" in res.config.keys()
+                
+                self.randomize = res.config["randomize"]
+                print("rogue config:", self.randomize, flush=True)
 
-        SE_samples[turtle] += 1
-        print('SampleEnvs map', SE_samples)
+        #SE_samples[turtle] += 1
+        #print('Sampled map', SE_samples)
 
     def __del__(self):
-        print('Samples encountered:\n', SE_samples)
+        pass
+        #print('Samples encountered:\n', SE_samples)
 
     def reset(self, **kwargs):
         # reset procedural elements 
-        turtle = get_turtle(env)
+        turtle = get_turtle(self.env)
         # get interventional env open 
         params = {}
-        with AmidarGenerative(turtle) as res:
-            res.resample_state()
-            print('resetting to env:', env)
-            new_vars = res.config["randomize"].keys()
-            print('\tparams:', res.config[new_vars])
+        with AmidarGenerative(turtle.toybox) as res:
+            SE_config = res.resample_state(self.randomize)
+            print('resetting to env:', self.env)
+            print(SE_config)
 
-
-        gym.Wrapper.__init__(self, env)
+        gym.Wrapper.__init__(self, self.env)
         self.env.reset(**kwargs)
-        SE_samples[get_turtle(env)] += 1 
+        #SE_samples[get_turtle(env)] += 1 
         obs, _, _, _ = self.env.step(0)
         return obs
 
     def step(self, action):
+        #with AmidarGenerative(get_turtle(self.env).toybox) as conf:
+        #    print(conf.config["randomize"], flush=True)
+
         res = self.env.step(action)
         info = res[-1]
         info['samples'] = SE_samples
@@ -378,12 +387,17 @@ def make_wrapper(env_id):
     return env
 
 
-def make_atari(env_id, sample_weights):
+def make_atari(env_id, sample_weights, rogue, rogue_config):
     env = make_wrapper(env_id)
+    print(rogue)
+    if rogue: 
+        print("Roguelike!")
+        return RogueEnv(env, rogue_config)
     if sample_weights:
         env1 = env
         env2 = make_wrapper(get_complement(env_id))
         return SampleEnvs([env1, env2], sample_weights)
+
     return env
 
 def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=False, scale=False):
