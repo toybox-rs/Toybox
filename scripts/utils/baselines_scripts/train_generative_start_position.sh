@@ -1,5 +1,5 @@
-work1=/mnt/nfs/work1/jensen/kclary/
-logs=$work1/ijcai20/logs
+work1=/mnt/nfs/work1/jensen/kclary/ijcai20
+logs=$work1/logs
 
 mkdir -p $logs
 
@@ -11,7 +11,7 @@ env="AmidarToyboxNoFrameskip-v4"
 #timesteps="1e7 5e7"
 timesteps="1e7"
 #seeds=`cat training_seeds`
-seeds=22022933152
+seeds="2202933152"
 xys=`cat ../tb_amidar/src/resources/tileset`
 
 # make sure we have all the pip dependencies we want installed
@@ -27,25 +27,24 @@ source $HOME/.cargo/env
 rustup default stable
 cargo build --release
 
-mod_var=-1
 for steps in $timesteps; do
     for seed in $seeds; do
         for alg in $algs; do
             for xy_pair in $xys; do
-                mod_var=$((mod_var + 1))
-                echo $mod_var
-                if [ $(( $mod_var % 2 )) -eq 0 ]; then
-                    xy=$(echo $xy_pair | tr "," " ")
-                    xy=($xy)
-                    x=${xy[0]}
-                    y=${xy[1]}
+                xy=$(echo $xy_pair | tr "," " ")
+                xy=($xy)
+                x=${xy[0]}
+                y=${xy[1]}
 
-                    uid=$env.$alg.$steps.$seed.$x.$y
-                    echo "Processing model $uid"
+                uid=$env.$alg.$steps.$seed.$x.$y
+                echo "Processing model $uid"
 
-                    dest=run_cmd_$uid.sh
-                    conf=trial_config_x_${x}_y_${y}.json
-
+                dest=run_cmd_$uid.sh
+                conf=trial_config_x_${x}_y_${y}.json
+                model=$uid.`date -I`.model
+                model_path=$work1/$model
+       
+                if ! ls $work1/$uid*.model 1> /dev/null 2>&1; then
                     logdir=$logs/$uid
                     mkdir -p $logdir
 
@@ -81,7 +80,7 @@ for steps in $timesteps; do
 #SBATCH -e $uid.err
 #SBATCH --mem=16g
 
-OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python_gypsum -m baselines.run --alg=$alg --env=$env --seed=$seed --num_timesteps=$steps --save_path=$work1/$model --partial_config=$conf "
+OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python_gypsum -m baselines.run --alg=$alg --env=$env --seed=$seed --num_timesteps=$steps --save_path=$model_path --partial_config=$conf "
                     echo "$cmd"
                     echo "$cmd" > $dest
                     sbatch -p $partition --gres=gpu:1 $dest
