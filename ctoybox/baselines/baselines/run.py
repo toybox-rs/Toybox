@@ -23,7 +23,7 @@ from importlib import import_module
 from baselines.common.vec_env.vec_normalize import VecNormalize
 from baselines.common import atari_wrappers, retro_wrappers
 
-from baselines.common.atari_wrappers import SampleEnvs
+from baselines.common.atari_wrappers import SampleEnvs, RogueEnv
 
 try:
     from mpi4py import MPI
@@ -123,13 +123,13 @@ def build_env(args, extra_args):
         else:
             frame_stack_size = 4
             weights = extra_args['weights'] if 'weights' in extra_args else None
-            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=weights), frame_stack_size)
+            env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed, weights=weights, rogue=args.rogue, rogue_config=args.partial_config), frame_stack_size)
 
         # assign custom configuration to Toybox if argument provided 
         turtle = atari_wrappers.get_turtle(env)
         if args.partial_config: 
-                with AmidarGenerative(turtle.toybox, turtle.toybox.game_name) as intervention:
-                    intervention.set_partial_config(args.partial_config)
+            with AmidarGenerative(turtle.toybox, turtle.toybox.game_name) as intervention:
+                intervention.set_partial_config(args.partial_config)
 
     return env
 
@@ -232,7 +232,8 @@ def main():
             num_lives = turtle.ale.lives()
             obs, _, done, info = env.step(actions)
             #done = done and (num_lives == 1 or turtle.ale.game_over())
-            env.render()
+            if args.show: 
+                env.render()
             #time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
             #done = done.any() if isinstance(done, np.ndarray) else done
