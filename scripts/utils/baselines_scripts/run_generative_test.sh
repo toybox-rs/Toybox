@@ -1,12 +1,11 @@
-work1=/mnt/nfs/work1/jensen/kclary/NeurIPS_2019
-e_work1=/mnt/nfs/work1/jensen/etosch/neurips
-logs=$work1/ijcai20/logs
+work1=/mnt/nfs/work1/jensen/kclary/ijcai20
+logs=$work1/logs
 
 mkdir -p $logs
 
 partition="titanx-short"
 
-models=`ls $work1/ijcai20/*.model`
+models=`ls /mnt/nfs/work1/jensen/kclary/ijcai20/*.model | xargs -n 1 basename`
 xys=`cat ../tb_amidar/src/resources/tileset`
 
 # make sure we have all the pip dependencies we want installed
@@ -35,8 +34,9 @@ for model in $models; do
 	my=${minfo[5]}
 	dt=${minfo[6]}
 
+        uid=$env.$alg.$steps.$seed.$mx.$my
+
     echo "Processing model $uid"
-	uid=$env.$alg.$steps.$seed.$mx.$my
 	dest=run_cmd_$uid.sh
     echo "Running on $partition. Command saved to $dest."
 
@@ -80,13 +80,12 @@ for model in $models; do
     },
     \"_comment\": \"Amidar quick config for removing nonrandom noise from training. Modifications: unpaint initial segment to avoid implementation headches; no chase mode; no jump mode; set starting player position from set\"}"
                         
-            echo "$trial_config"
-            echo "$trial_config" > $conf
-        done;
+            #echo "$trial_config"
+            #echo "$trial_config" > $conf
         
         cmd="$cmd
 OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python_gypsum -m baselines.run --alg=$alg --env=$env --num_timesteps=0 --num_env=1 --load_path=$work1/$model --partial_config=$conf --play"
-
+            done;
 	    echo "$cmd"
         echo "$cmd" > $dest
         sbatch -p $partition --gres=gpu:1 $dest

@@ -32,7 +32,8 @@ for steps in $timesteps; do
             echo "Processing model $uid"
 
             dest=run_cmd_$uid.sh
-            conf=toybox/toybox/intervention/defaults/amidar_quick_general_config.json
+            conf=toybox/toybox/interventions/defaults/amidar_quick_general_config.json
+            echo "$conf"
             model=$uid.`date -I`.model
             model_path=$work1/$model
    
