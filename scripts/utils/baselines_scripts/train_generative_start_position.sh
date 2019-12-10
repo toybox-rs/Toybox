@@ -9,7 +9,7 @@ partition="titanx-long"
 algs="ppo2"
 env="AmidarToyboxNoFrameskip-v4"
 #timesteps="1e7 5e7"
-timesteps="1e7"
+timesteps="5e7"
 #seeds=`cat training_seeds`
 seeds="2202933152"
 xys=`cat ../tb_amidar/src/resources/tileset`
@@ -27,6 +27,7 @@ source $HOME/.cargo/env
 rustup default stable
 cargo build --release
 
+job_ct=0
 for steps in $timesteps; do
     for seed in $seeds; do
         for alg in $algs; do
@@ -45,12 +46,15 @@ for steps in $timesteps; do
                 model_path=$work1/$model
        
                 if ! ls $work1/$uid*.model 1> /dev/null 2>&1; then
-                    logdir=$logs/$uid
-                    mkdir -p $logdir
+                    job_ct=$(($job_ct +  1)) 
+                    
+                    if [ $job_ct -ge 0 ] && [ $job_ct -lt 113 ]; then 
+                        logdir=$logs/$uid
+                        mkdir -p $logdir
 
-                    echo "Running on $partition. Command saved to $dest."
+                        echo "Running on $partition. Command saved to $dest."
 
-                    trial_config="{
+                        trial_config="{
         \"player_start\": {
         \"tx\": 31,
         \"ty\": 15
@@ -69,11 +73,11 @@ for steps in $timesteps; do
     },
     \"_comment\": \"Amidar quick config for removing nonrandom noise from training. Modifications: unpaint initial segment to avoid implementation headches; no chase mode; no jump mode; set starting player position from set\"}"
 
-                    echo "$trial_config"
-                    echo "$trial_config" > $conf
+                        echo "$trial_config"
+                        echo "$trial_config" > $conf
 
 
-                    cmd="#!/bin/bash
+                        cmd="#!/bin/bash
 #
 #SBATCH --job-name=$uid
 #SBATCH --output=$uid.out
@@ -81,9 +85,10 @@ for steps in $timesteps; do
 #SBATCH --mem=16g
 
 OPENAI_LOGDIR=$logdir OPENAI_FORMAT=csv ./start_python_gypsum -m baselines.run --alg=$alg --env=$env --seed=$seed --num_timesteps=$steps --save_path=$model_path --partial_config=$conf "
-                    echo "$cmd"
-                    echo "$cmd" > $dest
-                    sbatch -p $partition --gres=gpu:1 $dest
+                        echo "$cmd"
+                        echo "$cmd" > $dest
+                        sbatch -p $partition --gres=gpu:1 $dest
+                    fi
                 fi 
             done;
         done;
