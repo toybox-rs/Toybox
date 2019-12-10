@@ -109,12 +109,11 @@ class RogueEnv(gym.Wrapper):
 
     def __init__(self, env, rogue_config=None):
         """Randomizes game element(s) according to pre-specified configuration file"""
-        self.env = env
         self.config_file = rogue_config
         self.randomize = {}
-        turtle = get_turtle(self.env)
+        turtle = get_turtle(env)
 
-        gym.Wrapper.__init__(self, self.env)
+        gym.Wrapper.__init__(self, env)
         print('Starting rogue env:', turtle)
         with AmidarGenerative(turtle.toybox) as res:
             if rogue_config: 
@@ -134,15 +133,18 @@ class RogueEnv(gym.Wrapper):
     def reset(self, **kwargs):
         # reset procedural elements 
         turtle = get_turtle(self.env)
-        # get interventional env open 
-        params = {}
-        with AmidarGenerative(turtle.toybox) as res:
-            SE_config = res.resample_state(self.randomize)
-            print('resetting to env:', self.env)
-            print(SE_config)
 
-        gym.Wrapper.__init__(self, self.env)
-        self.env.reset(**kwargs)
+        reset = True
+        while reset: 
+            # get interventional env open 
+            with AmidarGenerative(turtle.toybox) as res:
+                SE_config = res.resample_state(self.randomize)
+                print('resetting to env:', self.env, flush=True)
+                print(SE_config, flush=True)
+
+            gym.Wrapper.__init__(self, self.env)
+            self.env.reset(**kwargs)
+            reset = turtle.toybox.game_over()
         #SE_samples[get_turtle(env)] += 1 
         obs, _, _, _ = self.env.step(0)
         return obs
