@@ -111,7 +111,7 @@ class AmidarIntervention(Intervention):
         return self.state['chase_timer'] > 0
 
     def enemy_tiles(self):
-        return [self.state['enemies'][i]['position'] for i in range(len(self.state['enemies']))]
+        return [self.world_to_tile(self.state['enemies'][i]['position']['x'], self.state['enemies'][i]['position']['y']) for i in range(len(self.state['enemies']))]
 
     def enemy_caught(self, eid):
         return self.state['enemies'][eid]['caught']

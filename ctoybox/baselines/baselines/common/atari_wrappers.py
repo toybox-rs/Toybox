@@ -134,17 +134,15 @@ class RogueEnv(gym.Wrapper):
         # reset procedural elements 
         turtle = get_turtle(self.env)
 
-        reset = True
-        while reset: 
-            # get interventional env open 
-            with AmidarGenerative(turtle.toybox) as res:
-                SE_config = res.resample_state(self.randomize)
-                print('resetting to env:', self.env, flush=True)
-                print(SE_config, flush=True)
+        # get interventional env open 
+        with AmidarGenerative(turtle.toybox) as res:
+            SE_config = res.resample_state(self.randomize)
+            print('resetting to env:', self.env, flush=True)
+            print(SE_config, flush=True)
 
-            gym.Wrapper.__init__(self, self.env)
-            self.env.reset(**kwargs)
-            reset = turtle.toybox.game_over()
+        gym.Wrapper.__init__(self, self.env)
+        self.env.reset(**kwargs)
+        reset = turtle.toybox.game_over()
         #SE_samples[get_turtle(env)] += 1 
         obs, _, _, _ = self.env.step(0)
         return obs

@@ -108,6 +108,9 @@ class AmidarGenerative(AmidarIntervention):
 
         # filter out inappropriate player positions
         var_list = [v for v in var_list if self.check_is_tile(v)]
+        e_pos = self.enemy_tiles()
+        var_list = [v for v in var_list if v not in e_pos]
+
         assert len(var_list) > 0
 
         return var_list, None
