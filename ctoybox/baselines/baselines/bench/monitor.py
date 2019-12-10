@@ -52,7 +52,8 @@ class Monitor(Wrapper):
     def step(self, action):
         if self.needs_reset:
             turtle = atari_wrappers.get_turtle(self.env)
-            print(turtle.toybox.config, flush=True)
+            print(turtle.toybox.config_to_json(), flush=True)
+            print(turtle.toybox.state_to_json(), flush=True)
             raise RuntimeError("Tried to step environment that needs reset")
         ob, rew, done, info = self.env.step(action)
         self.update(ob, rew, done, info)
