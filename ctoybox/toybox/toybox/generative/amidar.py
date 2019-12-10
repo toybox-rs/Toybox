@@ -126,10 +126,10 @@ class AmidarGenerative(AmidarIntervention):
             if var in randomize["weights"].keys() and len(randomize["weights"][var]) > 0: 
                 print("weights:", randomize["weights"][var])
                 self.config[var] = np.random.choice(randomize["choices"][var], p=randomize["weights"][var])
-                print(self.config[var])
+                print(self.config[var], flush=True)
             else: 
                 self.config[var] = np.random.choice(randomize["choices"][var])
-                print(self.config[var])
+                print(self.config[var], flush=True)
             SE_config[var] = self.config[var]
         return SE_config
 
