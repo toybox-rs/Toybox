@@ -8,6 +8,7 @@ import csv
 import os.path as osp
 import json
 import numpy as np
+from baselines.common import atari_wrappers
 
 class Monitor(Wrapper):
     EXT = "monitor.csv"
@@ -50,6 +51,8 @@ class Monitor(Wrapper):
 
     def step(self, action):
         if self.needs_reset:
+            turtle = get_turtle(self.env)
+            print(turtle.toybox.config, flush=True)
             raise RuntimeError("Tried to step environment that needs reset")
         ob, rew, done, info = self.env.step(action)
         self.update(ob, rew, done, info)
