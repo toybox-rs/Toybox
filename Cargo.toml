@@ -12,7 +12,6 @@ members = [
   "tb_gridworld",
   "tb_spaceinvaders",
   "bench_games",
-  "wp_breakout"
 ]
 exclude = [
   # These are mostly old names for crates that may be hanging around on your system.
@@ -20,5 +19,6 @@ exclude = [
   "amidar",
   "breakout",
   "breakout-web-play",
+  "wp_breakout"
 ]
 
