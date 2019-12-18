@@ -3,9 +3,13 @@ from setuptools import setup, find_packages
 toybox_api_version = '0.2.0-dev'
 toybox_envs_version = '0.2.0-dev'
 
+packages = """
+gym
+atari_py
+""".strip()
+
 dependencies = ["toybox_api=={0}".format(toybox_api_version)]
-with open('requirements.txt', 'r') as fp:
-    dependencies.extend([line.strip() for line in fp.readlines()])
+dependencies.extend([line.strip() for line in packages.split("\n")])
 
 setup(
     name='toybox-envs',

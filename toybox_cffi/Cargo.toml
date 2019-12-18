@@ -1,6 +1,6 @@
 [package]
 name = "toybox_cffi"
-version = "0.1.0-dev"
+version = "0.1.1-dev"
 authors = ["Emma 'Frank' Tosch <etosch@cs.umass.edu>"]
 build = "build.rs"
 homepage = "https://github.com/KDL-umass/Toybox"

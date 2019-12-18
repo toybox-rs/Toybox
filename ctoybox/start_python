@@ -2,15 +2,12 @@
 
 # add baselines to path!
 export PYTHONPATH=${PWD}/baselines:${PYTHONPATH}
-# add development binary paths... maybe delete now.
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${PWD}/../target/release
-export LIBCTOYBOX=${PWD}/..
 
 # RUN THIS command FROM CTOYBOX.
 set -eu
 
 # install toybox_cffi rust package
-cd ../toybox_cffi && pyo3-pack develop -b cffi --release && cd -
+cd ../toybox_cffi && maturin develop -b cffi --release && cd -
 
 # install toybox_api python package
 cd ../toybox_api_py && python3 setup.py install && cd -
@@ -18,7 +15,8 @@ cd ../toybox_api_py && python3 setup.py install && cd -
 # install toybox_envs python package
 cd ../toybox_envs_py && python3 setup.py install && cd -
 
+# install baselines-specific requirements.
+pip install -r requirements.txt
+
 echo "PYTHONPATH $PYTHONPATH"
-echo "LD_LIBRARY_PATH $LD_LIBRARY_PATH"
-echo "LIBCTOYBOX $LIBCTOYBOX"
 python3 "$@"
