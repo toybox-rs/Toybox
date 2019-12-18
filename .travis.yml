@@ -10,7 +10,6 @@ env:
     - RUST_BACKTRACE=1
 
 cache: 
-  - cargo
   - pip
 
 before_install:
