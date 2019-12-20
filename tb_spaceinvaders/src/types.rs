@@ -79,11 +79,16 @@ pub struct Enemy {
     pub points: i32,
     /// This is an animation counter; it's presence indicates the enemy is in the process of dying.
     pub death_counter: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnemiesMovementState {
+    /// Delay between each step in movement; starts high, goes down over time.
     pub move_counter: i32,
-    pub move_right: bool,
-    pub move_down: bool,
-    /// Enemies flip back and forth over time. How do they look by default?
-    pub orientation_init: bool,
+    /// Are we moving right/left/down?
+    pub move_dir: Direction,
+    /// Enemies flip back and forth over time. How do they look by at current?
+    pub visual_orientation: bool,
 }
 
 /// This struct represents the configuration for Space Invaders; all of these values cannot change from frame-to-frame but require a "new_game" reset to take effect.
@@ -124,6 +129,8 @@ pub struct StateCore {
     pub shields: Vec<SpriteData>,
     /// Enemies are rectangular actors (logically speaking).
     pub enemies: Vec<Enemy>,
+    /// We need some variables to track the enemy movement state.
+    pub enemies_movement: EnemiesMovementState,
     /// Enemy shot delay: how long between enemy shots.
     pub enemy_shot_delay: i32,
     /// The enemies can have many lasers fired at once.

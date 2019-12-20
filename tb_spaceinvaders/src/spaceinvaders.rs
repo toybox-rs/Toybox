@@ -4,7 +4,6 @@ use super::types::*;
 use firing_ai::{enemy_fire_lasers, FiringAI};
 use itertools::Itertools;
 use serde_json;
-use std::cmp::{max, min};
 use toybox_core::collision::Rect;
 use toybox_core::graphics::{Color, Drawable, FixedSpriteData, SpriteData};
 use toybox_core::random;
@@ -29,7 +28,7 @@ pub mod screen {
 
     pub const ENEMY_SIZE: (i32, i32) = (16, 10);
     pub const ENEMY_START_POS: (i32, i32) = (44, 31);
-    pub const ENEMY_END_POS: (i32, i32) = (98, 31);
+    pub const ENEMY_END_POS: (i32, i32) = (GAME_SIZE.0 - ENEMY_START_POS.0 - ENEMY_SPACE.0, 31);
     pub const ENEMIES_PER_ROW: i32 = 6;
     pub const ENEMIES_NUM: i32 = 6;
     pub const ENEMY_SPACE: (i32, i32) = (16, 8);
@@ -75,7 +74,6 @@ pub mod screen {
     pub const SHIP_LIMIT_X2: i32 = (GAME_DOT_RIGHT + GAME_DOT_SIZE.0 / 2) - SHIP_SIZE.0;
 
     pub const SHIELD_SPRITE_DATA: &str = include_str!("resources/space_invader_shield_x3");
-
 }
 lazy_static! {
     static ref INVADER_INIT_1: FixedSpriteData = load_sprite_default(
@@ -211,9 +209,8 @@ pub fn load_sprite_default(data: &str, on_color: Color) -> FixedSpriteData {
     load_sprite_dynamic(data, on_color).unwrap().to_fixed()
 }
 
-pub fn get_invader_sprite(enemy: &Enemy) -> FixedSpriteData {
+pub fn get_invader_sprite(enemy: &Enemy, orientation: bool) -> FixedSpriteData {
     let row = enemy.row;
-    let orientation = &enemy.orientation_init;
     if let Some(dc) = enemy.death_counter {
         for i in 0..4 {
             let bound = screen::DEATH_TIME - (screen::DEATH_HIT_1 + i * screen::DEATH_HIT_N);
@@ -308,6 +305,16 @@ impl Default for SpaceInvaders {
     }
 }
 
+impl Default for EnemiesMovementState {
+    fn default() -> Self {
+        EnemiesMovementState {
+            move_counter: screen::ENEMY_PERIOD,
+            move_dir: Direction::Right,
+            visual_orientation: true,
+        }
+    }
+}
+
 impl Player {
     fn new(x: i32, y: i32) -> Player {
         let (w, h) = screen::SHIP_SIZE;
@@ -392,59 +399,10 @@ impl Enemy {
             alive: true,
             points: screen::ENEMY_POINTS[row as usize],
             death_counter: None,
-            move_counter: screen::ENEMY_PERIOD,
-            move_right: true,
-            move_down: true,
-            orientation_init: true,
         }
     }
     fn rect(&self) -> Rect {
         Rect::new(self.x, self.y, screen::ENEMY_SIZE.0, screen::ENEMY_SIZE.1)
-    }
-    fn enemy_shift(&mut self, num_killed: i32) {
-        if self.move_counter == 0 {
-            let (width, height) = screen::ENEMY_SIZE;
-            let (deltax, deltay) = screen::ENEMY_DELTA;
-            let (padx, pady) = screen::ENEMY_SPACE;
-            let startx = screen::ENEMY_START_POS.0 + self.col * (width + padx);
-            let starty = screen::ENEMY_START_POS.1 + self.row * (height + pady);
-            let end = screen::ENEMY_END_POS.0 + self.col * (width + padx);
-            // If this is the first move, just move right.
-            // move_right flag is initialized to be true, so we don't need to change it.
-            if self.x == startx && self.y == starty {
-                self.x += deltax;
-            // If we are aligned with the start position on the x-axis, set movement
-            // direction to the right, move down, and toggle the move down flag
-            } else if self.x == startx && self.move_down {
-                self.y += deltay;
-                self.move_right = true;
-                self.move_down = false;
-            // Likewise for the end position
-            } else if self.x == end && self.move_down {
-                self.y += deltay;
-                self.move_right = false;
-                self.move_down = false;
-            // If we aren't at the (x,y) start position and aren't moving down, move laterally.
-            } else if self.move_right {
-                self.x = min(self.x + deltax, end);
-                self.move_down = true;
-            } else {
-                self.x = max(self.x - deltax, startx);
-                self.move_down = true;
-            };
-            self.orientation_init = !self.orientation_init;
-            for (num_dead, speedup) in screen::ENEMY_SPEEDUPS {
-                if num_killed >= *num_dead {
-                    self.move_counter = *speedup;
-                }
-            }
-            // If we haven't killed enough enemies to accellerate, reset to the original period.
-            if self.move_counter == 0 {
-                self.move_counter = screen::ENEMY_PERIOD;
-            }
-        } else {
-            self.move_counter -= 1;
-        }
     }
 }
 
@@ -464,6 +422,7 @@ impl StateCore {
             enemy_shot_delay: 50,
             shields: Vec::new(),
             enemies: Vec::new(),
+            enemies_movement: Default::default(),
             enemy_lasers: Vec::new(),
             ufo: Ufo::new(),
         };
@@ -554,6 +513,8 @@ impl StateCore {
         if let Some(laser) = &mut self.ship_laser {
             let laser_rect = laser.rect();
 
+            let enemy_orient = self.enemies_movement.visual_orientation;
+
             // Check collision with living enemies:
             for e in self
                 .enemies
@@ -564,7 +525,7 @@ impl StateCore {
 
                 // Broad-phase collision: is it in the rectangle?
                 if laser_rect.intersects(&enemy_rect) {
-                    let sprite = get_invader_sprite(&e);
+                    let sprite = get_invader_sprite(&e, enemy_orient);
                     // pixel-perfect detection:
                     if laser_rect.collides_visible(e.x, e.y, &sprite.data) {
                         hit = Some(e.id);
@@ -692,14 +653,97 @@ impl StateCore {
         false
     }
 
-    /// Move enemies
+    /// Move enemies as a group!
     fn enemy_shift(&mut self) {
-        let num_killed = self
+        // Enemies do not move every frame; there is a delay.
+        if self.enemies_movement.move_counter > 0 {
+            self.enemies_movement.move_counter -= 1;
+            return;
+        }
+
+        // Calculate the rectangle that surrounds all living enemies.
+        let rectangle: Vec<Rect> = self
             .enemies
             .iter()
-            .fold(0, |acc, e| if e.alive { acc } else { acc + 1 });
-        for enemy in self.enemies.iter_mut() {
-            enemy.enemy_shift(num_killed as i32);
+            .filter(|e| e.alive)
+            .map(|e| e.rect())
+            .collect();
+        let rect_union = Rect::merge(&rectangle);
+        if rect_union == None {
+            return;
+        }
+        let rect_union = rect_union.unwrap();
+        // Calculate how many deaths have occurred:
+        let num_killed = (self.enemies.len() - rectangle.len()) as i32;
+
+        // Calculate which direction we are moving, and what next to do.
+        let (deltax, deltay) = screen::ENEMY_DELTA;
+        let startx = screen::ENEMY_START_POS.0;
+        let end = screen::ENEMY_END_POS.0;
+
+        let x = rect_union.x1();
+
+        // we're going to fill in the change to apply to all enemies.
+        let mut dx = 0;
+        let mut dy = 0;
+
+        // Grab a reference to the state variables we need.
+        let mut movement = &mut self.enemies_movement;
+
+        // They're moving, so flip the sprites.
+        movement.visual_orientation = !movement.visual_orientation;
+
+        let at_left = x <= startx;
+        let at_right = rect_union.x2() >= end;
+
+        let new_dir = match movement.move_dir {
+            Direction::Left => {
+                if at_left {
+                    Direction::Down
+                } else {
+                    dx = -deltax;
+                    Direction::Left
+                }
+            }
+            Direction::Right => {
+                if at_right {
+                    Direction::Down
+                } else {
+                    dx = deltax;
+                    Direction::Right
+                }
+            }
+            Direction::Down => {
+                dy = deltay;
+                if at_left {
+                    Direction::Right
+                } else {
+                    Direction::Left
+                }
+            }
+            Direction::Up => unreachable!(),
+        };
+
+        // Change direction if necessary.
+        movement.move_dir = new_dir;
+
+        // Accelerate appropriately.
+        for (num_dead, speedup) in screen::ENEMY_SPEEDUPS {
+            if num_killed >= *num_dead {
+                movement.move_counter = *speedup;
+            }
+        }
+        // If we haven't killed enough enemies to accelerate, reset to the original period.
+        if movement.move_counter == 0 {
+            movement.move_counter = screen::ENEMY_PERIOD;
+        }
+
+        // Now actually move enemies!
+        for e in self.enemies.iter_mut() {
+            e.x += dx;
+            // Make sure we don't go off the edge!
+            //e.x = max(startx, min(e.x, end));
+            e.y += dy;
         }
     }
 
@@ -817,7 +861,7 @@ impl toybox_core::Simulation for SpaceInvaders {
     fn game_size(&self) -> (i32, i32) {
         screen::GAME_SIZE
     }
-    fn new_game(&mut self) -> Box<toybox_core::State> {
+    fn new_game(&mut self) -> Box<dyn toybox_core::State> {
         Box::new(State {
             config: self.clone(),
             state: StateCore::new(self),
@@ -840,7 +884,7 @@ impl toybox_core::Simulation for SpaceInvaders {
     fn new_state_from_json(
         &self,
         json_str: &str,
-    ) -> Result<Box<toybox_core::State>, serde_json::Error> {
+    ) -> Result<Box<dyn toybox_core::State>, serde_json::Error> {
         let state: StateCore = serde_json::from_str(json_str)?;
         Ok(Box::new(State {
             state,
@@ -852,7 +896,10 @@ impl toybox_core::Simulation for SpaceInvaders {
         serde_json::to_string(self).expect("SpaceInvaders should be JSON-serializable!")
     }
 
-    fn from_json(&self, json_str: &str) -> Result<Box<toybox_core::Simulation>, serde_json::Error> {
+    fn from_json(
+        &self,
+        json_str: &str,
+    ) -> Result<Box<dyn toybox_core::Simulation>, serde_json::Error> {
         let config: SpaceInvaders = serde_json::from_str(json_str)?;
         Ok(Box::new(config))
     }
@@ -1021,11 +1068,31 @@ impl toybox_core::State for State {
             output.push(Drawable::DestructibleSprite(shield.clone()));
         }
 
+        // Calculate the rectangle that surrounds all living enemies.
+        let rectangle: Vec<Rect> = self
+            .state
+            .enemies
+            .iter()
+            .filter(|e| e.alive)
+            .map(|e| e.rect())
+            .collect();
+        let rect_union = Rect::merge(&rectangle);
+        if let Some(rect) = rect_union {
+            output.push(Drawable::rect(
+                Color::rgb(100, 0, 0),
+                rect.x,
+                rect.y,
+                rect.w,
+                rect.h,
+            ));
+        }
+
+        let enemy_orient = self.state.enemies_movement.visual_orientation;
         for enemy in self.state.enemies.iter().filter(|e| e.alive) {
             output.push(Drawable::sprite(
                 enemy.x,
                 enemy.y,
-                get_invader_sprite(&enemy),
+                get_invader_sprite(&enemy, enemy_orient),
             ));
         }
 
@@ -1081,5 +1148,4 @@ mod tests {
         assert_eq!(super::screen::SHIELD_SIZE.0, sprite.width());
         assert_eq!(super::screen::SHIELD_SIZE.1, sprite.height());
     }
-
 }

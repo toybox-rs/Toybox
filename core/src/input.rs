@@ -190,5 +190,4 @@ mod tests {
             assert_eq!(Some(i), action_int);
         }
     }
-
 }
