@@ -8,12 +8,12 @@ source check-venv/bin/activate
 set -eu
 
 # scripts should do this later for us but frontload on travis...
-pip install -r toybox_cffi/requirements.txt
+pip install -q -r toybox_cffi/requirements.txt
 # not explicitly listed elsewhere because you may want tensorflow_gpu instead.
-pip install 'tensorflow<2.0'
+pip install -q 'tensorflow<2.0'
 
 cargo fmt --all -- --check
-cargo test --verbose --all
+cargo test --all
 cargo build --release
 
 if [ ! -e toybox-regress-models.zip ]; then
