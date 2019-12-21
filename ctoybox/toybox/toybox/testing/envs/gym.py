@@ -18,7 +18,11 @@ def _get_turtle(env):
     while True:
         if (isinstance(env, VecFrameStack)):
             env = env.venv
-        elif (isinstance(env, gym.Wrapper)):
+        elif (isinstance(env, gym.wrappers.time_limit.TimeLimit)):
+            # Not setting this causes issues later when trying
+            # to time step with the TimeLimit wrapper. Not sure how to 
+            # pass it in.
+            env._max_episode_steps = 1e7
             env = env.env
         elif (isinstance(env, DummyVecEnv)):
             env = env.envs[0]
@@ -26,6 +30,8 @@ def _get_turtle(env):
             return env
         elif isinstance(env, SubprocVecEnv):
             env = env.example_env 
+        elif (isinstance(env, gym.Wrapper)):
+            env = env.env
         elif isinstance(env, gym.Env):
             return env
         else:
@@ -36,7 +42,7 @@ def setUpToyboxGym(testclass, env_id, seed):
     nenv = 1
     frame_stack_size = 4
     env_type = 'atari'
-  
+ 
     # Nb: OpenAI special cases acer, trpo, and deepQ.
     env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed) , frame_stack_size)
   

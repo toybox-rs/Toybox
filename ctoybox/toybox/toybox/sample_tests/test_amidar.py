@@ -1,49 +1,16 @@
-import toybox.testing.behavior as behavior
 import toybox.testing.envs.gym as gym
-import toybox.testing.models.openai as oai
+import toybox.testing.models.openai_baselines as oai
 import toybox.interventions.amidar as ami
 
+from toybox.sample_tests.amidar_base import AmidarToyboxTest
+
 import os
+import random
 import time
 import tensorflow as tf
 
 from scipy.stats import sem
 from numpy import mean
-from abc import ABC, abstractmethod
-
-class AmidarToyboxTest(behavior.BehavioralFixture, ABC):
-
-    @classmethod
-    def setUpEnv(cls):
-        # With no enemies, nothing can be random anyway.
-        seed = 0xdeadbeef
-        gym.setUpToyboxGym(cls, 'AmidarToyboxNoFrameskip-v4', seed)
-    
-    @classmethod
-    def tearDownEnv(cls):
-        gym.tearDownToyboxGym(cls)
-
-    def takeAction(self, model):
-        oai.takeAction(self, model)
-
-    def stepEnv(self):
-        gym.stepEnv(self)
-
-    def resetEnv(self):
-        gym.resetEnv(self)
-
-    def isDone(self):
-        with ami.AmidarIntervention(self.getToybox()) as ai:
-            return ai.get_level() > 1 or self.hasTimedOut() or ai.get_lives() == 1
-
-    @abstractmethod
-    def onTestEnd(self):
-        pass 
-
-    @abstractmethod
-    def onTrialEnd(self):
-        pass
-
 
 class EnemyRemovalTest(AmidarToyboxTest):
 
@@ -99,38 +66,104 @@ class EnemyRemovalTest(AmidarToyboxTest):
                 print(self.timeout)
                 self.runTest(model)
         
-class GangUpNoJumpTest(AmidarToyboxTest):
+class OneEnemyTargetTest(AmidarToyboxTest):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lives = 10000
 
     def shouldIntervene(self):
         return self.tick == 0
 
-    def onTrialEnd(self, trial_data):
+    def onTrialEnd(self):
+        pass
+
+    def onTestEnd(self):
+        pass
+
+    def intervene(self):
+      print('This should only be called once per trial...')
+      with ami.AmidarIntervention(self.getToybox()) as ai:
+        ai.game.jumps = 0
+        ai.game.lives = 1
+        # intervene on a single enemy
+        enemy = ai.game.enemies[0]
+        start = ami.TilePoint(ai.game.intervention, 0, 0)
+        # Set the starting position to be the next one?
+        start.pos = enemy.get_ai_arg('next')
+        start_dir = ami.Direction.directions[random.randint(0, 3)]
+        vision_distance = max(ai.game.board.height, ai.game.board.width)
+        dir = ami.Direction.directions[random.randint(0, 3)]
+        enemy.set_protocol('EnemyTargetPlayer', 
+          start=start, 
+          start_dir=start_dir,
+          vision_distance=vision_distance,
+          dir=dir,
+          player_seen=None)
+        ai.game.enemies = [enemy]
+
+    def test_scenario_ppo2(self):
+      seed = 42
+      fdir = os.path.dirname(os.path.abspath(__file__))
+      path = os.sep.join([fdir, 'models', 'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
+      model = oai.getModel(self.env, 'ppo2', seed, path)
+      # Set low to be a test of a test!
+      self.runTest(model)
+
+
+class GangUpNoJumpTest(AmidarToyboxTest):
+
+    def shouldIntervene(self):
+      return self.tick == 0
+        # if self.tick == 0:
+        #     return True
+        # else:
+        #     with ami.AmidarIntervention(self.getToybox()) as ai:
+        #         assert ai.game.jumps == 0
+        #     return self.tick == 0
+
+    def onTrialEnd(self):
+        self.trialnum = 1 if hasattr(self, 'trialnum') else self.trialnum + 1
+        print('end trial %d', self.trialnum)
         with ami.AmidarIntervention(self.getToybox()) as ai:
             unpainted = ai.num_tiles_unpainted()
             painted = ai.num_tiles_painted()
             jumps = ai.jumps_remaining()
-        scores = [t[3] for t in trial_data]
-        self.assertGreaterEqual(painted, 10)
-        return {'painted': painted, 'unpainted': unpainted, 
-                'score' : scores[-1]}
+            score = ai.get_score()
+            self.assertGreaterEqual(painted, 10)
+            return {'painted': painted, 'unpainted': unpainted, 
+                    'score' : scores}
 
     def onTestEnd(self, trials_data):
         print(trials_data)
 
     def intervene(self):
-        with ami.AmidarIntervention(self.getToybox()) as ai:
-            ai.set_n_jumps(0)
-            ai.set_n_lives(2)
-            for eid in ai.get_enemy_ids():
-                ai.set_enemy_protocol(eid, 'EnemyTargetPlayer')
+      with ami.AmidarIntervention(self.getToybox()) as ai:
+        ai.game.jumps = 0
+        ai.game.lives = 2
+        for enemy in ai.game.enemies:
+          # We are expecting the default protocol to be enemy lookup
+          assert enemy.ai_name == ami.Enemy.EnemyLookupAI
+          # Create an empty TilePoint
+          start = ami.TilePoint(ai.game.intervention, 0, 0)
+          # Set the starting position to be the next one?
+          start.pos = enemy.get_ai_arg('next')
+          start_dir = ami.Direction.directions[random.randint(0, 3)]
+          vision_distance = max(ai.game.board.height, ai.game.board.width)
+          dir = ami.Direction.directions[random.randint(0, 3)]
 
+          enemy.set_protocol('EnemyTargetPlayer', 
+            start=start, 
+            start_dir=start_dir,
+            vision_distance=vision_distance,
+            dir=dir,
+            player_seen=None)
 
     def test_scenario_ppo2(self):
         seed = 42
         fdir = os.path.dirname(os.path.abspath(__file__))
         path = os.sep.join([fdir, 'models', 'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
-        model = oai_test.getPPO2(self.env, seed, path)
+        model = oai.getModel(self.env, 'ppo2', seed, path)
         # Set low to be a test of a test!
-        gym.runTest(self, model)
-
+        self.runTest(model)
 

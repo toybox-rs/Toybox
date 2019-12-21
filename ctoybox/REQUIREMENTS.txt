@@ -1,6 +1,7 @@
-tensorflow
-gym[atari]
-tensorboard
-pygame
-cffi
-
+gym<0.15.4
+tensorflow<2.0.0
+tensorboard<2.1.0,>=2.0.0
+scipy
+opencv-python
+joblib
+mpi4py
