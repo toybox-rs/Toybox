@@ -30,6 +30,12 @@ If you use this code, or otherwise are inspired by our white-box testing approac
     ./start_python human_play.py amidar
     ./start_python human_play.py space_invaders
 
+## Run the tests
+
+1. Navigate to `ctoybox`. 
+2. Run `pip3 install -r REQUIREMENTS.txt`
+3. Run `PYTHONPATH=baselines:toybox python3 -m unittest toybox.sample_tests.test_amidar`
+
 ## Mac Dev Setup Instructions
 * `brew install rustup`
 * `rustup-init` with the default install
