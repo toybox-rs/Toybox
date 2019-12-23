@@ -6,28 +6,23 @@ from abc import ABC, abstractmethod
 
 class AmidarToyboxTest(behavior.BehavioralFixture):
 
-    def __init___(self, *args, **kwargs):
-        super().__init__(args, kwargs)
-        self.lives = 10000
-
     @classmethod
     def setUpEnv(cls):
-        # With no enemies, nothing can be random anyway.
-        seed = 0xdeadbeef
-        gym.setUpToyboxGym(cls, 'AmidarToyboxNoFrameskip-v4', seed)
+      seed = 0xdeadbeef
+      gym.setUpToyboxGym(cls, 'AmidarToyboxNoFrameskip-v4', seed)
     
     @classmethod
     def tearDownEnv(cls):
-        gym.tearDownToyboxGym(cls)
+      gym.tearDownToyboxGym(cls)
 
     def takeAction(self, model):
-        oai.takeAction(self, model)
+      oai.takeAction(self, model)
 
     def stepEnv(self):
-        gym.stepEnv(self)
+      gym.stepEnv(self)
 
     def resetEnv(self):
-        gym.resetEnv(self)
+      gym.resetEnv(self)
 
     def isDone(self):
       lives = self.toybox.get_lives()

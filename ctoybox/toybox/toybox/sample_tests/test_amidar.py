@@ -68,10 +68,6 @@ class EnemyRemovalTest(AmidarToyboxTest):
         
 class OneEnemyTargetTest(AmidarToyboxTest):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.lives = 10000
-
     def shouldIntervene(self):
         return self.tick == 0
 
@@ -82,12 +78,12 @@ class OneEnemyTargetTest(AmidarToyboxTest):
         pass
 
     def intervene(self):
-      print('This should only be called once per trial...')
       with ami.AmidarIntervention(self.getToybox()) as ai:
         ai.game.jumps = 0
-        ai.game.lives = 1
+        ai.game.lives = 0
+        ai.game.level = 0
         # intervene on a single enemy
-        enemy = ai.game.enemies[0]
+        enemy = random.choice(ai.game.enemies)
         start = ami.TilePoint(ai.game.intervention, 0, 0)
         # Set the starting position to be the next one?
         start.pos = enemy.get_ai_arg('next')
@@ -100,6 +96,7 @@ class OneEnemyTargetTest(AmidarToyboxTest):
           vision_distance=vision_distance,
           dir=dir,
           player_seen=None)
+        print(enemy)
         ai.game.enemies = [enemy]
 
     def test_scenario_ppo2(self):
@@ -115,41 +112,39 @@ class GangUpNoJumpTest(AmidarToyboxTest):
 
     def shouldIntervene(self):
       return self.tick == 0
-        # if self.tick == 0:
-        #     return True
-        # else:
-        #     with ami.AmidarIntervention(self.getToybox()) as ai:
-        #         assert ai.game.jumps == 0
-        #     return self.tick == 0
 
     def onTrialEnd(self):
-        self.trialnum = 1 if hasattr(self, 'trialnum') else self.trialnum + 1
-        print('end trial %d', self.trialnum)
-        with ami.AmidarIntervention(self.getToybox()) as ai:
-            unpainted = ai.num_tiles_unpainted()
-            painted = ai.num_tiles_painted()
-            jumps = ai.jumps_remaining()
-            score = ai.get_score()
-            self.assertGreaterEqual(painted, 10)
-            return {'painted': painted, 'unpainted': unpainted, 
-                    'score' : scores}
+      if hasattr(self, 'trialnum'):
+        self.trialnum += 1
+      else: self.trialnum = 1
+      print('end trial %d', self.trialnum)
+      with ami.AmidarIntervention(self.getToybox()) as ai:
+        unpainted = len(ai.game.board.tiles.filter(ami.Tile.Unpainted))
+        painted = len(ai.game.board.tiles.filter(ami.Tile.Painted))
+        score = ai.game.score
+        self.assertGreaterEqual(painted, 6)
+        return {'painted': painted, 'unpainted': unpainted, 'score' : score}
 
-    def onTestEnd(self, trials_data):
-        print(trials_data)
+    def onTestEnd(self):
+      pass
 
     def intervene(self):
       with ami.AmidarIntervention(self.getToybox()) as ai:
         ai.game.jumps = 0
-        ai.game.lives = 2
+        ai.game.lives = 1
         for enemy in ai.game.enemies:
           # We are expecting the default protocol to be enemy lookup
           assert enemy.ai_name == ami.Enemy.EnemyLookupAI
           # Create an empty TilePoint
           start = ami.TilePoint(ai.game.intervention, 0, 0)
-          # Set the starting position to be the next one?
-          start.pos = enemy.get_ai_arg('next')
+          # Set the starting position to be close to the player's 
+          # start position. I picked an arbitrary max distance (20)
+          player_tile = ai.game.player.position.to_tile_point()
+          start.pos = ai.get_random_tile(lambda t, b: \
+              abs(t.tx - player_tile.tx) < 20 and \
+              abs(t.ty - player_tile.ty) < 20)
           start_dir = ami.Direction.directions[random.randint(0, 3)]
-          vision_distance = max(ai.game.board.height, ai.game.board.width)
+          vision_distance = 5
           dir = ami.Direction.directions[random.randint(0, 3)]
 
           enemy.set_protocol('EnemyTargetPlayer', 

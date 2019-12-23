@@ -10,18 +10,18 @@ from collections import namedtuple
 
 class Amidar(Game):
 
-  expected_keys = Game.expected_keys + ['enemies', 'jumps', 'jump_timer', 'chase_timer', 'board']
+  expected_keys = Game.expected_keys + ['enemies', 'player', 'jumps', 'jump_timer', 'chase_timer', 'board']
   
   def __init__(self, intervention, 
     score=None, player=None, lives=None, rand=None, level=None,
     enemies=None, jumps=None, jump_timer=None, chase_timer=None, board=None):
-    print('Amidar init')
-    super().__init__(intervention, score, player, lives, rand, level)
+    super().__init__(intervention, score, lives, rand, level)
     self.enemies = EnemyCollection.decode(intervention, enemies, EnemyCollection)
     self.jumps = jumps
     self.jump_timer = jump_timer
     self.chase_timer = chase_timer
     self.board = Board.decode(intervention, board, Board)
+    self.player = Player.decode(intervention, player, Player)
 
   def __setattr__(self, name, value):
     calling_fn = inspect.stack()[1].function
@@ -29,11 +29,6 @@ class Amidar(Game):
         coll = EnemyCollection(self.intervention, value, directset=True)
         super().__setattr__(name, coll)
         self.intervention.dirty_state = True
-        # Enemies are part of the Amidar config
-        # This should be done in a more principled way, but right now I'm just trying to debug.
-        # print(self.intervention.config); exit(0)
-        # self.intervention.config['enemies'] = coll.encode()
-        # self.intervention.dirty_config = True
     else:
         super().__setattr__(name, value)
 
@@ -122,7 +117,7 @@ class Enemy(BaseMixin):
       return self.ai_kwds.keys()
 
     def set_protocol(self, protocol, **kwargs):
-      """Sets the enemy movement protocol. Each instance in the   rust has a different set of parameters:
+      """Sets the enemy movement protocol. Each instance in the rust has a different set of parameters:
   
       EnemyLookupAI
         next: u32
@@ -152,9 +147,6 @@ class Enemy(BaseMixin):
       assert protocol in Enemy.mvmt_protocols
       def assert_keys(k, t): 
           assert k in kwargs, 'Missing argument %s for protocol %s' % (k, protocol)
-          # 
-        #   v = kwargs[k]
-        #   assert isinstance(v, t), 'Argument %s must be of type %s; is %s' % (k, t, type(v))
       if protocol == Enemy.EnemyLookupAI:
           assert_keys('next', int)
           assert_keys('default_route_index', int)
@@ -176,6 +168,10 @@ class Enemy(BaseMixin):
           except:
             assert_keys('player_seen', TilePoint)
       else: assert False
+      # we have to do this manually because ai_name and ai_kwds are not 
+      # elements of the expected_keys list,  so they are not caught by the 
+      # overridden __setattr__ in the superclass
+      self.intervention.dirty_state = True
       self.ai_name = protocol
       self.ai_kwds = kwargs
   
@@ -195,6 +191,9 @@ class Player(BaseMixin):
 
     def set_position(self, x, y):
         self.position = WorldPoint(self.intervention, x, y)
+
+    def decode(intervention, js, clz):
+        return Player(intervention, **js)
 
 
 class Board(BaseMixin):
@@ -223,28 +222,50 @@ class TileCollection(BaseMixin):
     expected_keys = []
 
     def __init__(self, intervention, tiles):
-        self.tiles = [[Tile(intervention, tile) for tile in row] for row in tiles]
+      self.intervention = intervention
+      self.tiles = []
+      for i, t in enumerate(tiles):
+        row = []
+        for j, tag in enumerate(t):
+         row.append(Tile(intervention, tag, i, j))
+        self.tiles.append(row)
 
     def __iter__(self):
-        return self.tiles.__iter__()
+      return self.tiles.__iter__()
+
+    def __getitem__(self, key):
+        return self.tiles[key]
+
+    def __len__(self):
+        return len(self.tiles)
 
     def decode(intervention, tiles, clz):
-        return TileCollection(intervention, tiles, TileCollection)
+      return TileCollection(intervention, tiles)
 
     def encode(self):
-        return [[t.encode() for t in row] for row in self.tiles]
+      return [[t.encode() for t in row] for row in self.tiles]
 
+    def filter(self, tag):
+      lst = []
+      for row in self.tiles:
+          for tile in row:
+              if tile.tag == tag:
+                  lst.append(tile)
+      return lst
 
 class WorldPoint(BaseMixin):
 
     expected_keys = ['x', 'y']
   
     def __init__(self, intervention, x=None, y=None):
-        assert type(x) is int
-        self.x = x
-        self.y = y
-        self.intervention = intervention        
+      assert type(x) is int
+      self.x = x
+      self.y = y
+      self.intervention = intervention       
 
+    def to_tile_point(self):
+      tx, ty = self.intervention.toybox.query_state_json("world_to_tile", self.encode())
+      return TilePoint(self.intervention, tx, ty)
 
 class BoxCollection(BaseMixin):
 
@@ -287,16 +308,25 @@ class Tile(BaseMixin):
     
     expected_keys = []
 
-    def __init__(self, intervention, name):
-        assert name in Tile.tags
-        self.intervention = intervention
-        self.tag = name
+    def __init__(self, intervention, name, tx, ty):
+      assert name in Tile.tags
+      self.intervention = intervention
+      self.tag = name
+      self.tx = tx
+      self.ty = ty
 
     def decode(intervention, rustname, clz):
-        return Tile(intervention, rustname)
+      return Tile(intervention, rustname)
 
     def encode(self):
-        return self.tag
+      return self.tag
+
+    def to_tile_point(self):
+      return TilePoint(self.tx, self.ty)
+
+    def to_world_point(self, x, y): 
+      js = self.toybox.query_state_json("tile_to_world", self.encode())
+      return WorldPoint.decode(self.intervention, **js)
 
 
 class TilePoint(BaseMixin):
@@ -347,94 +377,48 @@ class TilePoint(BaseMixin):
 class AmidarIntervention(Intervention):
 
     def __init__(self, tb, game_name='amidar'):
-        # check that the simulation in tb matches the game name.
-        Intervention.__init__(self, tb, game_name, Amidar)
+      # check that the simulation in tb matches the game name.
+      Intervention.__init__(self, tb, game_name, Amidar)
 
-    def get_random_tile_id(self): 
-        tile = {}
+    def get_random_tile(self, pred=lambda tile, board: True): 
+      """Returns a random tile object, filtered by the input predicate.
+      
+      Arguments
+      ====
+      pred:
+        boolean function that takes an individual tile as a first argument
+        and the rest of the board as the second argument (for making global
+        decisions, e.g. only returning the tile if it is some minimum distance
+        away from other agents)
+      """
+      # formerly get_random_tile_id
+      while True:
+        i = random.randint(0, self.game.board.height - 1)
+        j = random.randint(0, self.game.board.width - 1)
+        tile = self.game.board.tiles[i][j]
+        if pred(tile, self.game.board):
+            return tile
 
-        ty = random.choice(range(len(self.state['board']['tiles'])))
-        which_tiles = [i for i in range(len(self.state['board']['tiles'][ty])) if self.state['board']['tiles'][ty][i] != "Empty"]
-        tx = random.choice(which_tiles)
-
-        tile['tx'] = tx
-        tile['ty'] = ty
-
-        return tile
-
-
-    def get_random_position(self):
-        # grab random tile
-        rand_tile = self.get_random_tile_id()
-    
-        # convert random tile to x,y location 
-        x, y = self.tile_to_world(rand_tile['tx'], rand_tile['ty'])
-        return WorldPoint(x, y)
-
-    def world_to_tile(self, x, y): 
-        worldpoint = WorldPoint(self, x, y)
-        (tx, ty) = self.toybox.query_state_json("world_to_tile", worldpoint.encode())
-
-        tile = {}
-        tile['tx'] = tx
-        tile['ty'] = ty
-        return tile
+    def get_random_track_position(self):
+      """Utility function to get a random track tile."""
+      # formerly get_random_position
+      # grab random tile
+      rand_tile = self.get_random_tile(lambda tile, board: tile.tag != 'Empty')  
+      # convert random tile to x,y location 
+      return rand_tile.to_world()
 
 
-    def tile_to_world(self, tx, ty): 
-        tilepoint = {'tx': tx, 'ty': ty}
-        (x, y) = self.toybox.query_state_json("tile_to_world", tilepoint)
-        return WorldPoint(x, y)
-
-
-    def num_tiles_unpainted(self):
-        total_unpainted = 0
-        for i in range(len(self.state['board']['tiles'])): 
-            total_unpainted += sum([tile != "Painted" and tile != "Empty" for tile in self.state['board']['tiles'][i]])
-
-        return total_unpainted
-
-
-    def num_tiles_painted(self):
-        return sum([sum([int(tile == 'Painted') for tile in row]) for row in self.state['board']['tiles']])
-
-        
-    def player_tile(self):
-        return self.state['player']['position']
-
-    def get_enemies(self):
-        return self.state['enemies']
-    
-    def get_enemy_ids(self):
-        print('WARNING: need actual ids in the rust')
-        return range(self.num_enemies())
-
-    def num_enemies(self):
-        return len(self.state['enemies'])
-
-    def get_level(self):
-        return self.config['level']
-
-    # def get_lives(self):
-    #     return self.state['lives']
-
-    def jumps_remaining(self):
-        return self.state['jumps']
-
-    def regular_mode(self):
-        return self.state['jump_timer'] == 0 and self.state['chase_timer'] == 0
+    def in_regular_mode(self):
+      """Predicate that tells us whether the agent is in 'regular' mode (i.e., not jumping, nor chasing enemies.)"""
+      return self.game.jump_timer == 0 and self.game.chase_timer == 0
 
     def jump_mode(self):
-        return self.state['jump_timer'] > 0
+      """Predicate indicating whether we are in jump mode, where enemies cannot kill the player."""
+      return self.game.jump_timer > 0
 
     def chase_mode(self):
-        return self.state['chase_timer'] > 0
-
-    def enemy_tiles(self):
-        return [self.state['enemies'][i]['position'] for i in range(len(self.state['enemies']))]
-
-    def enemy_caught(self, eid):
-        return self.state['enemies'][eid]['caught']
+      """Preidcate indicating whether we are in chase mode, where the player scores extra points for catching enemies."""
+      return self.game.chase_timer > 0
 
     def any_enemy_caught(self, eid):
         return any([self.state['enemies'][i]['caught'] for i in range(len(self.state['enemies']))])
@@ -449,96 +433,6 @@ class AmidarIntervention(Intervention):
         self.state['board']['tiles'][tid['ty']][tid['tx']] = label
 
 
-    # def set_box(self, bid, paint=True, include_tiles=True, allow_chase=True):
-    #     self.dirty_state = True
-    #     box = self.state['board']['boxes'][bid]
-    #     box['painted'] = paint
-
-    #     if allow_chase: 
-    #         # if we allow the intervention to trigger chasing, 
-    #         # we only want to do so if it was not already triggered 
-    #         allow_chase = allow_chase and not self.check_chase_condition()
-
-    #     if include_tiles: 
-    #         tx_left = box['top_left']['tx']
-    #         ty_left = box['top_left']['ty']
-    #         tx_right = box['bottom_right']['tx']
-    #         ty_right = box['bottom_right']['ty']
-
-    #         for i in range(tx_left, tx_right+1): 
-    #             for j in range(ty_left, ty_right+1):
-    #                 if self.state['board']['tiles'][i][j] != "Empty": 
-    #                     self.state['board']['tiles'][i][j] = "Painted"
-
-    #     if allow_chase: 
-    #         self.chase_react()
-
-
-    # def check_chase_condition(self): 
-    #     chase = False
-    #     continue_check = True
-
-    #     for box in self.state['board']['boxes']: 
-    #         if box['triggers_chase']: 
-    #             tx_left = box['top_left']['tx']
-    #             ty_left = box['top_left']['ty']
-    #             tx_right = box['bottom_right']['tx']
-    #             ty_right = box['bottom_right']['ty']
-
-    #             all_painted = True
-    #             for i in range(tx_left, tx_right+1): 
-    #                 for j in range(ty_left, ty_right+1):
-    #                     if self.state['board']['tiles'][i][j] != "Empty": 
-    #                         all_painted &= self.state['board']['tiles'][i][j] == "Painted"
-    #                     if not all_painted: 
-    #                         continue_check = False
-    #                         break
-    #                 if not continue_check:
-    #                     break
-
-    #         if not continue_check: 
-    #             break
-
-    #     return all_painted
-
-
-    # def chase_react(self): 
-    #     self.dirty_state = True
-    #     if self.check_chase_condition(): 
-    #         self.set_mode('chase')
-
-
-    # def set_player_tile(self, pos):
-    #     self.dirty_state = True
-    #     # check the input formatting
-    #     assert Intervention.check_position(self, pos, ['x','y'])
-
-    #     # get tile for new position
-    #     # check that this is a walkable, valid tile
-    #     tile = self.world_to_tile(pos)
-    #     assert self.check_tile_position(tile)
-
-    #     # now set the position
-    #     self.state['player']['position']['x'] = pos['x']
-    #     self.state['player']['position']['y'] = pos['y']
-
-
-    # def set_enemy_tile(self, eid, pos):
-    #     self.dirty_state = True
-    #     assert Intervention.check_position(self, pos, ['x', 'y'])
-
-    #     self.state['enemies'][eid]['position']['x'] = pos['x']
-    #     self.state['enemies'][eid]['position']['y'] = pos['y']
-
-
-    # def set_enemy_tiles(self, eids, pos_list):
-    #     self.dirty_state = True
-    #     assert len(eids) == len(pos_list)
-
-    #     for i, eid in enumerate(eids): 
-    #         set_enemy_tile(eid, pos_list[i])
-
-
     def set_mode(self, mode_id='regular', set_time=None): 
         assert mode_id in ['jump', 'chase', 'regular']
         self.dirty_state = True
@@ -549,17 +443,6 @@ class AmidarIntervention(Intervention):
         else: #mode_id == 'regular' 
             self.state['jump_timer'] = 0
             self.state['chase_timer'] = 0
-
-
-    # def get_enemy_protocol(self, eid): 
-    #     return self.state['enemies'][eid]['ai']
-
-
-    # def get_enemy_protocols(self, eids): 
-    #     return [self.state['enemies'][eid]['ai'] for eid in eids]
-
-
-
 
 
     def get_random_dir_for_tile(self, tid):
@@ -600,14 +483,6 @@ class AmidarIntervention(Intervention):
 
 
     
-    def set_enemy_protocols(self, eids, protocols=None):
-        self.dirty_state = True
-        if protocols is None: 
-            protocols = ['EnemyAmidarMvmt']*len(eids) 
-        assert len(eids) == len(protocols)
-
-        for i, eid in enumerate(eids):
-            self.set_enemy_protocol[eid, protocols[i]] 
 
 
     def add_enemy(self, pos, ai='EnemyLookupAI', **kwargs): 
@@ -635,27 +510,8 @@ class AmidarIntervention(Intervention):
         self.state['enemies'].append(new_e)
 
 
-    def remove_enemy(self, eid):
-        self.dirty_state = True
-        assert eid < self.num_enemies() and eid >=0 
-        enemies = [self.state['enemies'][i] for i in range(len(self.state['enemies'])) if i != eid]
-        self.state['enemies'] = enemies
 
 
-    def set_n_jumps(self, n):  
-        self.dirty_state = True      
-        assert n >= 0
-        self.state['jumps'] = n
-
-
-    def set_n_lives(self, n):
-        self.dirty_state = True
-        assert n > 0 
-        self.state['lives'] = n
-
-    # set enemy protocol 
-    # get, set score
-        # consider logic for score calculation
 
 ### difficult interventions ###
     # random start state?

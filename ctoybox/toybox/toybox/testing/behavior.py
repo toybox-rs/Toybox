@@ -27,6 +27,7 @@ class BehavioralFixture(unittest.TestCase, ABC):
     self.recordInterval = record_period
     self.toReset = None
     self.model = None
+    self.lives = 10000
   
   def hasTimedOut(self):
     return self.tick > self.timeout
@@ -73,7 +74,7 @@ class BehavioralFixture(unittest.TestCase, ABC):
                 self.takeAction(model)
                 self.stepEnv()
                 self.env.render()
-                #time.sleep(1/30.0)
+                time.sleep(1/30.0)
               if self.toReset:
                 self.resetConfig(self.toReset)
               trials_data.append(self.onTrialEnd())

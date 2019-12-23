@@ -16,7 +16,6 @@ class BaseMixin(ABC):
 
   def __init__(self, *args, **kwargs):
     self.intervention = None
-    # super().__init__(*args, **kwargs) 
 
   def __setattr__(self, name, value):
     calling_fn = inspect.stack()[1].function
@@ -79,17 +78,15 @@ class BaseMixin(ABC):
 class Game(BaseMixin):
   """Base class for games. Supertype that contains common elements."""
 
-  expected_keys = ['score', 'player', 'lives', 'rand', 'level']
+  expected_keys = ['score', 'lives', 'rand', 'level']
 
-  def __init__(self, intervention, score, player, lives, rand, level, *args, **kwargs):
+  def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
     print('Game init')
     self.score = score
-    self.player = player
     self.rand = rand
     self.lives = lives
     self.level = level
     self.intervention = intervention
-  
 
 class Direction(BaseMixin):
 
