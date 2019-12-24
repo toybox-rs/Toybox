@@ -2,3 +2,4 @@ gym
 tensorflow
 scipy
 opencv-python
+ctoybox
