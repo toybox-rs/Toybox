@@ -1,4 +1,4 @@
-from toybox.toybox import Input
+from ctoybox import Input
 
 NOOP_STR = Input._NOOP.upper() 
 FIRE_STR = "FIRE"

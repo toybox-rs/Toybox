@@ -1,5 +1,5 @@
 import toybox, sys
-from toybox.toybox import Toybox, Input
+from toybox import Toybox, Input
 from toybox.interventions.base import *
 
 import numpy as np
@@ -79,6 +79,9 @@ if __name__ == '__main__':
             img2x = pygame.transform.scale(img, dim)
             screen.blit(img2x, dest=(0,0))
             pygame.display.update()
-            clock.tick(FPS)
+            if key_state[K_TAB]:
+                clock.tick(FPS*4)
+            else:
+                clock.tick(FPS)
     pygame.quit()
     sys.exit()

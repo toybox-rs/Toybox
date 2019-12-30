@@ -1,6 +1,6 @@
 from toybox.envs.atari.base import ToyboxBaseEnv
 from toybox.envs.atari.constants import *
-from toybox.toybox import Toybox, Input
+from toybox import Toybox, Input
 
 import json
 

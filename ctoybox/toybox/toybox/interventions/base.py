@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from toybox.toybox import Toybox
 import inspect
+from ctoybox import Toybox
 import json
 """ Contains the base class for interventions. 
 

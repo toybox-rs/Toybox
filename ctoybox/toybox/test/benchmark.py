@@ -1,4 +1,4 @@
-from toybox.toybox import Toybox, Input
+from toybox import Toybox, Input
 import time
 import atari_py as atari
 import atari_py.ale_python_interface as ale
