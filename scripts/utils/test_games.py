@@ -1,5 +1,5 @@
-import toybox
-from toybox.toybox import Toybox, Input
+import ctoybox
+from ctoybox import Toybox, Input
 import argparse
 
 def smoke_test(tb):

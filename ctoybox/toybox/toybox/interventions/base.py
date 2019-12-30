@@ -1,5 +1,5 @@
 from abc import ABC
-from toybox.toybox import Toybox
+from ctoybox import Toybox
 
 import json
 """ Contains the base class for interventions. 

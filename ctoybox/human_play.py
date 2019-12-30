@@ -1,5 +1,5 @@
 import toybox, sys
-from toybox.toybox import Toybox, Input
+from toybox import Toybox, Input
 from toybox.interventions.base import *
 
 import numpy as np

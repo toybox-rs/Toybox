@@ -1,6 +1,6 @@
 import toybox
 import toybox.interventions.breakout as inter
-from toybox.toybox import Toybox
+from toybox import Toybox
 
 def all_but_one(toybox:Toybox):
     # Generate the set of states that have only one brick left

@@ -2,9 +2,8 @@
 
 set -eu
 
-cargo fmt --all -- --check
-cargo test
-cargo build --release
+# just to make sure pip installs worked OK!
+python -c 'import ctoybox'
 
 if [ ! -e toybox-regress-models.zip ]; then
   wget https://static.jjfoley.me/toybox-regress-models-16-april-2019.zip -O toybox-regress-models.zip
