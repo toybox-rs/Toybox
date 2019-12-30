@@ -74,7 +74,7 @@ class BehavioralFixture(unittest.TestCase, ABC):
                 self.takeAction(model)
                 self.stepEnv()
                 self.env.render()
-                time.sleep(1/30.0)
+                #time.sleep(1/30.0)
               if self.toReset:
                 self.resetConfig(self.toReset)
               trials_data.append(self.onTrialEnd())

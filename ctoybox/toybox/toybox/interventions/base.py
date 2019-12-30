@@ -49,6 +49,7 @@ class BaseMixin(ABC):
       A subclass of BaseMixin corresponding to a game or game element. 
     
     """
+    #if not isinstance(obj, dict): return obj
     actual_keys = set(obj.keys()) 
     target_name = clz.__name__
     intersection = actual_keys.intersection(clz.expected_keys)

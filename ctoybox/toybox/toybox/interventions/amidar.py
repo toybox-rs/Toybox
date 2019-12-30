@@ -22,15 +22,21 @@ class Amidar(Game):
     self.chase_timer = chase_timer
     self.board = Board.decode(intervention, board, Board)
     self.player = Player.decode(intervention, player, Player)
+    # convenience fields. These cannot be manually set and should only be treated as a softlink
+    self.tiles = self.board.tiles
 
   def __setattr__(self, name, value):
     calling_fn = inspect.stack()[1].function
-    if name == 'enemies' and calling_fn != '__init__':
+    if calling_fn != '__init__':
+      # Various special cases here
+      if name == 'tiles':
+        raise AttributeError('tiles is a convenience field on Amidar. To set, access via Board object.')
+      elif name == 'enemies':
         coll = EnemyCollection(self.intervention, value, directset=True)
         super().__setattr__(name, coll)
         self.intervention.dirty_state = True
-    else:
-        super().__setattr__(name, value)
+        return 
+    super().__setattr__(name, value)
 
 
 class EnemyCollection(BaseMixin):
@@ -38,28 +44,32 @@ class EnemyCollection(BaseMixin):
     expected_keys = []
 
     def __init__(self, intervention, enemies, directset=False):
-        self.intervention = intervention
-        self.enemies = enemies if directset else [Enemy.decode(intervention, e, Enemy) for e in enemies]
+      self.intervention = intervention
+      self.enemies = enemies if directset else [Enemy.decode(intervention, e, Enemy) for e in enemies]
         
     def __iter__(self):
-        return self.enemies.__iter__()
+      return self.enemies.__iter__()
 
     def __getitem__(self, key):
-        return self.enemies.__getitem__(key)
+      return self.enemies.__getitem__(key)
 
     def __len__(self):
-        return self.enemies.__len__()
+      return self.enemies.__len__()
+
+    def append(self, obj):
+      assert isinstance(obj, Enemy), '%s must be of type Enemy' % obj
+      self.enemies.append(obj)
 
     def decode(intervention, enemies, clz):
-        return EnemyCollection(intervention, enemies)
+      return EnemyCollection(intervention, enemies)
 
     def encode(self):
-        return [e.encode() for e in self.enemies]
+      return [e.encode() for e in self.enemies]
 
 
 class Enemy(BaseMixin):
 
-    EnemyLookupAI     ='EnemyLookupAI'
+    EnemyLookupAI     = 'EnemyLookupAI'
     EnemyPerimeterAI  = 'EnemyPerimeterAI' 
     EnemyAmidarMvmt   = 'EnemyAmidarMvmt' 
     EnemyTargetPlayer = 'EnemyTargetPlayer'
@@ -78,7 +88,10 @@ class Enemy(BaseMixin):
       self.intervention = intervention
       self.history = history
       self.step = step
-      self.position = WorldPoint(intervention, **position)
+      self.position = position           if isinstance(position, WorldPoint) \
+          else position.to_world_point() if isinstance(position, TilePoint) \
+          else position.to_world_point() if isinstance(position, Tile) \
+          else WorldPoint.decode(self.intervention, position, WorldPoint)
       self.caught = caught
       self.speed = speed
       assert len(ai.keys()) == 1  
@@ -146,28 +159,33 @@ class Enemy(BaseMixin):
         player_seen: Option<TilePoint>"""
       assert protocol in Enemy.mvmt_protocols
       def assert_keys(k, t): 
-          assert k in kwargs, 'Missing argument %s for protocol %s' % (k, protocol)
+        assert k in kwargs, 'Missing argument %s for protocol %s' % (k, protocol)
       if protocol == Enemy.EnemyLookupAI:
-          assert_keys('next', int)
-          assert_keys('default_route_index', int)
+        assert_keys('next', int)
+        assert_keys('default_route_index', int)
       elif protocol == Enemy.EnemyPerimeterAI:
-          assert_keys('start', TilePoint)
+        assert_keys('start', TilePoint)
       elif protocol == Enemy.EnemyAmidarMvmt:
-          assert_keys('vert', Direction)
-          assert_keys('horiz', Direction)
-          assert_keys('start_vert', Direction)
-          assert_keys('start_horiz', Direction)
-          assert_keys('start', TilePoint)
+        assert_keys('vert', Direction)
+        assert_keys('horiz', Direction)
+        assert_keys('start_vert', Direction)
+        assert_keys('start_horiz', Direction)
+        assert_keys('start', TilePoint)
       elif protocol == Enemy.EnemyTargetPlayer:
-          assert_keys('start', TilePoint)
-          assert_keys('start_dir', Direction)
-          assert_keys('vision_distance', int)
-          assert_keys('dir', Direction)
-          try: 
-            assert_keys('player_seen', None)
-          except:
-            assert_keys('player_seen', TilePoint)
-      else: assert False
+        assert_keys('start', TilePoint)
+        assert_keys('start_dir', Direction)
+        assert_keys('vision_distance', int)
+        assert_keys('dir', Direction)
+        try: 
+          assert_keys('player_seen', None)
+        except:
+          assert_keys('player_seen', TilePoint)
+      elif protocol == Enemy.EnemyRandomMvmt:
+        assert_keys('start', TilePoint)
+        assert_keys('start_dir', Direction)
+        assert_keys('dir', Direction)
+      else: 
+        raise ValueError('Unknown enemy movement protocol: %s' % protocol)
       # we have to do this manually because ai_name and ai_kwds are not 
       # elements of the expected_keys list,  so they are not caught by the 
       # overridden __setattr__ in the superclass
@@ -261,11 +279,13 @@ class WorldPoint(BaseMixin):
       assert type(x) is int
       self.x = x
       self.y = y
-      self.intervention = intervention       
+      self.intervention = intervention
 
     def to_tile_point(self):
-      tx, ty = self.intervention.toybox.query_state_json("world_to_tile", self.encode())
-      return TilePoint(self.intervention, tx, ty)
+      """Converts this world point to a tile point."""
+      tx, ty = self.intervention.toybox.query_state_json('world_to_tile', self.encode())
+      return TilePoint(self.intervention, tx, ty)  
+
 
 class BoxCollection(BaseMixin):
 
@@ -322,11 +342,12 @@ class Tile(BaseMixin):
       return self.tag
 
     def to_tile_point(self):
-      return TilePoint(self.tx, self.ty)
+      return TilePoint(self.intervention, self.tx, self.ty)
 
-    def to_world_point(self, x, y): 
-      js = self.toybox.query_state_json("tile_to_world", self.encode())
-      return WorldPoint.decode(self.intervention, **js)
+    def to_world_point(self): 
+      x, y = self.intervention.toybox.query_state_json('tile_to_world', 
+        self.to_tile_point().encode())
+      return WorldPoint(self.intervention, x, y)
 
 
 class TilePoint(BaseMixin):
@@ -339,6 +360,9 @@ class TilePoint(BaseMixin):
         self.ty = ty
         self.pos = None
         self.board = None
+
+    def __str__(self):
+        return 'TilePoint {tx: %d, ty: %d}' % (self.tx, self.ty)
 
     def _board_init(self, board):
         assert self.tx >= 0 and self.tx < board.width, \
@@ -370,9 +394,12 @@ class TilePoint(BaseMixin):
         parent.__setattr__('tx', tx)          
 
     def is_walkable(self):
-        # formerly check_tile_position(self, tdict)
-        return self.tag != Tile.empty
+      # formerly check_tile_position(self, tdict)
+      return self.tag != Tile.empty
 
+    def to_world_point(self):
+      return WorldPoint(self.intervention, 
+        *self.intervention.toybox.query_state_json('tile_to_world', self.encode()))
 
 class AmidarIntervention(Intervention):
 
@@ -380,7 +407,7 @@ class AmidarIntervention(Intervention):
       # check that the simulation in tb matches the game name.
       Intervention.__init__(self, tb, game_name, Amidar)
 
-    def get_random_tile(self, pred=lambda tile, board: True): 
+    def get_random_tile(self, pred=lambda tile: True): 
       """Returns a random tile object, filtered by the input predicate.
       
       Arguments
@@ -396,7 +423,7 @@ class AmidarIntervention(Intervention):
         i = random.randint(0, self.game.board.height - 1)
         j = random.randint(0, self.game.board.width - 1)
         tile = self.game.board.tiles[i][j]
-        if pred(tile, self.game.board):
+        if pred(tile):
             return tile
 
     def get_random_track_position(self):
