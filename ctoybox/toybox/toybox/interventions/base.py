@@ -14,15 +14,22 @@ class BaseMixin(ABC):
   @abstractmethod
   def expected_keys(clz): pass
 
+  @classmethod
+  @property
+  @abstractmethod
+  def immutable_fields(clz): pass
+
   def __init__(self, *args, **kwargs):
     self.intervention = None
 
   def __setattr__(self, name, value):
-    calling_fn = inspect.stack()[1].function
+    stack = [frame.function for frame in inspect.stack()]
+    calling_fn = stack[1]
     existing_attrs = self.__dict__.keys()
     adding_new = name not in existing_attrs
     # Prohibit adding fields outside object instantiation/initialization
-    if calling_fn != '__init__' and calling_fn != '__setattr__':
+    if not ('__init__' in stack or \
+        name in self.immutable_fields):
       if adding_new:
         raise AttributeError("Cannot add new fields to %s from %s" % (self.__class__.__name__, calling_fn))
       assert 'intervention' in existing_attrs
@@ -49,7 +56,6 @@ class BaseMixin(ABC):
       A subclass of BaseMixin corresponding to a game or game element. 
     
     """
-    #if not isinstance(obj, dict): return obj
     actual_keys = set(obj.keys()) 
     target_name = clz.__name__
     intersection = actual_keys.intersection(clz.expected_keys)
@@ -71,54 +77,16 @@ class BaseMixin(ABC):
     dat = {}
     for name, val in self.__dict__.items():
       if name not in self.expected_keys:
+        if name != 'intervention' and __debug__:
+          print('skipping %s in %s; not in expected keys' % (name, type(self).__name__))
         continue
       dat[name] = val.encode() if isinstance(val, BaseMixin) else val
     return dat
         
-
-class Game(BaseMixin):
-  """Base class for games. Supertype that contains common elements."""
-
-  expected_keys = ['score', 'lives', 'rand', 'level']
-
-  def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
-    print('Game init')
-    self.score = score
-    self.rand = rand
-    self.lives = lives
-    self.level = level
-    self.intervention = intervention
-
-class Direction(BaseMixin):
-
-  Up    = 'Up'
-  Down  = 'Down'
-  Left  = 'Left'
-  Right = 'Right'
-
-  directions = [Up, Down, Left, Right]
-
-  def __init__(self, intervention, direction):
-    self.intervention = intervention
-    assert direction in Direction.directions
-    self.direction = direction
-
-  def decode(intervention, direction, clz):
-    return Direction(intervention, direction)
-
-  def encode(self):
-    return self.direction
-
-
 class Intervention(ABC):
 
   def __init__(self, tb, game_name, clz):
-    print('Initializing intervention')
-    # for frame in inspect.stack():
-    #   print(frame.function)
-    # check that the simulation in tb matches the game name.
     self.toybox = tb
-    # self.state = None
     self.config = None
     self.dirty_config = False
     self.dirty_state = False
@@ -141,11 +109,9 @@ class Intervention(ABC):
     if self.dirty_config:
       assert False
       self.toybox.write_config_json(self.config)
-      # print("new_game!")
       self.toybox.new_game()
 
     elif self.dirty_state:
-      print("write_state_json!")
       self.toybox.write_state_json(self.game.encode())
 
     self.config = None
