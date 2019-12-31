@@ -485,18 +485,16 @@ class AmidarIntervention(Intervention):
       pos = self.get_random_tile(pred=within_min_manhattan)
       self.game.player.position = self.tile_to_worldpoint(pos)
 
-    def get_random_dir_for_tile(self, tid):
-        tile = self.state['board']['tiles'][tid['ty']][tid['tx']]
-
-        assert tile != "Empty"
+    def get_random_dir_for_tile(self, tiles):
+        assert tile.tag != "Empty"
         selected = False
         dirs = ["Up", "Down", "Left", "Right"]
 
         d = None
         while not selected: 
             next_tid = {}
-            next_tid['tx'] = tid['tx']
-            next_tid['ty'] = tid['ty']
+            next_tid['tx'] = tile.tx
+            next_tid['ty'] = tile.ty
 
             if d is not None: 
                 dirs.remove(d)
@@ -514,7 +512,7 @@ class AmidarIntervention(Intervention):
                 next_tid['tx'] = next_tid['tx'] + 1
 
             if d is not None: 
-                selected = not selected and self.check_is_tile(next_tid)
+                selected = not selected and self.is_tile_walkable(Tile.decode(self, next_tid, Tile))
 
         if d is None:
             raise Exception("No valid direction from this tile:\t\tTile tx:"+str(tid['tx'])+", ty"+str(tid['ty']))
