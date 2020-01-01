@@ -22,7 +22,33 @@ def _get_turtle(env):
             # Not setting this causes issues later when trying
             # to time step with the TimeLimit wrapper. Not sure how to 
             # pass it in.
-            env._max_episode_steps = 1e7
+            #env._max_episode_steps = 1e7
+            env = env.env
+        elif (isinstance(env, DummyVecEnv)):
+            env = env.envs[0]
+        elif isinstance(env, ToyboxBaseEnv):
+            return env
+        elif isinstance(env, SubprocVecEnv):
+            env = env.example_env 
+        elif (isinstance(env, gym.Wrapper)):
+            env = env.env
+        elif isinstance(env, gym.Env):
+            return env
+        else:
+            raise ValueError("Can't unwrap", env)
+
+
+def _reset_deep_kludge(env, timeout):
+    env = env 
+    while True:
+        env.reset()
+        if (isinstance(env, VecFrameStack)):
+            env = env.venv
+        elif (isinstance(env, gym.wrappers.time_limit.TimeLimit)):
+            # Not setting this causes issues later when trying
+            # to time step with the TimeLimit wrapper. Not sure how to 
+            # pass it in.
+            env._max_episode_steps = timeout
             env = env.env
         elif (isinstance(env, DummyVecEnv)):
             env = env.envs[0]
@@ -50,17 +76,18 @@ def setUpToyboxGym(testclass, env_id, seed):
     testclass.turtle = _get_turtle(env)
     testclass.toybox = testclass.turtle.toybox
 
-
 def tearDownToyboxGym(testclass):
     testclass.env.close()
-
 
 def stepEnv(self):
     obs, _, done, info = self.env.step(self.action)
     self.done = done if type(done) == 'bool' else done.any()
     self.obs = obs
+    #if self.tick % 100 == 0: print('Tick', self.tick)
     self.tick += 1
 
 def resetEnv(self):
     self.getToybox().new_game()
+    self.tick = 0
+    self.lives = 1000
     self.obs = self.env.reset()

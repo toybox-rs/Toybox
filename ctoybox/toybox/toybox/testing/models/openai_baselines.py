@@ -8,9 +8,11 @@ def _get_alg_module(alg, submodule=None):
     return alg_module
 
 def _get_learn_function(alg):
+    # copied verbatim from baselines
     return _get_alg_module(alg).learn
 
 def _get_learn_function_defaults(alg, env_type):
+    # Copied verbaim from baselines
     try:
         alg_defaults = _get_alg_module(alg, 'defaults')
         kwargs = getattr(alg_defaults, env_type)()

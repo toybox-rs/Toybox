@@ -35,15 +35,18 @@ class AmidarToyboxTestBase(behavior.BehavioralFixture):
       lives = self.toybox.get_lives()
       has_reset = lives > self.lives
       self.lives = lives
+      #print('lives', lives, 'has_reset',  has_reset, 'hasTimedOut', self.hasTimedOut())
       return self.hasTimedOut() or has_reset
 
     @abstractmethod
-    def intervene(self): pass
-
-#behavior.BehavioralFixture.register(AmidarToyboxTestBase)
+    def intervene(self): assert False
 
 
 class EnemyRemovalTest(AmidarToyboxTestBase):
+
+    def setUp(self):
+        # remember, setup applies to 
+        super().setUp(trials=5, timeout=500)
 
     def shouldIntervene(self):
         return self.tick == 0
@@ -52,8 +55,9 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
       # An agent trained on ALE should be able to complete at least half of 
       # level 1 before time.
       with ami.AmidarIntervention(self.getToybox()) as intervention:
-        painted = len(intervention.game.board.tiles.filter(intervention.Tile.Painted))
-        self.assertGreaterEqual(painted, 6)
+        painted = len(intervention.filter_tiles(lambda t: t.tag == ami.Tile.Painted))
+        self.assertGreaterEqual(painted, 10)
+        print('painted:', painted, 'score', intervention.game.score)
         return {'painted': painted, 'score' : intervention.game.score}
 
     def onTestEnd(self): pass
@@ -61,17 +65,18 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
     def intervene(self):
       with ami.AmidarIntervention(self.getToybox()) as intervention:
         intervention.game.lives = 1
-        intervention.game.enemies = []
+        intervention.game.enemies.clear()
 
     def test_no_enemies_ppo2(self):
+        print('testing test_no_enemies_ppo2')
         seed = 42
-        fdir = os.path.dirname(os.path.abspath(__file__))
-        path = os.sep.join([fdir, 'models', 'AmidarNoFrameskip-v4.ppo2.5e7.845090117.2018-12-29.model'])  
-        # You need to do this if you want to load more than one model with tensorflow
+        # fdir = os.path.dirname(os.path.abspath(__file__))
+        # path = os.sep.join([fdir, 'models', 'AmidarNoFrameskip-v4.ppo2.5e7.845090117.2018-12-29.model'])  
+        path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
+        # # You need to do this if you want to load more than one model with tensorflow
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
             # Set low to be a test of a test!
-            self.timeout = 10
             self.runTest(model)
 
     def test_no_enemies_all_models(self):
@@ -85,7 +90,6 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
             family = trained.split('.')[1]
             with tf.Session(graph=tf.Graph()):
                 model = oai.getModel(self.env, family, seed, path)
-                print(self.timeout)
                 self.runTest(model)
         
 class OneEnemyTargetTest(AmidarToyboxTestBase):
@@ -107,22 +111,25 @@ class OneEnemyTargetTest(AmidarToyboxTestBase):
         start = ami.TilePoint(game.intervention, 0, 0)
         # Set the starting position to be the next one?
         start.pos = enemy.ai.next
-        start_dir = ami.Direction.directions[random.randint(0, 3)]
+        start_dir = ami.Direction(self, ami.Direction.directions[random.randint(0, 3)])
         vision_distance = max(game.board.height, game.board.width)
-        dir = ami.Direction.directions[random.randint(0, 3)]
+        dir = ami.Direction(self, ami.Direction.directions[random.randint(0, 3)])
         intervention.set_enemy_protocol(enemy, 'EnemyTargetPlayer', 
           start=start, 
           start_dir=start_dir,
           vision_distance=vision_distance,
           dir=dir,
           player_seen=None)
-        print(enemy)
+        self.trials = 2
+        self.timeout = 1e5
         game.enemies = [enemy]
+        assert self.dirty_state == True
 
     def test_scenario_ppo2(self):
       seed = 42
-      fdir = os.path.dirname(os.path.abspath(__file__))
-      path = os.sep.join([fdir, 'models', 'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
+    #   fdir = os.path.dirname(os.path.abspath(__file__))
+    #   path = os.sep.join([fdir, 'models', 'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])
+      path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
       model = oai.getModel(self.env, 'ppo2', seed, path)
       # Set low to be a test of a test!
       self.runTest(model)

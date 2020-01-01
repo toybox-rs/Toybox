@@ -11,6 +11,7 @@ import random
 class Amidar(Game):
 
   expected_keys = Game.expected_keys + ['enemies', 'player', 'jumps', 'jump_timer', 'chase_timer', 'board']
+  immutable_fields = Game.immutable_fields + ['enemies']
   
   def __init__(self, intervention, 
     score=None, player=None, lives=None, rand=None, level=None,
@@ -395,7 +396,7 @@ class AmidarIntervention(Intervention):
 
     def filter_tiles(self, pred=lambda t: True):
       lst = []
-      for row in self.game.tiles:
+      for row in self.game.board.tiles:
         for tile in row:
           if pred(tile): lst.append(tile)
       return lst

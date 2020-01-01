@@ -26,8 +26,9 @@ class BehavioralFixture(unittest.TestCase, ABC):
     self.timeout = timeout
     self.recordInterval = record_period
     self.toReset = None
-    self.model = None
     self.lives = 10000
+    self.tick = 0
+
   
   def hasTimedOut(self):
     return self.tick > self.timeout
@@ -61,24 +62,19 @@ class BehavioralFixture(unittest.TestCase, ABC):
 
   def runTest(self, model, collection=['n/a']):
       trials_data = []
-      if collection:
-        for obj in collection:
-          with self.subTest(obj=obj):
-            for trial in range(self.trials):
-              # for each trial, record the score at mod 10 steps 
-              print('Running trial %d...' % trial)
-              self.tick = 0
-              while not self.isDone():
-                if self.shouldIntervene():
-                  self.intervene()
-                self.takeAction(model)
-                self.stepEnv()
-                self.env.render()
-                time.sleep(1/30.0)
-              if self.toReset:
-                self.resetConfig(self.toReset)
-              trials_data.append(self.onTrialEnd())
-              # commenting out the reset env because I am seeing a lot of re-initialization of the game state
-              print('Resetting environment.')
-              self.resetEnv() #  EpisodicLifeEnv problems
+      for obj in collection:
+        with self.subTest(obj=obj):
+          for trial in range(self.trials):
+            # for each trial, record the score at mod 10 steps 
+            print('Running trial %d of %s...' % (trial+1, self.trials))
+            while not self.isDone():
+              if self.shouldIntervene(): self.intervene()
+              self.takeAction(model)
+              self.stepEnv()
+              self.env.render()
+            if self.toReset: self.resetConfig(self.toReset)
+            trials_data.append(self.onTrialEnd())
+            # commenting out the reset env because I am seeing a lot of re-initialization of the game state
+            print('Resetting environment.\n')
+            self.resetEnv()
       self.onTestEnd()    
