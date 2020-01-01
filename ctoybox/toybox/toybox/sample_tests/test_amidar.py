@@ -10,7 +10,12 @@ import tensorflow as tf
 from scipy.stats import sem
 from numpy import mean
 from abc import abstractmethod
+
 # These tests all share the same setup
+# This used to be in a separate module. 
+# We may want to consider putting it back into a separate module, since
+# we cannot currently use the automated tools for test discovery with an 
+# abstract test. There is probably a way to configure this.
 class AmidarToyboxTestBase(behavior.BehavioralFixture):
   
     @classmethod
