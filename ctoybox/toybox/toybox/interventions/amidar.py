@@ -24,40 +24,16 @@ class Amidar(Game):
     self.player = Player.decode(intervention, player, Player)
 
 
-class EnemyCollection(BaseMixin):
+class EnemyCollection(Collection):
 
     expected_keys = []
     immutable_fields = ['intervention']
 
-    def __init__(self, intervention, enemies, directset=False):
-      self.intervention = intervention
-      self.enemies = enemies if directset else [Enemy.decode(intervention, e, Enemy) for e in enemies]
-        
-    def __iter__(self):
-      return self.enemies.__iter__()
-
-    def __getitem__(self, key):
-      return self.enemies.__getitem__(key)
-
-    def __len__(self):
-      return self.enemies.__len__()
-
-    def append(self, obj):
-      assert isinstance(obj, Enemy), '%s must be of type Enemy' % obj
-      self.enemies.append(obj)
-      # Since this doesn't trigger the superclass' __setattr__, we need to set dirty_state manuall
-      self.intervention.dirty_state = True
-
-    def remove(self, obj):
-      self.enemies.remove(obj)
-      # Since this doesn't trigger the superclass' __setattr__, we need to set dirty_state manuall
-      self.intervention.dirty_state = True
+    def __init__(self, intervention, enemies):
+      super().__init__(intervention, enemies, Enemy)
 
     def decode(intervention, enemies, clz):
       return EnemyCollection(intervention, enemies)
-
-    def encode(self):
-      return [e.encode() for e in self.enemies]
 
 
 class MovementAI(BaseMixin):
@@ -114,7 +90,6 @@ class MovementAI(BaseMixin):
       return { self.protocol: args }
 
 
-
 class Enemy(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
@@ -162,37 +137,21 @@ class Board(BaseMixin):
       self.height = height
       self.chase_junctions = chase_junctions
       self.junctions = junctions
-
       self.boxes = BoxCollection.decode(intervention, boxes,  BoxCollection)
-    #   for box in self.boxes:
-    #     box.top_left._board_init(self)
-    #     box.bottom_right._board_init(self)
-  
-      self.tiles = TileCollection(intervention, tiles)
+      self.tiles = TileCollection.decode(intervention, tiles, TileCollection)
   
 
-class TileCollection(BaseMixin):
+class TileCollection(Collection):
     # Convenience class to deal with the fact that the tiles blob is
     # an array of arrays, which messes up how our recursive decode calls
 
-    expected_keys = []
-    immutable_fields = ['intervention', 'tiles']
+    immutable_fields = Collection.immutable_fields + ['tiles']
 
     def __init__(self, intervention, tiles):
       self.intervention = intervention
-      self.tiles = []
+      self.coll = []
       for row in tiles:
-        assert(type(row[0]) == str)
-        self.tiles.append([Tile.decode(intervention, tile, Tile) for tile in row])
-
-    def __iter__(self):
-      return self.tiles.__iter__()
-
-    def __getitem__(self, key):
-        return self.tiles[key]
-
-    def __len__(self):
-        return len(self.tiles)
+        self.coll.append([Tile.decode(intervention, tile, Tile) for tile in row])
 
     def remove(self):
         raise ValueError('Cannot remove tiles from the board.')
@@ -204,7 +163,7 @@ class TileCollection(BaseMixin):
       return TileCollection(intervention, tiles)
 
     def encode(self):
-      return [[t.encode() for t in row] for row in self.tiles]
+      return [[t.encode() for t in row] for row in self.coll]
 
 class WorldPoint(BaseMixin):
 
@@ -217,23 +176,14 @@ class WorldPoint(BaseMixin):
       self.y = y
       self.intervention = intervention
 
-class BoxCollection(BaseMixin):
-
-    expected_keys = []
-    immutable_fields = ['intervention']
+class BoxCollection(Collection):
 
     def __init__(self, intervention, boxes):
-        self.boxes = [Box(intervention, **boxdat) for boxdat in boxes]
-
-    def __iter__(self):
-        return self.boxes.__iter__()
+      self.intervention = intervention
+      self.coll = [Box(intervention, **boxdat) for boxdat in boxes]
 
     def decode(intervention, boxes, clz):
         return BoxCollection(intervention, boxes)
-
-    def encode(self):
-        return [b.encode() for b in self.boxes]
-
 
 class Box(BaseMixin):
 
@@ -529,6 +479,8 @@ class AmidarIntervention(Intervention):
 
 if __name__ == "__main__":
   with Toybox('amidar') as tb:
+
+    # This should all be moved to a testing framework
     
     # test painting
     with AmidarIntervention(tb) as intervention:

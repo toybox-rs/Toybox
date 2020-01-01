@@ -28,8 +28,9 @@ class BaseMixin(ABC):
     existing_attrs = self.__dict__.keys()
     adding_new = name not in existing_attrs
     # Prohibit adding fields outside object instantiation/initialization
-    if not ('__init__' in stack or \
-        name in self.immutable_fields):
+    if '__init__' not in stack:
+      if name in self.immutable_fields:
+        raise AttributeError('Trying mutate immutable field %s' % name)
       if adding_new:
         raise AttributeError("Cannot add new fields to %s from %s" % (self.__class__.__name__, calling_fn))
       assert 'intervention' in existing_attrs
@@ -97,7 +98,7 @@ class Intervention(ABC):
 
   def __enter__(self):
     # grab the JSON to be manipulated
-    # self.state = self.toybox.to_state_json()
+    #self.state = self.toybox.to_state_json()
     self.config = self.toybox.config_to_json()
     self.game = self.clz.decode(self, self.toybox.to_state_json(), self.clz)
 
