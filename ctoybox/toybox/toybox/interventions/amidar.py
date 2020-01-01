@@ -378,11 +378,9 @@ class AmidarIntervention(Intervention):
         assert_keys('dir', Direction)
       else: 
         raise ValueError('Unknown enemy movement protocol: %s' % protocol)
-      # we have to do this manually because ai_name and ai_kwds are not 
-      # elements of the expected_keys list,  so they are not caught by the 
-      # overridden __setattr__ in the superclass
-      enemy.intervention.dirty_state = True
-      enemy.ai = MovementAI(self, protocol, **kwargs)
+      enemy.ai.protocol = protocol
+      for k, v in kwargs.items():
+        enemy.ai.__setattr__(k, v)
 
     def is_tile_walkable(self, tile):
       # formerly check_tile_position(self, tdict)

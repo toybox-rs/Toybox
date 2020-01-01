@@ -27,15 +27,16 @@ class BaseMixin(ABC):
     calling_fn = stack[1]
     existing_attrs = self.__dict__.keys()
     adding_new = name not in existing_attrs
+    super().__setattr__(name, value)
     # Prohibit adding fields outside object instantiation/initialization
     if '__init__' not in stack:
-      if name in self.immutable_fields:
+      if name in self.immutable_fields: # and not :
         raise AttributeError('Trying mutate immutable field %s' % name)
       if adding_new:
         raise AttributeError("Cannot add new fields to %s from %s" % (self.__class__.__name__, calling_fn))
       assert 'intervention' in existing_attrs
       self.intervention.dirty_state = True
-    super().__setattr__(name, value)
+    
   
   def decode(intervention, obj, clz):
     """Creates an instance of the input class from the JSON. 
