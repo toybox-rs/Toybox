@@ -75,7 +75,7 @@ class BehavioralFixture(unittest.TestCase, ABC):
           print('Running trial %d of %s...' % (trial+1, self.trials))
           while not self.isDone():
             if self.shouldIntervene(): self.intervene()
-            self.env.render()
+            #self.env.render()
             self.takeAction(model)
             self.stepEnv()
           if self.toReset: self.resetConfig(self.toReset)
