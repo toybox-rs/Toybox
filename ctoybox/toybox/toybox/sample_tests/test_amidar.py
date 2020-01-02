@@ -57,6 +57,7 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
     def shouldIntervene(self): return self.tick == 0
 
     def onTrialEnd(self):
+      self.assertIsNotNone(self.final_state)
       game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
       painted = sum([
           sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
@@ -264,7 +265,8 @@ class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
     def test_scenario_ppo2(self):
       seed = 42
       fdir = os.path.dirname(os.path.abspath(__file__))
-      path = os.sep.join([fdir, 'models',  'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
+    #   path = os.sep.join([fdir, 'models',  'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
+      path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
       model = oai.getModel(self.env, 'ppo2', seed, path)
       # Set low to be a test of a test!
       self.runTest(model)
