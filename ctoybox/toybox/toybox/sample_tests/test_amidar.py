@@ -207,8 +207,9 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
 
     def test_scenario_ppo2(self):
       seed = 42
-      fdir = os.path.dirname(os.path.abspath(__file__))
-      path = os.sep.join([fdir, 'models',  'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
+    #   fdir = os.path.dirname(os.path.abspath(__file__))
+    #   path = os.sep.join([fdir, 'models',  'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
+      path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
       model = oai.getModel(self.env, 'ppo2', seed, path)
       # Set low to be a test of a test!
       self.runTest(model)
