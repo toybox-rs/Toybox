@@ -37,33 +37,33 @@ class AmidarToyboxTestBase(behavior.BehavioralFixture):
       gym.resetEnv(self)
 
     def isDone(self):
-      lives = self.toybox.get_lives()
-      has_reset = lives > self.lives
-      self.lives = lives
-      #print('lives', lives, 'has_reset',  has_reset, 'hasTimedOut', self.hasTimedOut())
-      return self.hasTimedOut() or has_reset
+      if self.hasTimedOut():
+        self.final_state = self.toybox.to_state_json()
+        return True 
+      else: return self.done
 
     @abstractmethod
     def intervene(self): assert False
 
 
+def generate_random_dir(intervention):
+    return ami.Direction(intervention, ami.Direction.directions[random.randint(0, 3)])
+
+
 class EnemyRemovalTest(AmidarToyboxTestBase):
 
-    def setUp(self):
-        # remember, setup applies to 
-        super().setUp(trials=5, timeout=500)
+    def setUp(self): super().setUp(trials=5, timeout=500)
 
-    def shouldIntervene(self):
-        return self.tick == 0
+    def shouldIntervene(self): return self.tick == 0
 
     def onTrialEnd(self):
-      # An agent trained on ALE should be able to complete at least half of 
-      # level 1 before time.
-      with ami.AmidarIntervention(self.getToybox()) as intervention:
-        painted = len(intervention.filter_tiles(lambda t: t.tag == ami.Tile.Painted))
-        self.assertGreaterEqual(painted, 10)
-        print('painted:', painted, 'score', intervention.game.score)
-        return {'painted': painted, 'score' : intervention.game.score}
+      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      painted = sum([
+          sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
+               for row in game.board.tiles]) 
+      print('painted:', painted, 'score', game.score)
+      self.assertGreaterEqual(painted, 10)
+      return {'painted': painted, 'score' : game.score}
 
     def onTestEnd(self): pass
 
@@ -75,13 +75,10 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
     def test_no_enemies_ppo2(self):
         print('testing test_no_enemies_ppo2')
         seed = 42
-        # fdir = os.path.dirname(os.path.abspath(__file__))
-        # path = os.sep.join([fdir, 'models', 'AmidarNoFrameskip-v4.ppo2.5e7.845090117.2018-12-29.model'])  
         path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
         # # You need to do this if you want to load more than one model with tensorflow
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
-            # Set low to be a test of a test!
             self.runTest(model)
 
     def test_no_enemies_all_models(self):
@@ -99,52 +96,71 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
         
 class OneEnemyTargetTest(AmidarToyboxTestBase):
 
-    def shouldIntervene(self):
-        return self.tick == 0
+    def setUp(self): super().setUp(trials=5, timeout=500)
 
-    def onTrialEnd(self): pass
+    def shouldIntervene(self): return self.tick == 0
+
+    def onTrialEnd(self):
+      self.assertIsNotNone(self.final_state)
+      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      painted = sum([
+          sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
+               for row in game.board.tiles]) 
+      print('painted:', painted, 'score', game.score)
+      self.assertGreaterEqual(painted, 10)
+      return {'painted': painted, 'score' : game.score}
 
     def onTestEnd(self): pass
 
     def intervene(self):
       with ami.AmidarIntervention(self.getToybox()) as intervention:
         game = intervention.game
-        game.jumps = 0
         game.lives = 1
+        game.jumps = 0
         # intervene on a single enemy
         enemy = random.choice(game.enemies)
         start = ami.TilePoint(game.intervention, 0, 0)
         # Set the starting position to be the next one?
         start.pos = enemy.ai.next
-        start_dir = ami.Direction(self, ami.Direction.directions[random.randint(0, 3)])
+        start_dir = generate_random_dir(intervention)
         vision_distance = max(game.board.height, game.board.width)
-        dir = ami.Direction(self, ami.Direction.directions[random.randint(0, 3)])
+        dir = generate_random_dir(intervention)
         intervention.set_enemy_protocol(enemy, 'EnemyTargetPlayer', 
           start=start, 
           start_dir=start_dir,
           vision_distance=vision_distance,
           dir=dir,
           player_seen=None)
-        self.trials = 2
-        self.timeout = 1e5
-        game.enemies = [enemy]
-        assert self.dirty_state == True
+        game.enemies.clear()
+        game.enemies.append(enemy)
+        self.assertTrue(intervention.dirty_state)
 
     def test_scenario_ppo2(self):
       seed = 42
     #   fdir = os.path.dirname(os.path.abspath(__file__))
     #   path = os.sep.join([fdir, 'models', 'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])
       path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
-      model = oai.getModel(self.env, 'ppo2', seed, path)
-      # Set low to be a test of a test!
-      self.runTest(model)
+      with tf.Session(graph=tf.Graph()):
+        model = oai.getModel(self.env, 'ppo2', seed, path)
+        # Set low to be a test of a test!
+        self.runTest(model)
 
 class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
 
-    def shouldIntervene(self):
-      return self.tick == 0
+    def setUp(self): super().setUp(trials=5, timeout=500)
 
-    def onTrialEnd(self): pass
+    def shouldIntervene(self): return self.tick == 0
+
+    def onTrialEnd(self):
+      self.assertIsNotNone(self.final_state)
+      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      painted = sum([
+          sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
+               for row in game.board.tiles]) 
+      print('painted:', painted, 'score', game.score)
+      self.assertGreaterEqual(painted, 10)
+      return {'painted': painted, 'score' : game.score}
+
 
     def onTestEnd(self): pass
 
@@ -158,25 +174,28 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
         sample_enemy = game.enemies[0] 
         game.enemies = []
 
-        player_pos = game.player.position.to_tile_point()
+        player_pos = intervention.worldpoint_to_tilepoint(game.player.position)
+
+        min_distance = 2
+
+        def is_min_distance(t, e):
+            t = intervention.tile_to_tilepoint(t)
+            e = intervention.worldpoint_to_tilepoint(e.position)
+            return abs(t.tx - player_pos.tx) > 2 and \
+                   abs(t.ty - player_pos.ty) > 2 and \
+                   abs(t.tx - e.tx) > 2 and \
+                   abs(t.ty - e.ty) > 2
 
         while num_enemies > 0:
           print('num_enemies:', num_enemies)
           num_enemies -= 1
-          start = intervention.get_random_tile(lambda t: \
-            # Should not be on top of another enemy, nor the player
-            all([
-                 abs(t.tx - player_pos.tx) > 2 and \
-                 abs(t.ty - player_pos.ty) > 2 and \
-                 abs(t.tx - e.position.to_tile_point().tx) > 2 and \
-                 abs(t.ty - e.position.to_tile_point().ty) > 2
-                     for e in game.enemies])
-          ).to_tile_point()
+          start_tile = intervention.get_random_tile(lambda t: all([is_min_distance(t, e) for e in game.enemies]))
+          start = intervention.tile_to_tilepoint(start_tile)
           # Set the starting position to be close to the player's 
           # start position. I picked an arbitrary max distance (20)
-          start_dir = ami.Direction.directions[random.randint(0, 3)]
+          start_dir = generate_random_dir(intervention)
           print('random start:', start, start_dir)
-          dir = ami.Direction.directions[random.randint(0, 3)]
+          dir = generate_random_dir(intervention)
 
           # Create a copy.
           enemy = ami.Enemy.decode(intervention, sample_enemy.encode(), ami.Enemy)
@@ -195,21 +214,21 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
       self.runTest(model)
 
 class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
+
+    def setUp(self): super().setUp(trials=5, timeout=500)
   
-    def shouldIntervene(self):
-      return self.tick == 0
+    def shouldIntervene(self): return self.tick == 0
 
     def onTrialEnd(self):
-      if hasattr(self, 'trialnum'):
-        self.trialnum += 1
-      else: self.trialnum = 1
-      print('end trial %d', self.trialnum)
-      with ami.AmidarIntervention(self.getToybox()) as ai:
-        unpainted = len(ai.game.board.tiles.filter(ami.Tile.Unpainted))
-        painted = len(ai.game.board.tiles.filter(ami.Tile.Painted))
-        score = ai.game.score
-        self.assertGreaterEqual(painted, 6)
-        return {'painted': painted, 'unpainted': unpainted, 'score' : score}
+      self.assertIsNotNone(self.final_state)
+      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      painted = sum([
+          sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
+               for row in game.board.tiles]) 
+      print('painted:', painted, 'score', game.score)
+      self.assertGreaterEqual(painted, 10)
+      return {'painted': painted, 'score' : game.score}
+
 
     def onTestEnd(self):
       pass
@@ -226,13 +245,13 @@ class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
           start = ami.TilePoint(game.intervention, 0, 0)
           # Set the starting position to be close to the player's 
           # start position. I picked an arbitrary max distance (20)
-          player_tile = game.player.position.to_tile_point()
+          player_tile = intervention.worldpoint_to_tilepoint(game.player.position)
           start.pos = intervention.get_random_tile(lambda t: \
-              abs(t.tx - player_tile.tx) < 20 and \
-              abs(t.ty - player_tile.ty) < 20)
-          start_dir = ami.Direction.directions[random.randint(0, 3)]
+              abs(intervention.tile_to_tilepoint(t).tx - player_tile.tx) < 20 and \
+              abs(intervention.tile_to_tilepoint(t).ty - player_tile.ty) < 20)
+          start_dir = generate_random_dir(intervention)
           vision_distance = 5
-          dir = ami.Direction.directions[random.randint(0, 3)]
+          dir = generate_random_dir(intervention)
 
           intervention.set_enemy_protocol(enemy, 'EnemyTargetPlayer',
             start=start, 

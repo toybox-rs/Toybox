@@ -13,7 +13,7 @@ from baselines.common.cmd_util import make_vec_env
 from baselines.common.atari_wrappers import DummyVecEnv, SubprocVecEnv
 
 # Get innermost gym.Env (skip all Wrapper)
-def _get_turtle(env):
+def get_turtle(env):
     env = env
     while True:
         if (isinstance(env, VecFrameStack)):
@@ -73,7 +73,7 @@ def setUpToyboxGym(testclass, env_id, seed):
     env = VecFrameStack(make_vec_env(env_id, env_type, nenv, seed) , frame_stack_size)
   
     testclass.env = env
-    testclass.turtle = _get_turtle(env)
+    testclass.turtle = get_turtle(env)
     testclass.toybox = testclass.turtle.toybox
 
 def tearDownToyboxGym(testclass):
@@ -81,13 +81,23 @@ def tearDownToyboxGym(testclass):
 
 def stepEnv(self):
     obs, _, done, info = self.env.step(self.action)
-    self.done = done if type(done) == 'bool' else done.any()
+    assert len(done) == 1 and len(info) == 1, 'Running with %d environments; should only be running with one.' % len(done)
+
+    if 'cached_state' in info[0]:
+        self.final_state = info[0]['cached_state']
+
+    # There is weird setup stuff -- we don't want to update the done
+    # flag until we are actually running the test.
+    if self.tick:
+        self.done = done.any()
     self.obs = obs
     #if self.tick % 100 == 0: print('Tick', self.tick)
     self.tick += 1
 
 def resetEnv(self):
-    self.getToybox().new_game()
     self.tick = 0
     self.lives = 1000
+    self.done = False
+    self.cached_state = None
+    self.getToybox().new_game()
     self.obs = self.env.reset()

@@ -217,6 +217,9 @@ class Tile(BaseMixin):
       self.intervention = intervention
       self.tag = name
 
+    def __eq__(self, other):
+      return hasattr(other, 'tag') and self.tag == other.tag
+
     def decode(intervention, rustname, clz):
       assert type(rustname) == str
       return Tile(intervention, rustname)
@@ -355,7 +358,7 @@ class AmidarIntervention(Intervention):
         v = kwargs[k]
         if option and v is None: return
         t_ = type(v) 
-        assert t_ == t, 'Expecting %s to have type %s; is %s' % (str(v), t, t_)
+        assert t_ == t, 'Expecting %s to have type %s; is %s' % (k, t, t_)
       if protocol == MovementAI.EnemyLookupAI:
         assert_keys('next', int)
         assert_keys('default_route_index', int)
