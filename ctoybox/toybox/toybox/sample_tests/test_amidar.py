@@ -40,7 +40,9 @@ class AmidarToyboxTestBase(behavior.BehavioralFixture):
       if self.hasTimedOut():
         self.final_state = self.toybox.to_state_json()
         return True 
-      else: return self.done
+      elif self.done and not self.final_state:
+        self.final_state = self.toybox.to_state_json()
+      return self.done
 
     @abstractmethod
     def intervene(self): assert False
