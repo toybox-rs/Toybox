@@ -1,7 +1,7 @@
 import toybox.testing.envs.gym as gym
-import toybox.testing.models.openai_baselines as oai
 import toybox.interventions.amidar as ami
-import toybox.testing.behavior as behavior
+#import toybox.testing.behavior as behavior
+import toybox.testing.models.openai_baselines as oai
 import os
 import random
 import time
@@ -9,43 +9,7 @@ import tensorflow as tf
 
 from scipy.stats import sem
 from numpy import mean
-from abc import abstractmethod
-
-# These tests all share the same setup
-# This used to be in a separate module. 
-# We may want to consider putting it back into a separate module, since
-# we cannot currently use the automated tools for test discovery with an 
-# abstract test. There is probably a way to configure this.
-class AmidarToyboxTestBase(behavior.BehavioralFixture):
-  
-    @classmethod
-    def setUpEnv(cls):
-      seed = 0xdeadbeef
-      gym.setUpToyboxGym(cls, 'AmidarToyboxNoFrameskip-v4', seed)
-    
-    @classmethod
-    def tearDownEnv(cls):
-      gym.tearDownToyboxGym(cls)
-
-    def takeAction(self, model):
-      oai.takeAction(self, model)
-
-    def stepEnv(self):
-      gym.stepEnv(self)
-
-    def resetEnv(self):
-      gym.resetEnv(self)
-
-    def isDone(self):
-      if self.hasTimedOut():
-        self.final_state = self.toybox.to_state_json()
-        return True 
-      elif self.done and not self.final_state:
-        self.final_state = self.toybox.to_state_json()
-      return self.done
-
-    @abstractmethod
-    def intervene(self): assert False
+from toybox.sample_tests.base import AmidarToyboxTestBase
 
 
 def generate_random_dir(intervention):
@@ -56,7 +20,7 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
 
     def setUp(self): super().setUp(trials=5, timeout=500)
 
-    def shouldIntervene(self): return self.tick == 0
+    def shouldIntervene(self, obj=None): return self.tick == 0
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
@@ -70,7 +34,7 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
 
     def onTestEnd(self): pass
 
-    def intervene(self):
+    def intervene(self, obj=None):
       with ami.AmidarIntervention(self.getToybox()) as intervention:
         intervention.game.lives = 1
         intervention.game.enemies.clear()
@@ -101,7 +65,7 @@ class OneEnemyTargetTest(AmidarToyboxTestBase):
 
     def setUp(self): super().setUp(trials=5, timeout=500)
 
-    def shouldIntervene(self): return self.tick == 0
+    def shouldIntervene(self, obj=None): return self.tick == 0
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
@@ -115,7 +79,7 @@ class OneEnemyTargetTest(AmidarToyboxTestBase):
 
     def onTestEnd(self): pass
 
-    def intervene(self):
+    def intervene(self, obj=None):
       with ami.AmidarIntervention(self.getToybox()) as intervention:
         game = intervention.game
         game.lives = 1
@@ -124,7 +88,6 @@ class OneEnemyTargetTest(AmidarToyboxTestBase):
         enemy = random.choice(game.enemies)
         start = ami.TilePoint(game.intervention, 0, 0)
         # Set the starting position to be the next one?
-        start.pos = enemy.ai.next
         start_dir = generate_random_dir(intervention)
         vision_distance = max(game.board.height, game.board.width)
         dir = generate_random_dir(intervention)
@@ -152,7 +115,7 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
 
     def setUp(self): super().setUp(trials=5, timeout=500)
 
-    def shouldIntervene(self): return self.tick == 0
+    def shouldIntervene(self, obj=None): return self.tick == 0
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
@@ -167,7 +130,7 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
 
     def onTestEnd(self): pass
 
-    def intervene(self):
+    def intervene(self, obj=None):
       with ami.AmidarIntervention(self.getToybox()) as intervention:
         game = intervention.game
         game.jumps = 0
@@ -175,7 +138,7 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
         num_enemies = len(game.enemies)
 
         sample_enemy = game.enemies[0] 
-        game.enemies = []
+        game.enemies.clear()
 
         player_pos = intervention.worldpoint_to_tilepoint(game.player.position)
 
@@ -221,7 +184,7 @@ class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
 
     def setUp(self): super().setUp(trials=5, timeout=500)
   
-    def shouldIntervene(self): return self.tick == 0
+    def shouldIntervene(self, obj=None): return self.tick == 0
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
@@ -237,7 +200,7 @@ class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
     def onTestEnd(self):
       pass
 
-    def intervene(self):
+    def intervene(self, obj=None):
       with ami.AmidarIntervention(self.getToybox()) as intervention:
         game = intervention.game
         game.jumps = 0
@@ -245,14 +208,13 @@ class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
         for enemy in game.enemies:
           # We are expecting the default protocol to be enemy lookup
           assert enemy.ai.protocol == ami.MovementAI.EnemyLookupAI
-          # Create an empty TilePoint
-          start = ami.TilePoint(game.intervention, 0, 0)
           # Set the starting position to be close to the player's 
           # start position. I picked an arbitrary max distance (20)
           player_tile = intervention.worldpoint_to_tilepoint(game.player.position)
-          start.pos = intervention.get_random_tile(lambda t: \
+          start_tile = intervention.get_random_tile(lambda t: \
               abs(intervention.tile_to_tilepoint(t).tx - player_tile.tx) < 20 and \
               abs(intervention.tile_to_tilepoint(t).ty - player_tile.ty) < 20)
+          start = intervention.tile_to_tilepoint(start_tile)
           start_dir = generate_random_dir(intervention)
           vision_distance = 5
           dir = generate_random_dir(intervention)

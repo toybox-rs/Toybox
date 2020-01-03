@@ -47,7 +47,11 @@ class BehavioralFixture(unittest.TestCase, ABC):
     assert False
 
   @abstractmethod
-  def intervene(self):
+  def shouldIntervene(self, obj=None):
+    assert False
+
+  @abstractmethod
+  def intervene(self, obj=None):
     assert False
 
   @abstractmethod
@@ -71,16 +75,15 @@ class BehavioralFixture(unittest.TestCase, ABC):
     for obj in collection:
       with self.subTest(obj=obj):
         for trial in range(self.trials):
-          # for each trial, record the score at mod 10 steps 
-          print('Running trial %d of %s...' % (trial+1, self.trials))
+          print('Running trial %d of %s for %s...' % (trial+1, self.trials, obj))
           while not self.isDone():
-            if self.shouldIntervene(): self.intervene()
-            #self.env.render()
+            if self.shouldIntervene(obj=obj): self.intervene(obj=obj)
+            self.env.render()
+            #time.sleep(1/30.)
             self.takeAction(model)
             self.stepEnv()
           if self.toReset: self.resetConfig(self.toReset)
-          trials_data.append(self.onTrialEnd()) # <--
-          # commenting out the reset env because I am seeing a lot of re-initializationof the game state
+          trials_data.append(self.onTrialEnd()) 
           print('Resetting environment.\n')
           self.resetEnv()
     self.onTestEnd()    

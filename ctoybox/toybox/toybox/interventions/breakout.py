@@ -50,7 +50,7 @@ class BrickCollection(Collection):
 class Brick(BaseMixin):
 
     expected_keys = ['destructible', 'depth', 'color', 'alive', 'points', 'size', 'position', 'row', 'col']
-    immutable_fields = []
+    immutable_fields = ['intervention']
       
     def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
         self.intervention = intervention
@@ -189,13 +189,13 @@ class BreakoutIntervention(Intervention):
     def add_channel(self, i):
         """Turns the ith column into a channel"""
         for brick in self.game.bricks:
-            if brick.col == i:
+            if brick.col == i and brick.alive:
                 brick.alive = False
 
     def fill_column(self, i): 
         """Fills the ith column, so that all bricks are now alive."""
         for brick in self.game.bricks:
-            if brick.col == i:
+            if brick.col == i and not brick.alive:
                 brick.alive = True
 
     def find_channel(self):
@@ -226,6 +226,10 @@ if __name__ == "__main__":
 
         with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
             json.dump(config, outfile)
+
+    with BreakoutIntervention(tb) as intervention:
+        intervention.game.lives = 1
+        assert intervention.dirty_state
     
     # remove and assert that the brick is gone
     with BreakoutIntervention(tb) as intervention:

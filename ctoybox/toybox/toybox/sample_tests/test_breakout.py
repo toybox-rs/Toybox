@@ -1,68 +1,57 @@
-import toybox.testing.envs.gym as gym
 import toybox.testing.models.openai_baselines as oai
 import toybox.interventions.breakout as brk
-import toybox.testing.behavior as behavior
+
+import tensorflow as tf
 
 import os
 
 from abc import abstractmethod
-
-class BreakoutToyboxTestBase(behavior.BehavioralFixture):
-
-    @classmethod
-    def setUpEnv(cls):
-        seed = 8675309
-        gym.setUpToyboxGym(cls, 'AmidarToyboxNoFrameskip-v4', seed)
-
-    @classmethod
-    def tearDownEnv(cls):
-        gym.tearDownToyboxGym(cls)
-
-    def takeAction(self, model):
-        oai.takeAction(self, model)
-
-    def stepEnv(self, action):
-        gym.stepEnv(self.env, action)
-
-    def resetEnv(self):
-        gym.resetEnv(self)
-    
-    def isDone(self):
-        lives = self.toybox.get_lives()
-        level = self.toybox.get_level()
-        has_reset = lives > self.lives
-        self.lives = lives
-        return self.hasTimedOut() or has_reset or lives < 1 or level != 1
-
-    @abstractmethod
-    def intervene(self): pass
+from toybox.sample_tests.base import BreakoutToyboxTestBase
     
 class EZChannel(BreakoutToyboxTestBase):
 
-    def shouldIntervene(self):
+    def setUp(self):
+        super().setUp(trials=1, timeout=500)
+
+    def shouldIntervene(self, obj=None):
         return self.tick == 0
 
+    # def subTest(self, obj=None):
+    #     self.resetEnv()
+    #     return super().subTest(obj)
 
-    def intervene(self):
+    def intervene(self, obj):
         with brk.BreakoutIntervention(self.getToybox()) as intervention:
-            # Limit to one life
+            import json 
+            game = intervention.game
+            with open('before.json', 'w') as f1:
+                f1.write(json.dumps(game.encode()))
+            print('about to set lives...')
             intervention.game.lives = 1
-            # Grab the column to clear
-            col = self.target.col
-            intervention.add_channel(col)
-            # Now grab the brick associated with the current target, and make it live again
-            brick = intervention.game.find_brick(lambda b: b.col == col and b.row == self.target.row)
-            brick.alive = True
-
-    def subTest(self, obj=None):
-        assert isinstance(obj, Brick), 'Expecting to iterate over Brick objects, not %s objects' % type(obj)
-        self.target = obj
+            assert intervention.dirty_state 
+            # assert intervention.dirty_state
+        #     # Make sure we only have one ball; it appears that the game currently 
+        #     # has two balls
+        #     # # Grab the column to clear
+        #     #col = obj.col
+        #     #row = obj.row
+        #     #intervention.add_channel(1)
+        #     game.balls.clear()
+        #     game.bricks[0].alive = False
+        #     # # Now grab the brick associated with the current target, and make it live again
+        #     # _, brick = intervention.find_brick(lambda b: b.col == col and b.row == row)
+        #     # brick.alive = True
+        #     #assert intervention.dirty_state
+        with open('after.json', 'w') as f2:
+            f2.write(json.dumps(game.encode()))
+        
     
-    def test_ezchanel_ppo2(self):
+    def test_ezchannel_ppo2(self):
         seed = 8675309
         path = '../models/BreakoutToyboxNoFrameskip-v4.regress.model'
-        model = oai.getModel(self.env, 'ppo2', seed, path)
-        self.runTest(model, collection=self.game.bricks)
+        with tf.Session(graph=tf.Graph()):
+            model = oai.getModel(self.env, 'ppo2', seed, path)
+            self.runTest(model)
 
     def onTestEnd(self):
         print('test end!')

@@ -11,7 +11,7 @@ import numpy as np
 from scipy.stats import sem
 from statistics import stdev
 import math
-from tqdm import tqdm
+#from tqdm import tqdm
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -237,7 +237,7 @@ def main():
 
 
     # get initial state
-    start_state = turtle.toybox.to_json()
+    start_state = turtle.toybox.to_state_json()
     config = turtle.toybox.config_to_json()
     ball_speed_slow = config['ball_speed_slow']
 
@@ -272,7 +272,7 @@ def main():
             time.sleep(1/60.0);
 
             # overwrite state inside the env wrappers:
-            turtle.toybox.write_json(start_state)
+            #turtle.toybox.write_json(start_state)
             # Take a step to overwrite anything that's stuck there, e.g., gameover
             obs, _, done, info = env.step(0)
 
@@ -284,6 +284,8 @@ def main():
             for t in range(7200):
                 actions = model.step(obs)[0]
                 obs, _, done, info = env.step(actions)
+                env.render()
+                time.sleep(1/30.)
                 score = turtle.toybox.get_score()
                 if score > best_score:
                     best_score = score

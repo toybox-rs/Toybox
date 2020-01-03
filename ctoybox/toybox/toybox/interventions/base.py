@@ -29,13 +29,13 @@ class BaseMixin(ABC):
     adding_new = name not in existing_attrs
     super().__setattr__(name, value)
     # Prohibit adding fields outside object instantiation/initialization
-    if '__init__' not in stack:
-      if name in self.immutable_fields: # and not :
-        raise AttributeError('Trying mutate immutable field %s' % name)
-      if adding_new:
-        raise AttributeError("Cannot add new fields to %s from %s" % (self.__class__.__name__, calling_fn))
-      assert 'intervention' in existing_attrs
-      self.intervention.dirty_state = True
+    if calling_fn == '__init__': return 
+    assert 'intervention' in existing_attrs
+    if name in self.immutable_fields: # and not :
+      raise AttributeError('Trying mutate immutable field %s' % name)
+    if adding_new:
+      raise AttributeError("Cannot add new field %s to %s from %s" % (name, self.__class__.__name__, calling_fn))
+    self.intervention.dirty_state = True
     
   
   def decode(intervention, obj, clz):
