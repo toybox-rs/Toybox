@@ -120,8 +120,8 @@ class Player(BaseMixin):
         self.speed = speed
         self.ai = ai
 
-    def set_position(self, x, y):
-        self.position = WorldPoint(self.intervention, x, y)
+    # def set_position(self, x, y):
+    #     self.position = WorldPoint(self.intervention, x, y)
 
     def decode(intervention, js, clz):
         return Player(intervention, **js)
@@ -155,10 +155,13 @@ class TileCollection(Collection):
         self.coll.append([Tile.decode(intervention, tile, Tile) for tile in row])
 
     def remove(self):
-        raise ValueError('Cannot remove tiles from the board.')
+      raise ValueError('Cannot remove tiles from the board.')
 
     def append(self):
-        raise ValueError('Cannot add tiles to the board.')
+      raise ValueError('Cannot add tiles to the board.')
+
+    def pop(self):
+      raise ValueError('Cannot remove tiles from the board.')
 
     def decode(intervention, tiles, clz):
       return TileCollection(intervention, tiles)

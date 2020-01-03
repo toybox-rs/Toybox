@@ -11,4 +11,4 @@ scipy
 six 
 tensorboard
 tensorflow<2.0
-ctoybox==0.3.0
+ctoybox==0.4.0

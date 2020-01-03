@@ -59,14 +59,16 @@ class BaseMixin(ABC):
     
     """
     actual_keys = set(obj.keys()) 
+    expected_keys = set(clz.expected_keys)
     target_name = clz.__name__
-    intersection = actual_keys.intersection(clz.expected_keys)
-    not_enough = len(clz.expected_keys) > len(intersection)
+
+    intersection = actual_keys.intersection(expected_keys)
+    not_enough = len(expected_keys) > len(intersection)
     too_many = len(actual_keys) > len(intersection)
 
     if not_enough:
-      raise ValueError("Missing keys; maybe %s is not a %s object?" % (
-        json.dumps(obj), target_name))
+      raise ValueError("Missing keys (%s); maybe input is not a %s object?" % (
+        str(expected_keys.difference(actual_keys)), target_name))
 
     elif too_many:
       raise ValueError("Input object contains too many keys (%s); has the specification for %s changed?" % (

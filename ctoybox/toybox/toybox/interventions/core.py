@@ -27,7 +27,7 @@ class Direction(BaseMixin):
 
   def __init__(self, intervention, direction):
     self.intervention = intervention
-    assert direction in Direction.directions
+    assert direction in Direction.directions, '%s not found in directions' % direction
     self.direction = direction
 
   def decode(intervention, direction, clz):
@@ -57,7 +57,7 @@ class Color(BaseMixin):
     self.r = r
     self.g = g 
     self.b = b 
-    self.a = a 
+    self.a = a   
 
 
 class Collection(BaseMixin):
@@ -125,3 +125,36 @@ class Collection(BaseMixin):
 
   def decode(intervention, coll, clz): 
     return clz(intervention, coll)
+
+
+class SpriteData(BaseMixin):
+  
+  expected_keys = ['x', 'y', 'data']
+  immutable_fields = ['intervention', 'data']
+
+  def __init__(self, intervention, x=None, y=None, data=None):
+    self.intervention = intervention
+    self.x = x
+    self.y = y
+    self.data = ColorCollectionCollection.decode(intervention, data, None)
+
+
+class ColorCollectionCollection(BaseMixin):
+
+  expected_keys = []
+  immutable_fields = []
+
+  def __init__(self, intervention, sprites):
+    self.intervention = intervention
+    self.coll = []
+    for coll in sprites:
+      self.coll.append([Color.decode(intervention, datum, Color) for datum in coll])
+
+  def decode(intervention, coll, clz):
+    return ColorCollectionCollection(intervention, coll)
+
+  def encode(self):
+    retval = []
+    for colors in self.coll:
+      retval.append([c.encode() for c in colors])
+    return retval
