@@ -9,3 +9,5 @@ time ./start_python -m unittest toybox.sample_tests.test_amidar.OneEnemyTargetTe
 time ./start_python -m unittest toybox.sample_tests.test_amidar.GangUpNoJumpRandomTest
 time ./start_python -m unittest toybox.sample_tests.test_amidar.GangUpNoJumpTargetTest
 time ./start_python -m unittest toybox.sample_tests.test_breakout.EZChannel
+time ./start_python -m unittest toybox.sample_tests.test_breakout.LastBrick
+time ./start_python -m unittest toybox.sample_tests.test_breakout.PolarStarts

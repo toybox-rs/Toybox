@@ -206,6 +206,11 @@ class BreakoutIntervention(Intervention):
                 return i, col
         return -1, None
 
+    def clear_board(self):
+        """Clears the board of all bricks"""
+        for brick in self.game.bricks:
+            brick.alive = False
+
 
 if __name__ == "__main__":
   import argparse 
