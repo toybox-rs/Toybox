@@ -78,7 +78,7 @@ class BehavioralFixture(unittest.TestCase, ABC):
           print('Running trial %d of %s for %s...' % (trial+1, self.trials, obj))
           while not self.isDone():
             if self.shouldIntervene(obj=obj): self.intervene(obj=obj)
-            self.env.render()
+            #self.env.render()
             #time.sleep(1/30.)
             self.takeAction(model)
             self.stepEnv()

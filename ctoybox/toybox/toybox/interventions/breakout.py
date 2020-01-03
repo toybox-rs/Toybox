@@ -60,7 +60,7 @@ class Brick(BaseMixin):
         self.alive = alive
         self.points = points
         self.size = Vec2D.decode(intervention, size, Vec2D)
-        self.position = Vec2D.decode(intervention, size, Vec2D)
+        self.position = Vec2D.decode(intervention, position, Vec2D)
         self.row = row
         self.col = col
 
