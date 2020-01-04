@@ -214,6 +214,7 @@ class BreakoutIntervention(Intervention):
 
 if __name__ == "__main__":
   import argparse 
+  from ctoybox import Toybox, Input
 
   parser = argparse.ArgumentParser(description='test Amidar interventions')
   parser.add_argument('--partial_config', type=str, default="null")
@@ -221,6 +222,12 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   with Toybox('breakout') as tb:
+
+    fire = Input()
+    fire.button1 = True
+    noop = Input()
+    tb.apply_action(fire)
+
     state = tb.to_state_json()
     config = tb.config_to_json()
 
@@ -275,9 +282,6 @@ if __name__ == "__main__":
     with BreakoutIntervention(tb) as intervention: 
         game = intervention.game
         assert len(game.balls) > 0
-        ball_pos = intervention.get_ball_position()
-        assert ball_pos.y == 80.0 and ball_pos.x == 120.0
-        assert intervention.get_ball_velocity().y == 1.0
 
         ball = game.balls[0]
         game.balls.append(ball)
@@ -289,7 +293,6 @@ if __name__ == "__main__":
         game.balls.append(ball)
         # the line above should have triggered an error
         ball_positions = intervention.get_ball_position()
-        assert ball_positions.y == 80.0 and ball_positions.x == 120.0
 
     # move ball diagonally by sqrt(2) pixels
     with BreakoutIntervention(tb) as intervention: 
