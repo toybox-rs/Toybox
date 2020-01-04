@@ -111,7 +111,6 @@ class Intervention(ABC):
     # commit the JSON
     
     if self.dirty_config:
-      assert False
       self.toybox.write_config_json(self.config)
       self.toybox.new_game()
 

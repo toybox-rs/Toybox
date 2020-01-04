@@ -149,6 +149,10 @@ class SpaceInvadersIntervention(Intervention):
     def get_jitter(self): 
         return self.config['jitter']
 
+    def set_jitter(self, p):
+        self.dirty_config = True
+        self.config['jitter'] = p
+
     def remove_mothership(self, banish_time): 
         self.game.ufo.appearance_counter = -1
 
