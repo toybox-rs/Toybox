@@ -274,6 +274,7 @@ if __name__ == "__main__":
     # get ball position, even when multiple balls present
     with BreakoutIntervention(tb) as intervention: 
         game = intervention.game
+        assert len(game.balls) > 0
         ball_pos = intervention.get_ball_position()
         assert ball_pos.y == 80.0 and ball_pos.x == 120.0
         assert intervention.get_ball_velocity().y == 1.0
