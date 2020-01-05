@@ -74,7 +74,7 @@ class LastBrick(BreakoutToyboxTestBase):
             intervention.game.reset = False
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
-            bricks = random.sample(bricks, 2)
+            bricks = random.choice(bricks, 2)
             self.runTest(model, collection=bricks)
 
 
@@ -106,7 +106,7 @@ class EZChannel(BreakoutToyboxTestBase):
             bricks = intervention.game.bricks
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
-            bricks = random.sample(bricks, 2)
+            bricks = random.choice(bricks, 2)
             self.runTest(model, collection=bricks)
 
     def onTestEnd(self):
