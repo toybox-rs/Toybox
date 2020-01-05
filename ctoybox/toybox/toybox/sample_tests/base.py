@@ -29,7 +29,7 @@ class ToyboxTestBase(behavior.BehavioralFixture):
         self.final_state = self.toybox.to_state_json()
       return self.done
 
-    def setUp(self): super().setUp(trials=2, timeout=500)
+    def setUp(self, **kwargs): super().setUp(trials=2, timeout=500)
 
 
 class AmidarToyboxTestBase(ToyboxTestBase):
