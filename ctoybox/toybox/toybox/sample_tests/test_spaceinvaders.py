@@ -73,7 +73,7 @@ class ShieldXs(SpaceInvadersToyboxTestBase):
         game = intervention.game
         to_keep = []
         if s1:
-          to_keep.append(shields[0])
+          to_keep.append(game.shields[0])
         if s2:
           to_keep.append(game.shields[1])
         if s3:
