@@ -3,12 +3,12 @@ import toybox.interventions.space_invaders as si
 import toybox.testing.models.openai_baselines as oai
 
 from collections import Counter
+from numpy import random
+
 seed = 1984
 path = '../models/SpaceInvadersToyboxNoFrameskip-v4.regress.model'
 
 class NoShields(SpaceInvadersToyboxTestBase):
-
-    def setUp(self): super().setUp(trials=5, timeout=500)
 
     def shouldIntervene(self, obj=None): return self.tick == 0
 
@@ -28,8 +28,6 @@ class NoShields(SpaceInvadersToyboxTestBase):
 
 class JitterVary(SpaceInvadersToyboxTestBase):
 
-    def setUp(self): super().setUp(trials=5, timeout=500)
-
     def shouldIntervene(self, obj=None): return self.tick == 0
 
     def onTrialEnd(self): 
@@ -46,11 +44,10 @@ class JitterVary(SpaceInvadersToyboxTestBase):
     
     def test_no_shields_ppo2(self):
       model = oai.getModel(self.env, 'ppo2', seed, path)
-      self.runTest(model, collection=[n/10 for n in range(11)])
+      ps = random.choice([n/10 for n in range(11)], 2)
+      self.runTest(model, collection=ps)
 
 class ShieldXs(SpaceInvadersToyboxTestBase):
-
-    def setUp(self): super().setUp(trials=5, timeout=500)
 
     def onTrialEnd(self):
       observed = self.xs_observed

@@ -8,13 +8,12 @@ import os
 
 from abc import abstractmethod
 from toybox.sample_tests.base import BreakoutToyboxTestBase
+from numpy import random
 
 seed = 8675309
 path = '../models/BreakoutToyboxNoFrameskip-v4.regress.model'        
 
 class PolarStarts(BreakoutToyboxTestBase):
-
-    def setUp(self): super().setUp(trials=3, timeout=500)
 
     def shouldIntervene(self, obj=None): return self.tick==0
 
@@ -43,12 +42,11 @@ class PolarStarts(BreakoutToyboxTestBase):
     def test_polar_starts_regress(self):
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
-            self.runTest(model, collection=range(0,360,5))
+            degs = random.choice(range(0,360,5), 2)
+            self.runTest(model, collection=degs)
 
     
 class LastBrick(BreakoutToyboxTestBase):
-
-    def setUp(self): super().setUp(trials=3, timeout=500)
 
     def shouldIntervene(self, obj=None): return self.tick==0
 
@@ -76,13 +74,11 @@ class LastBrick(BreakoutToyboxTestBase):
             intervention.game.reset = False
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
+            bricks = random.sample(bricks, 2)
             self.runTest(model, collection=bricks)
 
 
 class EZChannel(BreakoutToyboxTestBase):
-
-    def setUp(self):
-        super().setUp(trials=3, timeout=500)
 
     def shouldIntervene(self, obj=None):
         return self.tick == 0
@@ -110,6 +106,7 @@ class EZChannel(BreakoutToyboxTestBase):
             bricks = intervention.game.bricks
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
+            bricks = random.sample(bricks, 2)
             self.runTest(model, collection=bricks)
 
     def onTestEnd(self):
