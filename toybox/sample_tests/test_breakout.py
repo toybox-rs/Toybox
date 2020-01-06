@@ -11,7 +11,7 @@ from toybox.sample_tests.base import BreakoutToyboxTestBase
 from numpy import random
 
 seed = 8675309
-path = '../models/BreakoutToyboxNoFrameskip-v4.regress.model'        
+path = 'models/BreakoutToyboxNoFrameskip-v4.regress.model'        
 
 class PolarStarts(BreakoutToyboxTestBase):
 

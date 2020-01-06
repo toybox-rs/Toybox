@@ -20,10 +20,8 @@ for game in ['amidar', 'breakout', 'space_invaders']:
     with Toybox(game) as tb:
         # config -> json should work:
         config = tb.config_to_json()
-        print(config)
         # state -> json should work:
         state = tb.state_to_json()
-        print(state)
 
         actions = tb.get_legal_action_set()
         print("legal_actions", actions)

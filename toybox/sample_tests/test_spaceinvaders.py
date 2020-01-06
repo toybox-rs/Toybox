@@ -6,7 +6,7 @@ from collections import Counter
 from numpy import random
 
 seed = 1984
-path = '../models/SpaceInvadersToyboxNoFrameskip-v4.regress.model'
+path = 'models/SpaceInvadersToyboxNoFrameskip-v4.regress.model'
 
 class NoShields(SpaceInvadersToyboxTestBase):
 
