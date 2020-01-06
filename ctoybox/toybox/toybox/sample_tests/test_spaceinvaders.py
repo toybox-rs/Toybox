@@ -37,7 +37,6 @@ class JitterVary(SpaceInvadersToyboxTestBase):
     def onTestEnd(self): pass
 
     def intervene(self, obj=None):
-      assert type(obj) == float
       p = obj
       with si.SpaceInvadersIntervention(self.getToybox()) as intervention:
         intervention.set_jitter(p)
