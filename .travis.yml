@@ -12,6 +12,6 @@ cache:
 before_install:
   - sudo apt-get -y install python3-dev python3-pip python3-setuptools python3-wheel libopenmpi-dev
   - sudo pip3 install -U --upgrade pip
-  - sudo pip3 install -U --only-binary=numpy -r ctoybox/REQUIREMENTS.txt
+  - sudo pip3 install -U --only-binary=numpy -r REQUIREMENTS.txt
 
 script: ./check.sh
