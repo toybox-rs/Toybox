@@ -32,6 +32,13 @@ Go into the ``ctoybox`` directory, and use the ``start_python`` script. This wil
     python -m ctoybox.human_play amidar
     python -m ctoybox.human_play space_invaders
 
+## Run the tests
+
+1. Navigate to `ctoybox`. 
+2. Run `pip3 install -r REQUIREMENTS.txt`
+3. Run `PYTHONPATH=baselines:toybox python3 -m unittest toybox.sample_tests.test_${GAME}.${TEST_NAME}`
+
+
 ## Python
 
 Tensorflow, OpenAI Gym, OpenCV, and other libraries may or may not break with various Python versions. We have confirmed that the code in this repository will work with the following Python versions:

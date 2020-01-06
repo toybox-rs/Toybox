@@ -63,7 +63,8 @@ def make_session(config=None, num_cpu=None, make_default=False, graph=None):
     if config is None:
         config = tf.ConfigProto(
             allow_soft_placement=True,
-            log_device_placement=True,
+            # This following option controls whether information gets printed:
+            # log_device_placement=True,
             inter_op_parallelism_threads=num_cpu,
             intra_op_parallelism_threads=num_cpu)
         config.gpu_options.allow_growth = True

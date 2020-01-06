@@ -31,3 +31,6 @@ toybox-regress-models*.zip
 ctoybox/*.model
 *~
 ctoybox/human_play_*.json
+toybox/toybox/sample_tests/models
+toybox/toybox/sample_tests/models/
+ctoybox/toybox/toybox/sample_tests/models

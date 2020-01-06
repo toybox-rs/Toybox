@@ -41,6 +41,9 @@ class ToyboxBaseEnv(AtariEnv, ABC):
     def __init__(self, toybox, game, frameskip=(2, 5), repeat_action_probability=0., grayscale=True, alpha=False, actions=None):
         assert(toybox.rstate)
         self.toybox = toybox
+        # This is a workaround for issues with Gym wrappers
+        # resetting state prematurely
+        self.cached_state = None
         self.score = self.toybox.get_score()
         self.viewer = None
 
@@ -109,6 +112,11 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         assert(type(self._action_set)== list)
     
         self.toybox.apply_ale_action(self._action_set[action_index])
+
+        if self.ale.game_over():
+            print('GAME OVER')
+            info['cached_state'] = self.toybox.to_state_json()
+
         obs = self._get_obs()
         
         
@@ -129,6 +137,7 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         return obs, reward, done, info
 
     def reset(self):
+        self.cached_state = self.toybox.to_state_json()
         self.toybox.new_game()
         self.score = self.toybox.get_score()
         obs = self._get_obs()

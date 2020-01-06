@@ -1,179 +1,220 @@
 from toybox.interventions.base import *
+from toybox.interventions.core import * 
 import json
 """An API for interventions on Breakout."""
+
+class Breakout(Game):
+
+    expected_keys = Game.expected_keys + ['paddle', 'is_dead', 'balls', 'ball_radius', 'paddle_speed', 'reset', 'bricks', 'paddle_width']
+
+    immutable_fields = ['balls', 'bricks', 'intervention']
+
+    def __init__(self, intervention, 
+      score=None, lives=None, rand=None, level=None,
+      paddle=None, paddle_width=None, paddle_speed=None,
+      ball_radius=None, balls=None,
+      bricks=None,
+      reset=None, is_dead=None):
+
+        super().__init__(intervention, score, lives, rand, level)
+        self.paddle = Paddle.decode(intervention, paddle, Paddle)
+        self.reset = reset
+        self.ball_radius = ball_radius
+        self.bricks = BrickCollection.decode(intervention, bricks, BrickCollection)
+        self.balls = BallCollection.decode(intervention, balls, BallCollection)
+        self.paddle_speed = paddle_speed
+        self.paddle_width = paddle_width
+        self.is_dead = is_dead
+
+class Paddle(BaseMixin):
+
+    expected_keys = ['velocity', 'position']
+    immutable_fields = []
+
+    def __init__(self, intervention, velocity, position):
+        self.intervention = intervention
+        self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
+        self.position = Vec2D.decode(intervention, position, Vec2D)
+
+
+class BrickCollection(Collection):
+
+    def __init__(self, intervention, bricks):
+        super().__init__(intervention, bricks, Brick)
+
+    def decode(intervention, bricks, clz):
+        return BrickCollection(intervention, bricks)
+
+
+
+class Brick(BaseMixin):
+
+    expected_keys = ['destructible', 'depth', 'color', 'alive', 'points', 'size', 'position', 'row', 'col']
+    immutable_fields = ['intervention']
+      
+    def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
+        self.intervention = intervention
+        self.destructible = destructible
+        self.depth = depth
+        self.color = Color.decode(intervention, color, Color)
+        self.alive = alive
+        self.points = points
+        self.size = Vec2D.decode(intervention, size, Vec2D)
+        self.position = Vec2D.decode(intervention, position, Vec2D)
+        self.row = row
+        self.col = col
+
+class BallCollection(Collection):
+
+    def __init__(self, intervention, balls):
+        super().__init__(intervention, balls, Ball)
+
+
+class Ball(BaseMixin): 
+
+    expected_keys = ['position', 'velocity']
+    immutable_fields = ['intervention']
+
+    def __init__(self, intervention, position, velocity):
+        self.intervention = intervention
+        self.position = Vec2D.decode(intervention, position, Vec2D)
+        self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
+
 
 class BreakoutIntervention(Intervention):
 
     def __init__(self, tb, game_name='breakout'):
         # check that the simulation in tb matches the game name.
-        Intervention.__init__(self, tb, game_name)
+        Intervention.__init__(self, tb, game_name, Breakout)
 
     def num_bricks_remaining(self):
-        return sum(self.state['bricks'][i]['alive'] for i in range(self.num_bricks()))
-    
-
-    def channel_count(self):
-        stacks = self.get_stacks()
-        return sum(self.is_channel(stack) for stack in stacks)
-    
-
-    def get_bricks(self):
-        return self.state['bricks']
-
-
-    def brick_alive(self, i):
-        return self.state['bricks'][i]['alive']
-
+        return sum([int(brick.alive) for brick in self.game.bricks])
 
     def num_bricks(self):
-        return len(self.state['bricks'])
-
-
-    def get_ball_position(self):
-        nballs = len(self.state['balls'])
-        if nballs > 1:
-            return [self.state['balls'][i]["position"] for i in range(nballs)]
-        else:  
-            return self.state['balls'][0]["position"]
-
-
-    def get_ball_velocity(self):
-        nballs = len(self.state['balls'])
-        if nballs > 1:
-            return [self.state['balls'][i]["velocity"] for i in range(nballs)]
-        else:  
-            return self.state['balls'][0]["velocity"]
-
-
-    def is_stack(self, intlist):
-        ncols = self.num_columns()
-        nrows = self.num_rows()
-        offset = intlist[0] % ncols
-        row = 1
-        for i in intlist[1:]:
-            if i != row * ncols + offset:
-                return False
-            row += 1
-        return True 
-
-
-    def find_brick(self, pred):
-        for i, b in enumerate(self.state['bricks']):
-            if pred(b):
-                return i, b
-        raise ValueError('No bricks that satisfy the input predicate found.')
-
+        return len(self.game.bricks)
 
     def num_rows(self):
         return len(self.config['row_scores'])
 
-
     def num_columns(self):
+        """Returns the number of columns in the layout."""
         rows = self.num_rows()
         bricks = self.num_bricks()
         return bricks // rows
 
+    def add_row(self, bricks, points, pre=None, post=None):
+        """Adds the input row of bricks to the playing board.
 
-    def get_stacks(self):
-        """Returns a list of lists. Each element returned is a list of indices, 
-        corresponding to a potential channel."""
-        ncols = self.num_columns()
-        nrows = self.num_rows()
-        stacks = []
-        for offset in range(ncols):
-            stack = []
-            for row in range(nrows):
-                stack.append(row * ncols + offset)
-            stacks.append(stack)
-        return stacks
+        Parameters
+        ====
+        bricks: a list of brick objects
+        value: the points associated with this row
+        pre: add the list above
+        post: add the list below
+        """
 
+        input_len = len(bricks)
+        target_len = self.num_bricks()
 
-    def is_channel(self, intlist):
-        bricks = self.get_bricks()
-        return self.is_stack(intlist) and all([not self.brick_alive(i) for i in intlist])
+        if input_len != target_len:
+            raise ValueError('Input brick list length incorrect (is %d; should be %d)' % (input_len, target_len))
 
+        if pre:
+            for brick in bricks.reverse():
+                self.bricks.insert(0, brick)
+        
+        elif post: 
+            self.bricks.extend(bricks)
 
-    def get_paddle_position(self): 
-        return self.state['paddle']['position']
+        else:
+            raise ValueError('Must provide one optional argument: pre or post.')
 
+        self.config['row_scores'].append(points)
+        self.dirty_config = True
 
-    def set_brick(self, index, alive=True):
-        self.state['bricks'][index]['alive'] = alive
+    def is_stack(self, bricks):
+        col = bricks[0].col
+        return all([b.col == col for b in bricks])
 
+    def is_channel(self, bricklist):
+        """Predicate indicating whether the input list of bricks constitutes a channel."""
+        col = bricklist[0].col
+        for brick in bricklist:
+            if brick.col != col: return False
+            if brick.alive: return False
+        return True
+
+    def get_column(self, i):
+        """Returns the ith column of bricks."""
+        bricks = []
+        for brick in self.game.bricks:
+            if brick.col == i:
+                bricks.append(brick)
+        return bricks
+    
+    def channel_count(self):
+        count = 0
+        for i in range(self.num_columns()):
+            channel = self.get_column(i)
+            if self.is_channel(channel): count += 1
+        return count
+
+    def get_ball_position(self):
+        """Returns a list of positions, if there is more than one ball, and a single Vec2D object otherwise.:"""
+        nballs = len(self.game.balls)
+        if nballs > 1:
+            return [ball.position for ball in self.game.balls]
+        else:  
+            return self.game.balls[0].position
+
+    def get_ball_velocity(self):
+        nballs = len(self.game.balls)
+        if nballs > 1:
+            return [ball.velocity for ball in self.game.balls]
+        else:  
+            return self.game.balls[0].velocity
+
+    def get_paddle_position(self):
+        return self.game.paddle.position
+
+    def get_paddle_velocity(self):
+        return self.game.paddle.velocity
+
+    def find_brick(self, pred):
+        for i, b in enumerate(self.game.bricks):
+            if pred(b):
+                return i, b
+        raise ValueError('No bricks that satisfy the input predicate found.')
+
+    def add_channel(self, i):
+        """Turns the ith column into a channel"""
+        for brick in self.game.bricks:
+            if brick.col == i and brick.alive:
+                brick.alive = False
+
+    def fill_column(self, i): 
+        """Fills the ith column, so that all bricks are now alive."""
+        for brick in self.game.bricks:
+            if brick.col == i and not brick.alive:
+                brick.alive = True
 
     def find_channel(self):
-        stacks = self.get_stacks()
-        for i, stack in enumerate(stacks):
-            if self.is_channel(stack):
-                return i, stack
-        raise ValueError('No channels found.')
+        """Returns the first channel found."""
+        for i in range(self.num_columns()):
+            col = self.get_column(i)
+            if self.is_channel(col):
+                return i, col
+        return -1, None
 
-
-    def add_channel(self, intlist):
-        assert(self.is_stack(intlist))
-        for i in intlist:
-            self.set_brick(i, alive=False)
-
-
-    def fill_channel(self, intlist): 
-        assert(self.is_stack(intlist))
-        for i in intlist: 
-            self.set_brick(i, alive=True)
-
-
-    # pos should contain a dictionary containing keys 'x' and 'y' for each ball 
-    def set_ball_position(self, pos):
-        if isinstance(pos, dict): 
-            pos = [pos]
-
-        nballs = len(self.state['balls'])
-        assert len(self.state['balls']) == len(pos)
-
-        for i in range(nballs): 
-            assert isinstance(pos[i], dict)
-
-            for k in ['x', 'y']:
-                assert k in pos[i].keys()
-                self.state['balls'][i]['position'][k] = pos[i][k]
-
-    # vel should contain a dictionary containing keys 'x' and 'y' for each ball 
-    def set_ball_velocity(self, vel):
-        if isinstance(vel, dict): 
-            vel = [vel]
-
-        nballs = len(self.state['balls'])
-        assert len(self.state['balls']) == len(vel)
-
-        for i in range(nballs): 
-            assert isinstance(vel[i], dict)
-
-            for k in ['x', 'y']:
-                assert k in vel[i].keys()
-                self.state['balls'][i]['velocity'][k] = vel[i][k]
-
-
-    def set_paddle_position(self, pos): 
-        assert isinstance(pos, dict)
-        for k in ['y', 'x']: assert k in pos.keys()
-
-        self.state['paddle']['position']['y'] = pos['y'] 
-        self.state['paddle']['position']['x'] = pos['x']
-
-    
-# Intervention tests
-    # all the constants!
-    # vanishing ball: after hitting the ball, make the ball disappear 
-        # requires the model you throw at it has memory/sense of time
-    # add brick in arbitrary location?
-
-
-    def get_json(self):
-        #assert(_toybox_json)  // why would we have asserted here? still necessary in the with statement?
-        return self.state
+    def clear_board(self):
+        """Clears the board of all bricks"""
+        for brick in self.game.bricks:
+            brick.alive = False
 
 
 if __name__ == "__main__":
   import argparse 
+  from ctoybox import Toybox, Input
 
   parser = argparse.ArgumentParser(description='test Amidar interventions')
   parser.add_argument('--partial_config', type=str, default="null")
@@ -181,6 +222,12 @@ if __name__ == "__main__":
   args = parser.parse_args()
 
   with Toybox('breakout') as tb:
+
+    fire = Input()
+    fire.button1 = True
+    noop = Input()
+    tb.apply_action(fire)
+
     state = tb.to_state_json()
     config = tb.config_to_json()
 
@@ -191,11 +238,15 @@ if __name__ == "__main__":
 
         with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
             json.dump(config, outfile)
+
+    with BreakoutIntervention(tb) as intervention:
+        intervention.game.lives = 1
+        assert intervention.dirty_state
     
     # remove and assert that the brick is gone
     with BreakoutIntervention(tb) as intervention:
         nbricks = intervention.num_bricks_remaining()
-        intervention.set_brick(0, alive=False)
+        intervention.game.bricks[0].alive = False
         nbricks_post = intervention.num_bricks_remaining()
 
         assert nbricks - 1 == nbricks_post
@@ -203,7 +254,7 @@ if __name__ == "__main__":
     # reset and assert that the brick is present
     with BreakoutIntervention(tb) as intervention:
         nbricks = intervention.num_bricks_remaining()
-        intervention.set_brick(0, alive=True)
+        intervention.game.bricks[0].alive = True
         nbricks_post = intervention.num_bricks_remaining()
 
         assert nbricks + 1 == nbricks_post
@@ -211,9 +262,7 @@ if __name__ == "__main__":
     # add a channel and assert that num_rows bricks have been removed
     with BreakoutIntervention(tb) as intervention: 
         nbricks = intervention.num_bricks_remaining()
-
-        stacks = intervention.get_stacks()
-        intervention.add_channel(stacks[0])
+        intervention.add_channel(0)
         nbricks_post = intervention.num_bricks_remaining()
         assert nbricks_post == nbricks - intervention.num_rows()
 
@@ -225,70 +274,59 @@ if __name__ == "__main__":
     # remove a channel and assert that num_rows bricks have been added
     with BreakoutIntervention(tb) as intervention: 
         nbricks = intervention.num_bricks_remaining()
-
-        stacks = intervention.get_stacks()
-        intervention.fill_channel(stacks[0])
+        intervention.fill_column(0)
         nbricks_post = intervention.num_bricks_remaining()
         assert nbricks_post == nbricks + intervention.num_rows()
 
     # get ball position, even when multiple balls present
     with BreakoutIntervention(tb) as intervention: 
-        ball_pos = intervention.get_ball_position()
-        assert ball_pos == {'y': 80.0, 'x':120.0}
+        game = intervention.game
+        assert len(game.balls) > 0
 
-        ball_velocity = intervention.get_ball_velocity()
-        assert ball_velocity['y'] == 1.0
-
-        intervention.state['balls'] = [intervention.state['balls'][0], intervention.state['balls'][0]]
+        ball = game.balls[0]
+        game.balls.append(ball)
         ball_positions = intervention.get_ball_position()
         assert len(ball_positions) == 2
         ball_velocities = intervention.get_ball_velocity()
         assert len(ball_velocities) == 2
-
-        intervention.state['balls'] = [intervention.state['balls'][0],]
+        game.balls.clear()
+        game.balls.append(ball)
+        # the line above should have triggered an error
         ball_positions = intervention.get_ball_position()
-        assert ball_positions == {'y': 80.0, 'x':120.0}
 
     # move ball diagonally by sqrt(2) pixels
     with BreakoutIntervention(tb) as intervention: 
         ball_pos = intervention.get_ball_position()
-        ball_pos['x'] = ball_pos['x'] + 1
-        ball_pos['y'] = ball_pos['y'] + 1
-        intervention.set_ball_position(ball_pos)
+        ball_pos.x = ball_pos.x + 1
+        ball_pos.y = ball_pos.y + 1
+    with BreakoutIntervention(tb) as intervention: 
         ball_pos_post = intervention.get_ball_position()
-        assert ball_pos_post['x'] == ball_pos['x']
-
-        ball_pos['x'] = ball_pos['x'] - 1
-        ball_pos['y'] = ball_pos['y'] - 1
-        intervention.set_ball_position([ball_pos])
-        ball_pos_post = intervention.get_ball_position()
-        assert ball_pos_post['x'] == ball_pos['x']
+        assert ball_pos_post.x == ball_pos.x
+        ball_pos_post.x = ball_pos.x - 1
+        ball_pos_post.y = ball_pos.y - 1
+    with BreakoutIntervention(tb) as intervention: 
+        ball_pos_post_post = intervention.get_ball_position()
+        assert ball_pos_post.x == ball_pos_post_post.x
 
 
     # change ball velocity
     with BreakoutIntervention(tb) as intervention: 
         ball_vel = intervention.get_ball_velocity()
-        ball_vel['x'] = ball_vel['x'] + 1
-        ball_vel['y'] = ball_vel['y'] + 1
-        intervention.set_ball_velocity(ball_vel)
+        ball_vel.x = ball_vel.x + 1
+        ball_vel.y = ball_vel.y + 1
         ball_vel_post = intervention.get_ball_velocity()
-        assert ball_vel_post['x'] == ball_vel['x']
+        assert ball_vel_post.x == ball_vel.x
 
-        ball_vel['x'] = ball_vel['x'] - 1
-        ball_vel['y'] = ball_vel['y'] - 1
-        intervention.set_ball_velocity([ball_vel])
+        ball_vel.x = ball_vel.x - 1
+        ball_vel.y = ball_vel.y - 1
         ball_vel_post = intervention.get_ball_velocity()
-        assert ball_vel_post['x'] == ball_vel['x']
+        assert ball_vel_post.x == ball_vel.x
 
     # get paddle position and move
     with BreakoutIntervention(tb) as intervention: 
         pos = intervention.get_paddle_position()
-        assert pos['x'] == 120.0 and pos['y'] == 143.0
+        assert pos.x == 120.0 and pos.y == 143.0
 
-        pos['x'] = pos['x'] + 10
-        intervention.set_paddle_position(pos)
+        pos.x = pos.x + 10
         pos_post = intervention.get_paddle_position()
-        assert pos['x'] == pos_post['x']
-
-        pos['x'] = pos['x'] - 10
-        intervention.set_paddle_position(pos)
+        assert pos.x == pos_post.x
