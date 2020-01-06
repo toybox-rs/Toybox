@@ -1,0 +1,6 @@
+#!/bin/bash
+# RUN THIS command FROM CTOYBOX.
+pip3 install -q -r REQUIREMENTS.txt
+export PYTHONPATH=${PWD}/baselines:${PWD}:${PYTHONPATH}
+echo "PYTHONPATH $PYTHONPATH"
+python3 "$@"

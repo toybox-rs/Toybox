@@ -42,7 +42,7 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
     def test_no_enemies_ppo2(self):
         print('testing test_no_enemies_ppo2')
         seed = 42
-        path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
+        path = 'models/AmidarToyboxNoFrameskip-v4.regress.model'
         # # You need to do this if you want to load more than one model with tensorflow
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
@@ -105,7 +105,7 @@ class OneEnemyTargetTest(AmidarToyboxTestBase):
       seed = 42
     #   fdir = os.path.dirname(os.path.abspath(__file__))
     #   path = os.sep.join([fdir, 'models', 'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])
-      path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
+      path = 'models/AmidarToyboxNoFrameskip-v4.regress.model'
       with tf.Session(graph=tf.Graph()):
         model = oai.getModel(self.env, 'ppo2', seed, path)
         # Set low to be a test of a test!
@@ -175,7 +175,7 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
       seed = 42
     #   fdir = os.path.dirname(os.path.abspath(__file__))
     #   path = os.sep.join([fdir, 'models',  'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
-      path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
+      path = 'models/AmidarToyboxNoFrameskip-v4.regress.model'
       model = oai.getModel(self.env, 'ppo2', seed, path)
       # Set low to be a test of a test!
       self.runTest(model)
@@ -230,7 +230,7 @@ class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
       seed = 42
       fdir = os.path.dirname(os.path.abspath(__file__))
     #   path = os.sep.join([fdir, 'models',  'AmidarToyboxNoFrameskip-v4.ppo2.5e7.3771075072.2019-05-18.model'])  
-      path = '../models/AmidarToyboxNoFrameskip-v4.regress.model'
+      path = 'models/AmidarToyboxNoFrameskip-v4.regress.model'
       model = oai.getModel(self.env, 'ppo2', seed, path)
       # Set low to be a test of a test!
       self.runTest(model)

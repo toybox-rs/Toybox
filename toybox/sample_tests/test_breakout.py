@@ -11,7 +11,7 @@ from toybox.sample_tests.base import BreakoutToyboxTestBase
 from numpy import random
 
 seed = 8675309
-path = '../models/BreakoutToyboxNoFrameskip-v4.regress.model'        
+path = 'models/BreakoutToyboxNoFrameskip-v4.regress.model'        
 
 class PolarStarts(BreakoutToyboxTestBase):
 
@@ -68,7 +68,7 @@ class LastBrick(BreakoutToyboxTestBase):
             
     def test_last_brick_ppo2(self):
         seed = 8675309
-        path = '../models/BreakoutToyboxNoFrameskip-v4.regress.model'
+        path = 'models/BreakoutToyboxNoFrameskip-v4.regress.model'
         with brk.BreakoutIntervention(self.getToybox()) as intervention:
             bricks = intervention.game.bricks
             intervention.game.reset = False
@@ -101,7 +101,7 @@ class EZChannel(BreakoutToyboxTestBase):
     
     def test_ezchannel_ppo2(self):
         seed = 8675309
-        path = '../models/BreakoutToyboxNoFrameskip-v4.regress.model'
+        path = 'models/BreakoutToyboxNoFrameskip-v4.regress.model'
         with brk.BreakoutIntervention(self.getToybox()) as intervention:
             bricks = intervention.game.bricks
         with tf.Session(graph=tf.Graph()):
