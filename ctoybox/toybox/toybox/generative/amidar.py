@@ -57,6 +57,11 @@ class AmidarGenerative(AmidarIntervention):
                 self.config["randomize"]["choices"][var] = var_list
                 # unload weights
                 self.config["randomize"]["weights"][var] = weighted_choice if weighted_choice is not None else []
+            if False:
+            #if var == 'enemy_start': 
+                self.config["randomize"]["vars"].append(var)
+                var_list, weighted_choice = self.unload_enemy_starting_position(data[var])
+                self.config["randomize"]["choices"][var] = var_list
                
         for var in [k for k in data.keys() if not k in generative_support and not k in generative_utilities]:    
             print('Randomizer not supported:', var)
@@ -64,6 +69,16 @@ class AmidarGenerative(AmidarIntervention):
 
     def tile_wrapper(self, y, x): 
         return {'ty': y, 'tx': x}
+
+    def unload_enemy_starting_position(self, data): 
+        load_keys = [k for k in data.keys()]: 
+        for protocol in load_keys: 
+            if protocol == 'reindex': 
+                for e in self.num_enemies(): 
+                    pass
+
+        return var_list
+
 
 
     def unload_starting_position(self, data): 
