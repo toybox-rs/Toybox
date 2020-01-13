@@ -71,7 +71,7 @@ class AmidarGenerative(AmidarIntervention):
         return {'ty': y, 'tx': x}
 
     def unload_enemy_starting_position(self, data): 
-        load_keys = [k for k in data.keys()]: 
+        load_keys = [k for k in data.keys()] 
         for protocol in load_keys: 
             if protocol == 'reindex': 
                 for e in self.num_enemies(): 
