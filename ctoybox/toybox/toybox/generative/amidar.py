@@ -115,6 +115,16 @@ class AmidarGenerative(AmidarIntervention):
                     var_list.extend(list(set(zip(ylist,xlist))))
                 else: 
                     print("Invalid coordinate input: ", load_protocol, data[load_protocol])
+            if load_protocol == 'all_except_comb_list': 
+                choices = []
+                all_tiles, all_pos = self.collect_all_valid_tiles()
+                choices.extend(all_tiles)
+
+                excl_list = []
+                excl_list.extend(list(itertools.product(data[load_protocol]["xrange"],data[load_protocol]["yrange"]))) 
+                excl_list = set(excl_list)
+                var_list.extend([item for item in choices if item not in excl_list])
+                print(var_list)
 
         assert len(var_list) > 0
 
