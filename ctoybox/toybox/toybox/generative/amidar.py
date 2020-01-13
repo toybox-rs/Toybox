@@ -103,18 +103,8 @@ class AmidarGenerative(AmidarIntervention):
             if load_protocol == 'inf':
                 all_tiles, all_pos = self.collect_all_valid_tiles()
                 var_list.extend(all_tiles)
-            if load_protocol == 'rect_range': 
-                pass
-                #var_list.extend(list(itertools.product(data[load_protocol]['y1']:data[load_protocol]['y2'],data[load_protocol]['x1']:data[load_protocol]['x2'])))
             if load_protocol == 'comb_list':
                 var_list.extend(list(itertools.product(data[load_protocol]["xrange"],data[load_protocol]["yrange"])))
-            if load_protocol == 'zip_list': 
-                ylist = np.arange(data[load_protocol]['y1'],data[load_protocol]['y2'])
-                xlist = np.arange(data[load_protocol]['x1'],data[load_protocol]['x2'])
-                if len(ylist) == len(xlist): 
-                    var_list.extend(list(set(zip(ylist,xlist))))
-                else: 
-                    print("Invalid coordinate input: ", load_protocol, data[load_protocol])
             if load_protocol == 'all_except_comb_list': 
                 choices = []
                 all_tiles, all_pos = self.collect_all_valid_tiles()
