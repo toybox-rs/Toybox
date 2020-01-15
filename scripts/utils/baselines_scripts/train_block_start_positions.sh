@@ -8,7 +8,7 @@ partition="titanx-long"
 algs="ppo2"
 env="amidartoyboxnoframeskip-v4"
 timesteps="1e7 5e7"
-configs=`cat block_configs.txt`
+configs=`cat toybox/toybox/interventions/defaults/block_configs.txt`
 seeds="2202933152"
 
 # make sure we have all the pip dependencies we want installed
@@ -24,12 +24,13 @@ source $home/.cargo/env
 rustup default stable
 cargo build --release
 
+job_ct=0
 for steps in $timesteps; do
     for seed in $seeds; do
         for alg in $algs; do
             for fconfig in $configs; do
 
-                uid=$env.$alg.$steps.$seed.config
+                uid=$env.$alg.$steps.$seed.$job_ct
                 echo "processing model $uid"
 
                 dest=run_cmd_$uid.sh
@@ -37,8 +38,9 @@ for steps in $timesteps; do
                 echo "$conf"
                 model=$uid.`date -i`.model
                 model_path=$work1/$model
-       
+
                 if ! ls $work1/$uid*.model 1> /dev/null 2>&1; then
+
                     logdir=$logs/$uid
                     mkdir -p $logdir
 
@@ -56,6 +58,8 @@ openai_logdir=$logdir openai_format=csv ./start_python_gypsum -m baselines.run -
                     echo "$cmd" > $dest
                     sbatch -p $partition --gres=gpu:1 $dest
                 fi
+
+                job_ct=$(($job_ct +  1)) 
             done; 
         done;
     done;
