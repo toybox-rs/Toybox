@@ -46,6 +46,9 @@ class BehavioralFixture(unittest.TestCase, ABC):
   def onTestEnd(self):
     assert False
 
+  def onSubTestEnd(self, obj=None):
+    pass
+
   @abstractmethod
   def shouldIntervene(self, obj=None):
     assert False
@@ -86,4 +89,5 @@ class BehavioralFixture(unittest.TestCase, ABC):
           trials_data.append(self.onTrialEnd()) 
           print('Resetting environment.\n')
           self.resetEnv()
+      self.onSubTestEnd(obj=obj)
     self.onTestEnd()    
