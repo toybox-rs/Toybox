@@ -39,7 +39,7 @@ Go into the ``ctoybox`` directory, and use the ``start_python`` script. This wil
    * If you are not sure of your version, run `python --version`
 1. Activate your virtual environment: `source .env/bin/activate`
 2. Run `pip install -r REQUIREMENTS.txt`
-3. Run `python setup.py install`
+3. Run `cd baselines && python setup.py install && cd .. && python setup.py install`
 4. Run `python -m unittest toybox.sample_tests.test_${GAME}.${TEST_NAME}`
 
 
