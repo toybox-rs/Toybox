@@ -21,10 +21,6 @@ If you use this code, or otherwise are inspired by our white-box testing approac
 
 The rust implementations of the games have moved to a different repository: [toybox-rs/toybox-rs](https://github.com/toybox-rs/toybox-rs)
 
-## Where is the Python code?
-
-Go into the ``ctoybox`` directory, and use the ``start_python`` script. This will help set up your path and virtual-environments.
-
 ## Play the games (using pygame)
 
     pip install ctoybox pygame
