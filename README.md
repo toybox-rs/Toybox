@@ -34,9 +34,13 @@ Go into the ``ctoybox`` directory, and use the ``start_python`` script. This wil
 
 ## Run the tests
 
-1. Navigate to `ctoybox`. 
-2. Run `pip3 install -r REQUIREMENTS.txt`
-3. Run `PYTHONPATH=baselines:toybox python3 -m unittest toybox.sample_tests.test_${GAME}.${TEST_NAME}`
+1. Create a virtual environment using your python3 installation: `${python} -m venv .env`
+   * If you are on OSX, this is likely `python3`: thus, your command will be `python3 -m venv .env`
+   * If you are not sure of your version, run `python --version`
+1. Activate your virtual environment: `source .env/bin/activate`
+2. Run `pip install -r REQUIREMENTS.txt`
+3. Run `python setup.py install`
+4. Run `python -m unittest toybox.sample_tests.test_${GAME}.${TEST_NAME}`
 
 
 ## Python
