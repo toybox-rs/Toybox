@@ -38,6 +38,12 @@ Go into the ``ctoybox`` directory, and use the ``start_python`` script. This wil
 2. Run `pip3 install -r REQUIREMENTS.txt`
 3. Run `PYTHONPATH=baselines:toybox python3 -m unittest toybox.sample_tests.test_${GAME}.${TEST_NAME}`
 
+We have observed installation issues on OSX Catalina; if you get a linker error for ujson library, you can try running with the CFLAGS argument:
+
+CFLAGS=-stdlib=libc++ pip install ujson
+
+If this does not work, the code will simply default back to the existing json library.
+
 
 ## Python
 
