@@ -1,7 +1,9 @@
 from toybox.interventions.base import *
 from toybox.interventions.core import * 
-
-import json
+try:
+  import ujson as json
+except:
+  import json
 import random
 """An API for interventions on Amidar."""
 

@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 import inspect
 from ctoybox import Toybox
-import json
+try:
+  import ujson as json
+except:
+  import json
 """ Contains the base class for interventions. 
 
 To make interventions for a new game, subclass Intervention."""
