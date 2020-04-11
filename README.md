@@ -1,4 +1,4 @@
-# The Reinforcement Learning Toybox [![Build Status](https://travis-ci.com/toybox-rs/Toybox.svg?token=wqGZxUYsDSPaq1jz2zn6&branch=master)](https://travis-ci.com/toybox-rs/Toybox)
+# The Reinforcement Learning Toybox ![CI](https://github.com/toybox-rs/Toybox/workflows/CI/badge.svg)
 
 A set of games designed for testing deep RL agents.
 
@@ -39,7 +39,7 @@ Go into the ``ctoybox`` directory, and use the ``start_python`` script. This wil
    * If you are not sure of your version, run `python --version`
 1. Activate your virtual environment: `source .env/bin/activate`
 2. Run `pip install -r REQUIREMENTS.txt`
-3. Run `cd baselines && python setup.py install && cd .. && python setup.py install`
+3. Run `python setup.py install`
 4. Run `python -m unittest toybox.sample_tests.test_${GAME}.${TEST_NAME}`
 
 We have observed installation issues on OSX Catalina; if you get a linker error for ujson library, you can try running with the CFLAGS argument:
