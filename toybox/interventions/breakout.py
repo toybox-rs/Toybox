@@ -1,6 +1,6 @@
 from toybox.interventions.base import *
 from toybox.interventions.core import * 
-import json
+import ujson as json
 """An API for interventions on Breakout."""
 
 class Breakout(Game):
