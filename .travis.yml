@@ -11,7 +11,10 @@ cache:
 
 before_install:
   - sudo apt-get -y install python3-dev python3-pip python3-setuptools python3-wheel libopenmpi-dev
-  - sudo pip3 install -U --upgrade pip
-  - sudo pip3 install -U --only-binary=numpy -r REQUIREMENTS.txt
+  - python3 -m venv .env
+  - source .env/bin/activate
+  - sudo pip install -U --upgrade pip
+  - sudo pip install -U --only-binary=numpy -r REQUIREMENTS.txt
+  - cd baselines && python setup.py install && cd .. && python setup.py install
 
 script: ./check.sh
