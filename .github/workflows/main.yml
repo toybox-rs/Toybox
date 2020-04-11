@@ -10,6 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: apt install openmpi
+      run: sudo apt-get install -y libopenmpi-dev
     - name: Checkout Code
       uses: actions/checkout@v2
     - name: Setup Python
