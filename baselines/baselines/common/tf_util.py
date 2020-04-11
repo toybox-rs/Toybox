@@ -1,6 +1,18 @@
 import joblib
 import numpy as np
 import tensorflow as tf  # pylint: ignore-module
+
+# Try to suppress Tensorflow deprecation warnings on CI; we've frozen a version and aren't maintaining it:
+try:
+    from tensorflow.python.util import deprecation
+    deprecation._PRINT_DEPRECATION_WARNINGS = False
+except:
+    pass
+try:
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+except:
+    pass
+
 import copy
 import os
 import functools
