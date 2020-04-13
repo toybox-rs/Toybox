@@ -27,13 +27,10 @@ jobs:
         pip install -U --upgrade pip
         pip install -U --only-binary=numpy -r REQUIREMENTS.txt  
     - name: Install baselines
-      run: |
-	cd baselines 
-        python setup.py install 
+      working-directory: baselines
+      run: python setup.py install 
     - name: Install Toybox
-      run: |
-        cd .. 
-        python setup.py install
+      run: python setup.py install
     - name: Run "check.sh"
       run: ./check.sh
 
