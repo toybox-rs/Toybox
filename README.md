@@ -44,7 +44,7 @@ Go into the ``ctoybox`` directory, and use the ``start_python`` script. This wil
 
 We have observed installation issues on OSX Catalina; if you get a linker error for ujson library, you can try running with the CFLAGS argument:
 
-CFLAGS=-stdlib=libc++ pip install ujson
+`CFLAGS=-stdlib=libc++ pip install ujson`
 
 If this does not work, the code will simply default back to the existing json library.
 
