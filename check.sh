@@ -12,5 +12,5 @@ if [ ! -e toybox-regress-models.zip ]; then
 fi
 
 ./scripts/utils/regress.sh
+./scripts/utils/unit_tests.sh
 ./scripts/utils/behavior_tests.sh
-
