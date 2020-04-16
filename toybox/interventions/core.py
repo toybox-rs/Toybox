@@ -40,7 +40,7 @@ class Direction(BaseMixin):
   def __str__(self):
     return self.direction
 
-  def __eq__(self, other: Direction):
+  def __eq__(self, other):
     return self.direction == other.direction
 
 
@@ -57,7 +57,7 @@ class Vec2D(BaseMixin):
   def __str__(self):
     return '({}, {})'.format(self.x, self.y)
 
-  def __eq__(self, other: Vec2D):
+  def __eq__(self, other):
     return self.x == other.x and self.y == other.y
 
 class Color(BaseMixin):
@@ -75,7 +75,7 @@ class Color(BaseMixin):
   def __str__(self):
     return "({}, {}, {}, {})".format(self.r, self.g, self.b, self.a)
 
-  def __eq__(self, other: Color):
+  def __eq__(self, other):
     return self.r == other.r and self.g == other.g and self.b == other.b and self.a == other.a
 
 
@@ -89,7 +89,7 @@ class Collection(BaseMixin):
     self.elt_clz = elt_clz
     self.coll = [elt_clz.decode(intervention, elt, elt_clz) for elt in coll]
 
-  def __eq__(self, other: Collection):
+  def __eq__(self, other):
     if len(self) == len(other):
       for i in range(len(self)):
         if self[i] != other[i]:
@@ -168,7 +168,7 @@ class SpriteData(BaseMixin):
     self.y = y
     self.data = ColorCollectionCollection.decode(intervention, data, None)
 
-  def __eq__(self, other: SpriteData):
+  def __eq__(self, other):
     return self.x == other.x and self.y == other.y and self.data == other.data
 
   def __str__(self):
@@ -186,7 +186,7 @@ class ColorCollectionCollection(BaseMixin):
     for coll in sprites:
       self.coll.append([Color.decode(intervention, datum, Color) for datum in coll])
 
-  def __eq__(self, other: ColorCollectionCollection):
+  def __eq__(self, other):
     return self.coll == other.coll
 
   def decode(intervention, coll, clz):
