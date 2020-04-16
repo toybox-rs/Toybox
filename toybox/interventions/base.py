@@ -25,9 +25,6 @@ class BaseMixin(ABC):
   def __init__(self, *args, **kwargs):
     self.intervention = None
 
-  def __repr__(self):
-    return '<{}, {}>'.format(str(self), self.intervention)
-
   def __setattr__(self, name, value):
     stack = [frame.function for frame in inspect.stack()]
     calling_fn = stack[1]
