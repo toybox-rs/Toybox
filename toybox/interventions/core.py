@@ -91,7 +91,7 @@ class Collection(BaseMixin):
 
   def __eq__(self, other: Collection):
     if len(self) == len(other):
-    for i in range(len(self)):
+      for i in range(len(self)):
         if self[i] != other[i]:
           return False
       return True
