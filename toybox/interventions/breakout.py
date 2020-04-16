@@ -52,6 +52,9 @@ class Paddle(BaseMixin):
     def __eq__(self, other):
         return self.velocity == other.velocity and self.position == other.position
 
+    def __str__(self):
+        return '<position: {}, velocity: {}>'.format(self.position, self.velocity)
+
 
 class BrickCollection(Collection):
 

@@ -95,6 +95,9 @@ class Collection(BaseMixin):
           return False
       return True
     else: return False
+
+  def __str__(self):
+    return '[{}]'.format(', '.join(self.coll))
       
   def __iter__(self): return self.coll.__iter__()
 
@@ -166,6 +169,9 @@ class SpriteData(BaseMixin):
 
   def __eq__(self, other):
     return self.x == other.x and self.y == other.y and self.data == other.data
+
+  def __str__(self):
+    return 'Sprite at {}, {}'.format(self.x, self.y)
 
 
 class ColorCollectionCollection(BaseMixin):
