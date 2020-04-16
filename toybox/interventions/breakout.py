@@ -29,6 +29,16 @@ class Breakout(Game):
         self.paddle_width = paddle_width
         self.is_dead = is_dead
 
+    def __eq__(self, other):
+        return self.paddle == other.paddle and \
+            self.reset == other.reset and \
+                self.ball_radius == other.ball_radius and \
+                    self.bricks == other.bricks and \
+                        self.balls == other.balls and \
+                            self.paddle_speed == other.paddle_speed and \
+                                self.paddle_width == other.paddle_width and \
+                                    self.is_dead == other.is_dead
+
 class Paddle(BaseMixin):
 
     expected_keys = ['velocity', 'position']
@@ -38,6 +48,9 @@ class Paddle(BaseMixin):
         self.intervention = intervention
         self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
         self.position = Vec2D.decode(intervention, position, Vec2D)
+
+    def __eq__(self, other):
+        return self.velocity == other.velocity and self.position == other.position
 
 
 class BrickCollection(Collection):
@@ -67,6 +80,17 @@ class Brick(BaseMixin):
         self.row = row
         self.col = col
 
+    def __eq__(self, other):
+        return self.destructible == other.destructible and \
+            self.depth == other.depth and \
+                self.color == other.color and \
+                    self.alive == other.alive and \
+                        self.points == other.points and \
+                            self.size == other.size and \
+                                self.position == other.position and \
+                                    self.row == other.row and \
+                                        self.col == other.col
+
 class BallCollection(Collection):
 
     def __init__(self, intervention, balls):
@@ -82,6 +106,10 @@ class Ball(BaseMixin):
         self.intervention = intervention
         self.position = Vec2D.decode(intervention, position, Vec2D)
         self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
+
+    def __eq__(self, other):
+        return self.position == other.position and \
+            self.velocity == other.velocity
 
 
 class BreakoutIntervention(Intervention):
