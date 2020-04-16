@@ -1,4 +1,5 @@
 from toybox.interventions.base import * 
+import typing
 
 class Game(BaseMixin):
   """Base class for games. Supertype that contains common elements."""
@@ -39,7 +40,7 @@ class Direction(BaseMixin):
   def __str__(self):
     return self.direction
 
-  def __eq__(self, other):
+  def __eq__(self, other: Direction):
     return self.direction == other.direction
 
 
@@ -54,9 +55,9 @@ class Vec2D(BaseMixin):
     self.y = y
 
   def __str__(self):
-    return "({}, {})".format(self.x, self.y)
+    return '({}, {})'.format(self.x, self.y)
 
-  def __eq__(self, other):
+  def __eq__(self, other: Vec2D):
     return self.x == other.x and self.y == other.y
 
 class Color(BaseMixin):
@@ -74,7 +75,7 @@ class Color(BaseMixin):
   def __str__(self):
     return "({}, {}, {}, {})".format(self.r, self.g, self.b, self.a)
 
-  def __eq__(self, other):
+  def __eq__(self, other: Color):
     return self.r == other.r and self.g == other.g and self.b == other.b and self.a == other.a
 
 
@@ -88,16 +89,16 @@ class Collection(BaseMixin):
     self.elt_clz = elt_clz
     self.coll = [elt_clz.decode(intervention, elt, elt_clz) for elt in coll]
 
-  def __eq__(self, other):
+  def __eq__(self, other: Collection):
     if len(self) == len(other):
-      for i in range(len(self)):
+    for i in range(len(self)):
         if self[i] != other[i]:
           return False
       return True
     else: return False
 
   def __str__(self):
-    return '[{}]'.format(', '.join(self.coll))
+    return '[{}]'.format(', '.join([str(c) for c in self.coll]))
       
   def __iter__(self): return self.coll.__iter__()
 
@@ -167,7 +168,7 @@ class SpriteData(BaseMixin):
     self.y = y
     self.data = ColorCollectionCollection.decode(intervention, data, None)
 
-  def __eq__(self, other):
+  def __eq__(self, other: SpriteData):
     return self.x == other.x and self.y == other.y and self.data == other.data
 
   def __str__(self):
@@ -185,7 +186,7 @@ class ColorCollectionCollection(BaseMixin):
     for coll in sprites:
       self.coll.append([Color.decode(intervention, datum, Color) for datum in coll])
 
-  def __eq__(self, other):
+  def __eq__(self, other: ColorCollectionCollection):
     return self.coll == other.coll
 
   def decode(intervention, coll, clz):
