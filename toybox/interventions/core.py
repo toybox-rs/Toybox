@@ -1,4 +1,5 @@
 from toybox.interventions.base import * 
+import typing
 
 class Game(BaseMixin):
   """Base class for games. Supertype that contains common elements."""
@@ -7,11 +8,16 @@ class Game(BaseMixin):
   immutable_fields = []
 
   def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
+    super().__init__(intervention)
     self.score = score
     self.rand = rand
     self.lives = lives
     self.level = level
     self.intervention = intervention
+    # NO RESET OF _IN_INIT HERE
+    # Game is an abstract class and should never be terminal
+    # Python doesn't do great with multiple inheritence, which is 
+    # what a truly abstract version of this class would look like.
 
 class Direction(BaseMixin):
 
@@ -26,15 +32,22 @@ class Direction(BaseMixin):
   directions = [Up, Down, Left, Right]
 
   def __init__(self, intervention, direction):
-    self.intervention = intervention
+    super().__init__(intervention)
     assert direction in Direction.directions, '%s not found in directions' % direction
     self.direction = direction
+    self._in_init = False
 
   def decode(intervention, direction, clz):
     return Direction(intervention, direction)
 
   def encode(self):
     return self.direction
+
+  def __str__(self):
+    return self.direction
+
+  def __eq__(self, other):
+    return self.direction == other.direction
 
 
 class Vec2D(BaseMixin):
@@ -43,9 +56,16 @@ class Vec2D(BaseMixin):
   immutable_fields = []
 
   def __init__(self, intervention, x, y):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.x = x
     self.y = y
+    self._in_init = False
+
+  def __str__(self):
+    return '({}, {})'.format(self.x, self.y)
+
+  def __eq__(self, other):
+    return self.x == other.x and self.y == other.y
 
 class Color(BaseMixin):
 
@@ -53,11 +73,18 @@ class Color(BaseMixin):
   immutable_fields = []
   
   def __init__(self, intervention, r, g, b, a):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.r = r
     self.g = g 
     self.b = b 
     self.a = a   
+    self._in_init = False
+
+  def __str__(self):
+    return "({}, {}, {}, {})".format(self.r, self.g, self.b, self.a)
+
+  def __eq__(self, other):
+    return self.r == other.r and self.g == other.g and self.b == other.b and self.a == other.a
 
 
 class Collection(BaseMixin):
@@ -66,10 +93,22 @@ class Collection(BaseMixin):
   immutable_fields = ['intervention']
 
   def __init__(self, intervention, coll, elt_clz):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.elt_clz = elt_clz
     self.coll = [elt_clz.decode(intervention, elt, elt_clz) for elt in coll]
+    # SAME DEAL AS GAME - THIS SHOULD ALWAYS BE ABSTRACT, HENCE NO RESET OF IN_INIT
 
+  def __eq__(self, other):
+    if len(self) == len(other):
+      for i in range(len(self)):
+        if self[i] != other[i]:
+          return False
+      return True
+    else: return False
+
+  def __str__(self):
+    return '[{}]'.format(', '.join([str(c) for c in self.coll]))
+      
   def __iter__(self): return self.coll.__iter__()
 
   def __getitem__(self, key): return self.coll.__getitem__(key)
@@ -133,10 +172,17 @@ class SpriteData(BaseMixin):
   immutable_fields = ['intervention', 'data']
 
   def __init__(self, intervention, x=None, y=None, data=None):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.x = x
     self.y = y
     self.data = ColorCollectionCollection.decode(intervention, data, None)
+    self._in_init = False
+
+  def __eq__(self, other):
+    return self.x == other.x and self.y == other.y and self.data == other.data
+
+  def __str__(self):
+    return 'Sprite at {}, {}'.format(self.x, self.y)
 
 
 class ColorCollectionCollection(BaseMixin):
@@ -145,10 +191,14 @@ class ColorCollectionCollection(BaseMixin):
   immutable_fields = []
 
   def __init__(self, intervention, sprites):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.coll = []
     for coll in sprites:
       self.coll.append([Color.decode(intervention, datum, Color) for datum in coll])
+    self._in_init = False
+
+  def __eq__(self, other):
+    return self.coll == other.coll
 
   def decode(intervention, coll, clz):
     return ColorCollectionCollection(intervention, coll)

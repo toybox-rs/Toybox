@@ -22,17 +22,32 @@ class BaseMixin(ABC):
   @abstractmethod
   def immutable_fields(clz): pass
 
-  def __init__(self, *args, **kwargs):
-    self.intervention = None
+  def __init__(self, intervention, *args, **kwargs):
+    self._in_init = True
+    self.intervention = intervention
 
+
+  # Refactor notes 4/17/2020 (EMT)
+  # Inspecting the call stack was causing major overhead:
+  #
+  # 15278049 function calls (15277560 primitive calls) in 7.386 seconds
+  # removing the call to inspect:
+  # 10338 function calls (9903 primitive calls) in 0.011 seconds
+  #
+  # Unfortunately, the workaround requires some vigilance. Rather than inspecting
+  # the call stack to see if we are currently in the __init__ function (where we
+  # are allowed to set fields without writing to toybox), we are tracking whether
+  # we are current in __init__ via inheritence and the manual update of a flag in 
+  # the children's __init__ functions. 
   def __setattr__(self, name, value):
-    stack = [frame.function for frame in inspect.stack()]
-    calling_fn = stack[1]
+    # stack = [frame.function for frame in inspect.stack()]
+    # calling_fn = stack[1]
     existing_attrs = self.__dict__.keys()
     adding_new = name not in existing_attrs
     super().__setattr__(name, value)
     # Prohibit adding fields outside object instantiation/initialization
-    if calling_fn == '__init__': return 
+    # if calling_fn == '__init__': return 
+    if self._in_init or name == '_in_init': return
     assert 'intervention' in existing_attrs
     if name in self.immutable_fields: # and not :
       raise AttributeError('Trying mutate immutable field %s' % name)
@@ -82,9 +97,11 @@ class BaseMixin(ABC):
 
   def encode(self):
     dat = {}
-    for name, val in self.__dict__.items():
+    for name, val in vars(self).items():
+      if name == 'intervention': continue
+      if name == '_in_init': continue
       if name not in self.expected_keys:
-        if name != 'intervention' and __debug__:
+        if __debug__:
           print('skipping %s in %s; not in expected keys' % (name, type(self).__name__))
         continue
       dat[name] = val.encode() if isinstance(val, BaseMixin) else val
