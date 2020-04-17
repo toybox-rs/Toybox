@@ -13,6 +13,8 @@ If you use this code, or otherwise are inspired by our white-box testing approac
 }
 ```
 
+We have a lenghtier paper on [ArXiV](https://arxiv.org/pdf/1905.02825.pdf) and can provide a draft of a non-public paper on our acceptance testing framework by request (email at etosch at cs dot umass dot edu).
+
 ## How accurate are your games?
 
 [Watch four minutes of agents playing each game](https://www.youtube.com/watch?v=spx_YQQW1Lw). Both ALE implementations and Toybox implementations have their idiosyncracies, but the core gameplay and concepts have been captured. Pull requests always welcome to improve fidelity.
