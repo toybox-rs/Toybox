@@ -101,13 +101,13 @@ class AmidarGenerative(AmidarIntervention):
         var_list = []
         for load_protocol in load_keys: 
             if load_protocol == 'inf':
-                all_tiles, all_pos = self.collect_all_valid_tiles()
+                all_tiles, _all_pos = self.collect_all_valid_tiles()
                 var_list.extend(all_tiles)
             if load_protocol == 'comb_list':
                 var_list.extend(list(itertools.product(data[load_protocol]["xrange"],data[load_protocol]["yrange"])))
             if load_protocol == 'all_except_comb_list': 
                 choices = []
-                all_tiles, all_pos = self.collect_all_valid_tiles()
+                all_tiles, _all_pos = self.collect_all_valid_tiles()
                 choices.extend(all_tiles)
 
                 excl_list = []
