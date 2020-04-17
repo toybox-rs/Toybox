@@ -28,16 +28,37 @@ class Breakout(Game):
         self.paddle_speed = paddle_speed
         self.paddle_width = paddle_width
         self.is_dead = is_dead
+        self._in_init = False
 
     def __eq__(self, other):
-        return self.paddle == other.paddle and \
+        return self.score == other.score and \
+            self.lives == other.lives and \
+            self.level == other.level and \
+            self.paddle == other.paddle and \
             self.reset == other.reset and \
-                self.ball_radius == other.ball_radius and \
-                    self.bricks == other.bricks and \
-                        self.balls == other.balls and \
-                            self.paddle_speed == other.paddle_speed and \
-                                self.paddle_width == other.paddle_width and \
-                                    self.is_dead == other.is_dead
+            self.ball_radius == other.ball_radius and \
+            self.bricks == other.bricks and \
+            self.balls == other.balls and \
+            self.paddle_speed == other.paddle_speed and \
+            self.paddle_width == other.paddle_width and \
+            self.is_dead == other.is_dead
+
+    def __str__(self):
+        return """Breakout
+==========
+    score: {}
+    lives: {}
+    level: {}
+    paddle: {}
+    reset: {}
+    ball_radius: {}
+    bricks: {}
+    balls: {}
+    paddle_speed: {}
+    paddle_width: {}
+    is_dead: {}""".format(self.score, self.lives, self.level, self.paddle.__str__(), 
+        self.reset, self.ball_radius, self.bricks.__str__(), self.balls.__str__(), self.paddle_speed,
+        self.paddle_width, self.is_dead)
 
 class Paddle(BaseMixin):
 
@@ -45,9 +66,10 @@ class Paddle(BaseMixin):
     immutable_fields = []
 
     def __init__(self, intervention, velocity, position):
-        self.intervention = intervention
+        super().__init__(intervention)
         self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
         self.position = Vec2D.decode(intervention, position, Vec2D)
+        self._in_init = False
 
     def __eq__(self, other):
         return self.velocity == other.velocity and self.position == other.position
@@ -60,6 +82,7 @@ class BrickCollection(Collection):
 
     def __init__(self, intervention, bricks):
         super().__init__(intervention, bricks, Brick)
+        self._in_init = False
 
     def decode(intervention, bricks, clz):
         return BrickCollection(intervention, bricks)
@@ -72,7 +95,7 @@ class Brick(BaseMixin):
     immutable_fields = ['intervention']
       
     def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
-        self.intervention = intervention
+        super().__init__(intervention)
         self.destructible = destructible
         self.depth = depth
         self.color = Color.decode(intervention, color, Color)
@@ -82,6 +105,7 @@ class Brick(BaseMixin):
         self.position = Vec2D.decode(intervention, position, Vec2D)
         self.row = row
         self.col = col
+        self._in_init = False
 
     def __eq__(self, other):
         return self.destructible == other.destructible and \
@@ -98,6 +122,7 @@ class BallCollection(Collection):
 
     def __init__(self, intervention, balls):
         super().__init__(intervention, balls, Ball)
+        self._in_init = False
 
 
 class Ball(BaseMixin): 
@@ -106,9 +131,10 @@ class Ball(BaseMixin):
     immutable_fields = ['intervention']
 
     def __init__(self, intervention, position, velocity):
-        self.intervention = intervention
+        super().__init__(intervention)
         self.position = Vec2D.decode(intervention, position, Vec2D)
         self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
+        self._in_init = False
 
     def __eq__(self, other):
         return self.position == other.position and \

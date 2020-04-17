@@ -25,6 +25,7 @@ class Amidar(Game):
     self.chase_timer = chase_timer
     self.board = Board.decode(intervention, board, Board)
     self.player = Player.decode(intervention, player, Player)
+    self._in_init = False
 
 
 class EnemyCollection(Collection):
@@ -34,6 +35,7 @@ class EnemyCollection(Collection):
 
     def __init__(self, intervention, enemies):
       super().__init__(intervention, enemies, Enemy)
+      self._in_init = False
 
     def decode(intervention, enemies, clz):
       return EnemyCollection(intervention, enemies)
@@ -42,7 +44,7 @@ class EnemyCollection(Collection):
 class MovementAI(BaseMixin):
 
     expected_keys = []
-    immutable_fields = ['intervention']
+    immutable_fields = ['intervention', '_in_init']
 
     EnemyLookupAI     = 'EnemyLookupAI'
     EnemyPerimeterAI  = 'EnemyPerimeterAI' 
@@ -64,10 +66,9 @@ class MovementAI(BaseMixin):
         start_dir=None, dir=None,
         vision_distance=None, player_seen=None):
 
-      self.intervention = intervention
+      super().__init__(intervention)
       assert protocol in MovementAI.mvmt_protocols, '%s not a recognized movement protocol' % protocol
       self.protocol = protocol
-
       self.next = next
       self.default_route_index = default_route_index
       self.start = start
@@ -79,6 +80,8 @@ class MovementAI(BaseMixin):
       self.dir = dir
       self.vision_distance = vision_distance
       self.player_seen = player_seen
+      self._in_init = False
+
 
     def decode(intervention, ai, clz):
       ai_name = list(ai.keys())[0]
@@ -99,14 +102,14 @@ class Enemy(BaseMixin):
     immutable_fields = ['ai', 'intervention']
 
     def __init__(self, intervention, history, step, position, caught, speed, ai):
-      self.intervention = intervention
+      super().__init__(intervention)
       self.history = history
       self.step = step
       self.position = WorldPoint.decode(intervention, position, WorldPoint)
       self.caught = caught
       self.speed = speed
       self.ai = MovementAI.decode(intervention, ai, MovementAI)
-        
+      self._in_init = False
 
 class Player(BaseMixin):
 
@@ -114,13 +117,14 @@ class Player(BaseMixin):
     immutable_fields = ['intervention']
 
     def __init__(self, intervention, history, step, position, caught, speed, ai):
-        self.intervention = intervention
+        super().__init__(intervention)
         self.history = history
         self.step = step
         self.position = WorldPoint(intervention, **position)
         self.caught = caught
         self.speed = speed
         self.ai = ai
+        self._in_init = False
 
     # def set_position(self, x, y):
     #     self.position = WorldPoint(self.intervention, x, y)
@@ -135,14 +139,14 @@ class Board(BaseMixin):
     immutable_fields = ['boxes', 'tiles', 'intervention']
 
     def __init__(self, intervention, boxes, tiles, height, chase_junctions, width, junctions):
-      self.intervention = intervention
+      super().__init__(intervention)
       self.width = width
       self.height = height
       self.chase_junctions = chase_junctions
       self.junctions = junctions
       self.boxes = BoxCollection.decode(intervention, boxes,  BoxCollection)
       self.tiles = TileCollection.decode(intervention, tiles, TileCollection)
-  
+      self._in_init = False
 
 class TileCollection(Collection):
     # Convenience class to deal with the fact that the tiles blob is
@@ -151,10 +155,14 @@ class TileCollection(Collection):
     immutable_fields = Collection.immutable_fields + ['tiles']
 
     def __init__(self, intervention, tiles):
-      self.intervention = intervention
-      self.coll = []
+      # Instantiate with an empty list, since we are going to want to 
+      # make this a list of lists (there should probably be a CollectionCollection
+      # in core, since we also have a ColorCollectionCollection there, but I am 
+      # not adding this right now EMT 4/17/20)
+      super().__init__(intervention, [], None)
       for row in tiles:
         self.coll.append([Tile.decode(intervention, tile, Tile) for tile in row])
+      self._in_init = False
 
     def remove(self):
       raise ValueError('Cannot remove tiles from the board.')
@@ -177,16 +185,17 @@ class WorldPoint(BaseMixin):
     immutable_fields = ['intervention']
   
     def __init__(self, intervention, x=None, y=None):
+      super().__init__(intervention)
       assert type(x) is int
       self.x = x
       self.y = y
-      self.intervention = intervention
+      self._in_init = False
 
 class BoxCollection(Collection):
 
     def __init__(self, intervention, boxes):
-      self.intervention = intervention
-      self.coll = [Box(intervention, **boxdat) for boxdat in boxes]
+      super().__init__(intervention, boxes, Box)
+      self._in_init = False
 
     def decode(intervention, boxes, clz):
         return BoxCollection(intervention, boxes)
@@ -197,11 +206,12 @@ class Box(BaseMixin):
     immutable_fields = ['intervention']
 
     def __init__(self, intervention, triggers_chase, top_left, bottom_right, painted):
-        self.intervention = intervention
+        super().__init__(intervention)
         self.triggers_chase = triggers_chase
         self.top_left = TilePoint(intervention, **top_left)
         self.bottom_right = TilePoint(intervention, **bottom_right)
         self.painted = painted
+        self._in_init = False
 
 
 class Tile(BaseMixin):
@@ -218,9 +228,10 @@ class Tile(BaseMixin):
     immutable_fields = ['intervention']
 
     def __init__(self, intervention, name):
-      assert name in Tile.tags, '%s not a valid tile tag' % name
-      self.intervention = intervention
+      super().__init__(intervention)
+      assert name in Tile.tags, '%s not a valid tile tag' % name      
       self.tag = name
+      self._in_init = False
 
     def __eq__(self, other):
       return hasattr(other, 'tag') and self.tag == other.tag
@@ -239,9 +250,10 @@ class TilePoint(BaseMixin):
     immutable_fields = ['intervention']
 
     def __init__(self, intervention, tx, ty):
-        self.intervention = intervention
+        super().__init__(intervention)
         self.tx = tx
         self.ty = ty
+        self._in_init = False
 
     def __str__(self):
         return 'TilePoint {tx: %d, ty: %d}' % (self.tx, self.ty)

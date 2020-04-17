@@ -8,11 +8,16 @@ class Game(BaseMixin):
   immutable_fields = []
 
   def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
+    super().__init__(intervention)
     self.score = score
     self.rand = rand
     self.lives = lives
     self.level = level
     self.intervention = intervention
+    # NO RESET OF _IN_INIT HERE
+    # Game is an abstract class and should never be terminal
+    # Python doesn't do great with multiple inheritence, which is 
+    # what a truly abstract version of this class would look like.
 
 class Direction(BaseMixin):
 
@@ -27,9 +32,10 @@ class Direction(BaseMixin):
   directions = [Up, Down, Left, Right]
 
   def __init__(self, intervention, direction):
-    self.intervention = intervention
+    super().__init__(intervention)
     assert direction in Direction.directions, '%s not found in directions' % direction
     self.direction = direction
+    self._in_init = False
 
   def decode(intervention, direction, clz):
     return Direction(intervention, direction)
@@ -50,9 +56,10 @@ class Vec2D(BaseMixin):
   immutable_fields = []
 
   def __init__(self, intervention, x, y):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.x = x
     self.y = y
+    self._in_init = False
 
   def __str__(self):
     return '({}, {})'.format(self.x, self.y)
@@ -66,11 +73,12 @@ class Color(BaseMixin):
   immutable_fields = []
   
   def __init__(self, intervention, r, g, b, a):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.r = r
     self.g = g 
     self.b = b 
     self.a = a   
+    self._in_init = False
 
   def __str__(self):
     return "({}, {}, {}, {})".format(self.r, self.g, self.b, self.a)
@@ -85,9 +93,10 @@ class Collection(BaseMixin):
   immutable_fields = ['intervention']
 
   def __init__(self, intervention, coll, elt_clz):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.elt_clz = elt_clz
     self.coll = [elt_clz.decode(intervention, elt, elt_clz) for elt in coll]
+    # SAME DEAL AS GAME - THIS SHOULD ALWAYS BE ABSTRACT, HENCE NO RESET OF IN_INIT
 
   def __eq__(self, other):
     if len(self) == len(other):
@@ -163,10 +172,11 @@ class SpriteData(BaseMixin):
   immutable_fields = ['intervention', 'data']
 
   def __init__(self, intervention, x=None, y=None, data=None):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.x = x
     self.y = y
     self.data = ColorCollectionCollection.decode(intervention, data, None)
+    self._in_init = False
 
   def __eq__(self, other):
     return self.x == other.x and self.y == other.y and self.data == other.data
@@ -181,10 +191,11 @@ class ColorCollectionCollection(BaseMixin):
   immutable_fields = []
 
   def __init__(self, intervention, sprites):
-    self.intervention = intervention
+    super().__init__(intervention)
     self.coll = []
     for coll in sprites:
       self.coll.append([Color.decode(intervention, datum, Color) for datum in coll])
+    self._in_init = False
 
   def __eq__(self, other):
     return self.coll == other.coll
