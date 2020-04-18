@@ -6,7 +6,7 @@ import time
 import sys
 import multiprocessing
 import os.path as osp
-from os import getcwd, mkdir
+from os import getcwd, mkdir, walk
 import gym
 from collections import defaultdict
 import tensorflow as tf
@@ -14,7 +14,7 @@ import numpy as np
 from scipy.stats import sem
 from statistics import stdev
 from PIL import Image
-from subprocess import check_output
+import subprocess
 
 from baselines.common.vec_env.vec_frame_stack import VecFrameStack
 from baselines.common.cmd_util import common_arg_parser, parse_unknown_args, make_vec_env
@@ -216,24 +216,29 @@ def main():
         save_path = osp.expanduser(args.save_path)
         model.save(save_path)
 
-    mv_path_base = ""
+    mv_path = "."
     if args.record:
+        from datetime import datetime 
         # create movies dir if doesn't exist
         m_path = osp.join(getcwd(), "movies")
         if not osp.isdir(m_path): 
-            osp.mkdir(m_path)
+            mkdir(m_path)
         # create session dir 
+        dt = datetime.today()
+        nowstr = dt.strftime("%m%d%Y")
         # give it an ID larger than any other in the dir
-        sess_dirs = [d[0] for d in os.walk(getcwd()) if time.time() +  "session" in d[0]]
-        sess_ct = max([num(d) for d in sess_dirs]) if len(sess_dirs > 0) else 0
-        sess_str = "session" + time.time() + str(sess_ct + 1).zfill(3)
+        print(nowstr)
+        sess_dirs = [d[0] for d in next(walk(osp.join(getcwd(),"movies"))) if "session" + nowstr in d[0]]
+        sess_ct = max([int(d.split("_")[1]) for d in sess_dirs]) if len(sess_dirs) > 1 else len(sess_dirs)
+        sess_str = nowstr + "_" + str(sess_ct + 1).zfill(3)
         mv_path = osp.join("movies", "session" + sess_str)
-        osp.mkdir(mv_path)
+        mkdir(mv_path)
+        
         # print config + TB version + hash info to session{id}/info.txt
-        with open(osp.join(mv_path + 'session_config.txt', 'w')) as f:
-            f.write("config: ", args.partial_config) # config
-            label = subprocess.check_output(["git", "describe"]).strip()
-            f.write("toybox git hash: " + label)
+        with open(osp.join(mv_path, 'session_config.txt'), 'w') as f:
+            f.write("config: " + args.partial_config) # config
+            label = subprocess.check_output(["git", "describe", "--tags"]).strip().decode("utf-8")
+            f.write("toybox git hash: " + str(label))
 
 
     if args.play:
@@ -246,6 +251,8 @@ def main():
         scores = []
         session_scores = set()
         num_games = 0
+        gimg_path = osp.join(mv_path, turtle.toybox.game_name + "Toybox_game" + str(num_games).zfill(2))
+        mkdir(gimg_path)
         # This is a hack to get the starting screen, which throws an error in ALE for amidar
         num_steps = -1
 
@@ -258,7 +265,7 @@ def main():
             if args.show: 
                 env.render()
             if args.record:
-                path = osp.join(mv_path_base, turtle.toybox.game_name + "Toybox_game" + str(num_games).zfill(2) + "_frame_" + str(num_steps).zfill(4) + ".png")
+                path = osp.join(gimg_path, "frame_" + str(num_steps).zfill(4) + ".png")
                 turtle.toybox.save_frame_image(path, grayscale=False)
             #time.sleep(1.0/60.0)
             done = num_lives == 1 and done 
@@ -273,7 +280,10 @@ def main():
 
             if done:
                 num_games += 1
+                gimg_path = osp.join(mv_path, turtle.toybox.game_name + "Toybox_game" + str(num_games).zfill(2))
+                mkdir(gimg_path)
                 num_steps = -1
+                
                 score = max(session_scores)
                 scores.append(score)
                 session_scores = set()
