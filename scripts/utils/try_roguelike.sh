@@ -1,0 +1,1 @@
+./start_python -m baselines.run --alg=ppo2 --env=AmidarToyboxNoFrameskip-v4 --load_path=../../toybox-data/ijcai20/models/AmidarToyboxNoFrameskip-v4.ppo2.5e7.2202933152.infstart.2019-12-17.model --num_timesteps=0 --num_env=1 --play --show --partial_config=toybox/toybox/interventions/defaults/amidar_quick_general_config.json --rogue
