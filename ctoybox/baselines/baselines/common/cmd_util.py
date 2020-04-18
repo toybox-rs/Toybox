@@ -106,6 +106,7 @@ def common_arg_parser():
     parser.add_argument('--partial_config', help='Load partial game configuration rules', default=None, type=str)
     parser.add_argument('--show', default=False, action='store_true')
     parser.add_argument('--rogue', default=False, action='store_true')
+    parser.add_argument('--record', default=False, action='store_true')
     return parser
 
 def robotics_arg_parser():
