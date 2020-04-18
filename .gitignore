@@ -1,3 +1,4 @@
+ctoybox/movies/*
 /openai*/*
 openai_NIPS/*
 __pycache__
