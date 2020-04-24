@@ -46,7 +46,6 @@ class Amidar(Game):
 class EnemyCollection(Collection):
 
     expected_keys = []
-    immutable_fields = ['intervention']
 
     def __init__(self, intervention, enemies):
       super().__init__(intervention, enemies, Enemy)
@@ -67,7 +66,6 @@ class Tile(BaseMixin):
     tags = [Empty, Unpainted, Painted, ChaseMarker]
     
     expected_keys = []
-    immutable_fields = ['intervention']
 
     def __init__(self, intervention, name):
       assert intervention
@@ -92,7 +90,6 @@ class Tile(BaseMixin):
 class MovementAI(BaseMixin):
 
     expected_keys = []
-    immutable_fields = ['intervention', '_in_init']
 
     EnemyLookupAI     = 'EnemyLookupAI'
     EnemyPerimeterAI  = 'EnemyPerimeterAI' 
@@ -172,7 +169,7 @@ class MovementAI(BaseMixin):
 class Enemy(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
-    immutable_fields = ['ai', 'intervention']
+    immutable_fields = BaseMixin.immutable_fields + ['ai']
 
     def __init__(self, intervention, history, step, position, caught, speed, ai):
       super().__init__(intervention)
@@ -187,7 +184,6 @@ class Enemy(BaseMixin):
 class Player(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
-    immutable_fields = ['intervention']
 
     def __init__(self, intervention, history, step, position, caught, speed, ai):
         super().__init__(intervention)
@@ -209,7 +205,7 @@ class Player(BaseMixin):
 class Board(BaseMixin):
 
     expected_keys = ['boxes', 'tiles', 'height', 'chase_junctions', 'width', 'junctions']
-    immutable_fields = ['boxes', 'tiles', 'intervention']
+    immutable_fields = BaseMixin.immutable_fields + ['boxes', 'tiles']
 
     def __init__(self, intervention, boxes, tiles, height, chase_junctions, width, junctions):
       assert intervention
@@ -225,8 +221,6 @@ class Board(BaseMixin):
 class TileCollection(Collection):
     # Convenience class to deal with the fact that the tiles blob is
     # an array of arrays, which messes up how our recursive decode calls
-
-    immutable_fields = Collection.immutable_fields + ['tiles']
 
     def __init__(self, intervention, tiles):
       # Instantiate with an empty list, since we are going to want to 
@@ -257,7 +251,6 @@ class TileCollection(Collection):
 class WorldPoint(BaseMixin):
 
     expected_keys = ['x', 'y']
-    immutable_fields = ['intervention']
   
     def __init__(self, intervention, x=None, y=None):
       super().__init__(intervention)
@@ -278,7 +271,6 @@ class BoxCollection(Collection):
 class Box(BaseMixin):
 
     expected_keys = ['triggers_chase', 'top_left', 'bottom_right', 'painted']
-    immutable_fields = ['intervention']
 
     def __init__(self, intervention, triggers_chase, top_left, bottom_right, painted):
         super().__init__(intervention)
@@ -292,7 +284,6 @@ class Box(BaseMixin):
 class TilePoint(BaseMixin):
 
     expected_keys = ['tx', 'ty']
-    immutable_fields = ['intervention']
 
     def __init__(self, intervention, tx, ty):
         super().__init__(intervention)
@@ -691,3 +682,15 @@ if __name__ == "__main__":
       wp = intervention.game.player.position
       assert wp.x != initial_start.x or wp.y != initial_start.y
 
+    with AmidarIntervention(tb) as intervention:
+        try:
+            intervention.game.player.intervention = None
+            assert False, 'We should not be able to manually set the toybox object after initialization'
+        except: pass
+
+        try:
+            intervention.game.player._in_init = True
+            assert False, 'We should not be able to manulaly set the _in_init flag'
+        except: pass
+
+        assert '_in_init' in intervention.game.player.immutable_fields
