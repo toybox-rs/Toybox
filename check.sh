@@ -2,6 +2,9 @@
 
 set -eu
 
+source .env/bin/activate
+pip install -r REQUIREMENTS.txt
+
 # just to make sure pip installs worked OK!
 ./scripts/utils/unit_tests.sh 
 
