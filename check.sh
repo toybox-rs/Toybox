@@ -1,8 +1,8 @@
 #!/bin/bash
 
-set -eu
 
 source .env/bin/activate
+set -eu
 
 # just to make sure pip installs worked OK!
 ./scripts/utils/unit_tests.sh 
