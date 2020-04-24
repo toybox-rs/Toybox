@@ -22,7 +22,7 @@ class BaseMixin(ABC):
   @abstractmethod
   def immutable_fields(clz): pass
 
-  def __init__(self, intervention, *args, **kwargs):
+  def __init__(self, intervention):
     self._in_init = True
     self.intervention = intervention
 
@@ -52,7 +52,7 @@ class BaseMixin(ABC):
     if name in self.immutable_fields: # and not :
       raise AttributeError('Trying mutate immutable field %s' % name)
     if adding_new:
-      raise AttributeError("Cannot add new field %s to %s from %s" % (name, self.__class__.__name__, calling_fn))
+      raise AttributeError("Cannot add new field %s to %s" % (name, self.__class__.__name__))
     self.intervention.dirty_state = True
     
   
@@ -109,7 +109,7 @@ class BaseMixin(ABC):
         
 class Intervention(ABC):
 
-  def __init__(self, tb, game_name, clz):
+  def __init__(self, tb: Toybox, game_name: str, clz: type):
     self.toybox = tb
     self.config = None
     self.dirty_config = False

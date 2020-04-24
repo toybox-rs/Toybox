@@ -18,20 +18,13 @@ jobs:
       uses: actions/setup-python@v1.2.0
       with:
         python-version: 3.5
-    - name: Initialize virtual environment
-      run: |
-        python -m venv .env
-        source .env/bin/activate
     - name: Install dependencies
       run: |
         pip install -U --upgrade pip
-        pip install -U --only-binary=numpy -r REQUIREMENTS.txt  
+        pip install -U --only-binary=numpy -r REQUIREMENTS.txt
+        pip install -r REQUIREMENTS.txt  
     - name: Install baselines
       working-directory: baselines
       run: python setup.py install 
-    - name: Install Toybox
-      run: python setup.py install
     - name: Run "check.sh"
       run: ./check.sh
-
-    

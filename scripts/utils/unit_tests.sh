@@ -2,8 +2,7 @@
 
 set -eu
 
-./start_python scripts/utils/test_games.py
-./start_python toybox/interventions/amidar.py
-./start_python toybox/interventions/breakout.py
-./start_python toybox/interventions/space_invaders.py
-
+python scripts/utils/test_games.py
+python -m toybox.interventions.amidar
+python -m toybox.interventions.breakout
+python -m toybox.interventions.space_invaders
