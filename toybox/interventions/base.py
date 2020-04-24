@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import inspect
 from ctoybox import Toybox
 try:
   import ujson as json
@@ -17,10 +16,7 @@ class BaseMixin(ABC):
   @abstractmethod
   def expected_keys(clz): pass
 
-  @classmethod
-  @property
-  @abstractmethod
-  def immutable_fields(clz): pass
+  immutable_fields = ['intervention', '_in_init']
 
   def __init__(self, intervention):
     self._in_init = True
@@ -40,13 +36,10 @@ class BaseMixin(ABC):
   # we are current in __init__ via inheritence and the manual update of a flag in 
   # the children's __init__ functions. 
   def __setattr__(self, name, value):
-    # stack = [frame.function for frame in inspect.stack()]
-    # calling_fn = stack[1]
     existing_attrs = self.__dict__.keys()
     adding_new = name not in existing_attrs
     super().__setattr__(name, value)
     # Prohibit adding fields outside object instantiation/initialization
-    # if calling_fn == '__init__': return 
     if self._in_init or name == '_in_init': return
     assert 'intervention' in existing_attrs
     if name in self.immutable_fields: # and not :
@@ -110,12 +103,12 @@ class BaseMixin(ABC):
 class Intervention(ABC):
 
   def __init__(self, tb: Toybox, game_name: str, clz: type):
+    assert tb.game_name == game_name
+    self.game_name = game_name
     self.toybox = tb
     self.config = None
     self.dirty_config = False
     self.dirty_state = False
-    self.game_name = game_name
-    assert tb.game_name == game_name
     self.clz = clz
     self.game = None
 

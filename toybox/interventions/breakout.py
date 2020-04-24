@@ -10,8 +10,7 @@ import typing
 class Breakout(Game):
 
   expected_keys = Game.expected_keys + ['paddle', 'is_dead', 'balls', 'ball_radius', 'paddle_speed', 'reset', 'bricks', 'paddle_width']
-
-  immutable_fields = ['balls', 'bricks', 'intervention']
+  immutable_fields = Game.immutable_fields + ['balls', 'bricks']
 
   def __init__(self, intervention, 
     score=None, lives=None, rand=None, level=None,
@@ -68,7 +67,6 @@ Breakout
 class Paddle(BaseMixin):
 
   expected_keys = ['velocity', 'position']
-  immutable_fields = []  
   
   def __init__(self, intervention, velocity, position):
     super().__init__(intervention)
@@ -100,7 +98,6 @@ class BrickCollection(Collection):
 class Brick(BaseMixin):
 
   expected_keys = ['destructible', 'depth', 'color', 'alive', 'points', 'size', 'position', 'row', 'col']
-  immutable_fields = ['intervention']
     
   def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
     super().__init__(intervention)
@@ -146,7 +143,6 @@ class BallCollection(Collection):
 class Ball(BaseMixin): 
 
   expected_keys = ['position', 'velocity']
-  immutable_fields = ['intervention']  
 
   def __init__(self, intervention, position, velocity):
     super().__init__(intervention)
@@ -167,9 +163,9 @@ class Ball(BaseMixin):
 
 class BreakoutIntervention(Intervention):
 
-    def __init__(self, tb, game_name='breakout'):
+    def __init__(self, tb: Toybox):
         # check that the simulation in tb matches the game name.
-        Intervention.__init__(self, tb, game_name, Breakout)
+        Intervention.__init__(self, tb, 'breakout', Breakout)
 
     def num_bricks_remaining(self):
         return sum([int(brick.alive) for brick in self.game.bricks])
@@ -322,6 +318,20 @@ if __name__ == "__main__":
 
         with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
             json.dump(config, outfile)
+
+    with BreakoutIntervention(tb) as intervention:
+        try:
+            intervention.game.paddle.intervention = None
+            assert False, 'We should not be able to manually set the toybox object after initialization'
+        except: pass
+
+        try:
+            intervention.game.paddle._in_init = True
+            assert False, 'We should not be able to manulaly set the _in_init flag'
+        except: pass
+
+        assert '_in_init' in intervention.game.paddle.immutable_fields
+
 
     with BreakoutIntervention(tb) as intervention:
         intervention.game.lives = 1

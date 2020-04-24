@@ -36,7 +36,7 @@ class Game(BaseMixin):
   """Base class for games. Supertype that contains common elements."""
 
   expected_keys = ['score', 'lives', 'rand', 'level']
-  immutable_fields = []
+  immutable_fields = BaseMixin.immutable_fields + ['rand']
 
   def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
     super().__init__(intervention)
@@ -54,7 +54,7 @@ class Game(BaseMixin):
 class Direction(BaseMixin):
 
   expected_keys = []
-  immutable_fields = []
+  immutable_fields = BaseMixin.immutable_fields
 
   Up    = 'Up'
   Down  = 'Down'
@@ -85,7 +85,7 @@ class Direction(BaseMixin):
 class Vec2D(BaseMixin):
 
   expected_keys = ['y', 'x']
-  immutable_fields = []
+  immutable_fields = BaseMixin.immutable_fields
 
   def __init__(self, intervention, x, y):
     super().__init__(intervention)
@@ -106,7 +106,7 @@ class Vec2D(BaseMixin):
 class Color(BaseMixin):
 
   expected_keys = ['r', 'g', 'b', 'a']
-  immutable_fields = []
+  immutable_fields = BaseMixin.immutable_fields
   
   def __init__(self, intervention, r, g, b, a):
     super().__init__(intervention)
@@ -132,7 +132,7 @@ class Color(BaseMixin):
 class Collection(BaseMixin):
 
   expected_keys = []
-  immutable_fields = ['intervention']
+  immutable_fields = BaseMixin.immutable_fields + ['coll']
 
   def __init__(self, intervention, coll, elt_clz):
     super().__init__(intervention)
@@ -212,7 +212,7 @@ class Collection(BaseMixin):
 class SpriteData(BaseMixin):
   
   expected_keys = ['x', 'y', 'data']
-  immutable_fields = ['intervention', 'data']
+  immutable_fields = BaseMixin.immutable_fields + ['data']
 
   def __init__(self, intervention, x=None, y=None, data=None):
     super().__init__(intervention)
@@ -236,7 +236,7 @@ class SpriteData(BaseMixin):
 class ColorCollectionCollection(BaseMixin):
 
   expected_keys = []
-  immutable_fields = []
+  immutable_fields = BaseMixin.immutable_fields + ['coll']
 
   def __init__(self, intervention, sprites):
     super().__init__(intervention)
