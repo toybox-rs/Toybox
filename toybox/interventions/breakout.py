@@ -4,13 +4,30 @@ try:
   import ujson as json
 except:
   import json
-import typing
+import sys
+import copy
+from enum import Enum
 """An API for interventions on Breakout."""
 
 class Breakout(Game):
 
   expected_keys = Game.expected_keys + ['paddle', 'is_dead', 'balls', 'ball_radius', 'paddle_speed', 'reset', 'bricks', 'paddle_width']
-  immutable_fields = Game.immutable_fields + ['balls', 'bricks']
+  immutable_fields = Game.immutable_fields + ['balls', 'bricks', 'reset']
+  eq_keys = ['score'       ,
+             'lives'       ,
+             'level'       ,
+             'paddle'      ,
+             'reset'       ,
+             'ball_radius' ,
+             'bricks'      ,
+             'balls'       ,
+             'paddle_speed',
+             'paddle_width',
+             'is_dead'     ]
+
+  coersions = { **Game.coersions, 
+    'is_dead' : lambda x : x > 0.5
+  }
 
   def __init__(self, intervention, 
     score=None, lives=None, rand=None, level=None,
@@ -30,59 +47,149 @@ class Breakout(Game):
       self.is_dead = is_dead
       self._in_init = False  
 
-  def __eq__(self, other) -> Either:
-    names = {
-      'score'       : (self.score,        other.score), 
-      'lives'       : (self.lives,        other.lives), 
-      'level'       : (self.level,        other.level),
-      'paddle'      : (self.paddle,       other.paddle),
-      'reset'       : (self.reset,        other.reset),
-      'ball_radius' : (self.ball_radius,  other.ball_radius) ,
-      'bricks'      : (self.bricks,       other.bricks),
-      'balls'       : (self.balls,        other.balls),
-      'paddle_speed': (self.paddle_speed, other.paddle_speed),
-      'paddle_width': (self.paddle_width, other.paddle_width),
-      'is_dead'     : (self.is_dead,      other.is_dead)
-    }
-    return eq_map(names)
+  def __copy__(self):
+    return Breakout(
+      self.intervention,
+      score=self.score,
+      lives=self.lives,
+      rand=self.rand,
+      level=self.level,
+      paddle=self.paddle.encode(),
+      paddle_width=self.paddle_width,
+      paddle_speed=self.paddle_speed,
+      ball_radius=self.ball_radius,
+      bricks=self.bricks.encode(),
+      balls=self.balls.encode(),
+      is_dead=self.is_dead
+    )  
+  
+  def sample(self, *queries):
+    """Requires a seed state, hence an instance method"""
+    if not self.intervention.modelmod: 
+      print('WARNING: no models for sampling')
+      return 
+    modelmod = self.intervention.modelmod
+    mod = importlib.import_module(modelmod)
+    if len(queries) == 0:
+      return mod.sample(modelmod=modelmod, intervention=self.intervention)
 
-    def __str__(self):
-        return """
-Breakout
-==========
-    score: {}
-    lives: {}
-    level: {}
-    paddle: {}
-    reset: {}
-    ball_radius: {}
-    bricks: {}
-    balls: {}
-    paddle_speed: {}
-    paddle_width: {}
-    is_dead: {}""".format(self.score, self.lives, self.level, str(self.paddle), 
-        self.reset, self.ball_radius, self.bricks.__str__(), self.balls.__str__(), self.paddle_speed,
-        self.paddle_width, self.is_dead)
+    new = copy.copy(self)
+    for query in queries:
+      # this should work with the package argument, but right not it isn't
+      # mod = importlib.import_module(query, package=modelmod)
+      mod = importlib.import_module(modelmod + '.' + query)
+      val = mod.sample(intervention=self.intervention)
+      if query in self.coersions: val = self.coersions[query](val)
+      if __debug__:
+        before = get_property(new, query)
+      try:
+        after = get_property(new, query, setval=val)
+        if __debug__:
+          print('Set {} to {} (was {})'.format(query, after, before))
+      except AttributeError:
+        coll = get_property(new, query)
+        coll.clear()
+        for item in val:
+          coll.append(item)
+        print('reset', query)
+    return new
+
+  def make_models(self, data):
+    Game.make_models(self, data)
+    outdir = self.modelmod.replace('.', '/') + os.sep
+
+    distr(outdir + 'ball_radius', [d.ball_radius for d in   data])
+    distr(outdir + 'paddle_speed', [d.paddle_speed for d in data])
+    distr(outdir + 'paddle_width', [d.paddle_width for d in data])
+
+    distr(outdir + 'reset', [d.reset for d in   data])
+    distr(outdir + 'is_dead', [d.reset for d in data])
+
+    self.game.paddle.make_models([d.paddle for d in data])
+    self.game.bricks.make_models([d.bricks for d in data])
+    self.game.balls.make_models([d.balls for d in data])
+
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+      f.write("""from ctoybox import Toybox
+from toybox.interventions.breakout import BreakoutIntervention
+from toybox.interventions.core import get_property, Collection
+from . import * 
+import importlib
+
+def sample(*args, **kwargs):
+  with Toybox('breakout') as tb:
+    with BreakoutIntervention(tb) as intervention:
+      game = intervention.game
+      for key, v in vars(game).items():
+        if key in game.immutable_fields and not isinstance(v, Collection): continue
+
+        mod = importlib.import_module(kwargs['modelmod'] + '.' + key)
+        val = mod.sample(**kwargs)
+        if key in game.coersions: val = game.coersions[key](val)
+        if __debug__: 
+          before = get_property(game, key)
+
+        if key in game.immutable_fields:
+          v.clear()
+          for item in val:
+            v.append(item)
+        else: 
+          after = get_property(game, key, setval=val)
+          if __debug__:
+            print('Set {} to {} (was {})'.format(key, after, before))
+      return game""")
 
 class Paddle(BaseMixin):
 
   expected_keys = ['velocity', 'position']
+  coersions = {
+    # Otherwise, we get a wandering paddle...
+    'velocity' : lambda v : {'x' : v['x'], 'y': 0}
+  }
+  eq_keys = expected_keys
   
   def __init__(self, intervention, velocity, position):
     super().__init__(intervention)
     self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
     self.position = Vec2D.decode(intervention, position, Vec2D)
     self._in_init = False  
-  
-  def __eq__(self, other) -> Either:
-    names = {
-      'velocity': (self.velocity, other.velocity),
-      'position': (self.position, other.position)
-    }
-    return eq_map(names)   
-  
+    
   def __str__(self):
-      return '<position: {}, velocity: {}>'.format(self.position, self.velocity)
+    return '<position: {}, velocity: {}>'.format(self.position, self.velocity)
+
+  def make_models(self, data):
+    outdir = self.intervention.modelmod.replace('.', '/') + os.sep + 'paddle'
+    self.velocity.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
+    self.position.make_models(outdir + os.sep + 'position', [d.position for d in data])
+
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+      f.write("""from . import velocity as v
+from . import position as p
+from toybox.interventions.breakout import Paddle
+
+def sample(*args, **kwargs):
+  obj = {'velocity' : v.sample(*args, **kwargs).encode(),
+         'position' : p.sample(*args, **kwargs).encode()}
+  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
+  return Paddle.decode(intervention, obj, Paddle)""")
+
+
+  def sample(self, *queries):
+    """Requires a seed state"""
+    if not self.intervention.modelmod: 
+      print('WARNING: no models for sampling')
+      return 
+    new = copy.copy(self)
+    for query in queries:
+      mod = importlib.import_module('.models.breakout.' + query, package=__package__)
+      val = mod.sample()
+      if __debug__:
+        before = get_property(new, query)
+      after = get_property(new, query, setval=val)
+      if __debug__:
+        print('Set {} to {} (was {})'.format(query, after, before))
+    return new
+    
 
 
 class BrickCollection(Collection):
@@ -94,10 +201,40 @@ class BrickCollection(Collection):
   def decode(intervention, bricks, clz):
     return BrickCollection(intervention, bricks)
 
+  def make_models(self, data):
+    outdir = self.intervention.modelmod.replace('.', '/') + os.sep + 'bricks'
+
+    for i, brick in enumerate(self):
+        brick.make_models(outdir, i, [d[i] for d in data])
+
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+        f.write("""import importlib
+import os
+from toybox.interventions.breakout import BrickCollection
+
+def sample(*args, **kwargs):
+  bricks = []
+  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
+  for bricki in sorted(os.listdir(os.path.dirname(__file__))):
+    if bricki.startswith('brick'):
+      mod = importlib.import_module('{}.' + bricki)
+      bricks.append(mod.sample().encode())
+  return BrickCollection.decode(intervention, bricks, BrickCollection)
+        """.format(self.intervention.modelmod + '.bricks'))
+
 
 class Brick(BaseMixin):
 
   expected_keys = ['destructible', 'depth', 'color', 'alive', 'points', 'size', 'position', 'row', 'col']
+  eq_keys = expected_keys
+  coersions = {
+    'alive' : lambda x : x > 0.5,
+    'destructible' : lambda x : x > 0.5,
+    'depth'  : lambda x : max(0, int(x)),
+    'points' : lambda x : max(0, int(x)),
+    'row'    : lambda x : max(0, int(x)),
+    'col'    : lambda x : max(0, int(x))
+  }
     
   def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
     super().__init__(intervention)
@@ -112,19 +249,37 @@ class Brick(BaseMixin):
     self.col = col
     self._in_init = False
 
-  def __eq__(self, other) -> Either:
-    names = {
-      'destructible': (self.destructible, other.destructible),
-      'depth':        (self.depth,    other.depth),
-      'color':        (self.color,    other.color),
-      'alive':        (self.alive,    other.alive),
-      'points':       (self.points,   other.points),
-      'size':         (self.size,     other.size),
-      'position':     (self.position, other.position),
-      'row':          (self.row,      other.row),
-      'col':          (self.col,      other.col)
-    }
-    return eq_map(names)
+  def make_models(self, outdir, i, data): 
+    outdir = outdir + os.sep + 'brick{:04d}'.format(i)
+
+    distr(outdir + os.sep + 'destructible', [d.destructible for d in data])
+    distr(outdir + os.sep + 'depth', [d.depth for d in data])
+    self.color.make_models(outdir + os.sep + 'color', [d.color for d in data])
+    distr(outdir + os.sep + 'alive', [d.alive for d in data])
+    distr(outdir + os.sep + 'points', [d.points for d in data])
+    self.size.make_models(outdir + os.sep + 'size', [d.size for d in data])
+    self.position.make_models(outdir + os.sep + 'position', [d.position for d in data])
+    distr(outdir + os.sep + 'row', [d.row for d in data])
+    distr(outdir + os.sep + 'col', [d.col for d in data])
+
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+      module = outdir.replace(os.sep, '.')
+      f.write("""from . import * 
+import os
+import importlib
+from toybox.interventions.base import BaseMixin
+from toybox.interventions.breakout import Brick
+
+def sample(*args, **kwargs):
+  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
+  obj = dict()
+  features = [os.path.splitext(f)[0] for f in os.listdir(os.path.dirname(__file__)) if not f.startswith('__')]
+  for feature in features:
+    mod = importlib.import_module('{}.' + feature)
+    val = mod.sample()
+    obj[feature] = mod.sample().encode() if isinstance(val, BaseMixin) else val
+  return Brick.decode(intervention, obj, Brick)
+      """.format(module))
 
 
 class BallCollection(Collection):
@@ -139,33 +294,82 @@ class BallCollection(Collection):
     else:
       return '[{}]'.format(', '.join(str(b) for b in self))
 
+  def __hash__(self):
+    # let's see how many collisions this causes
+    h = 0
+    for item in self:
+      h += hash(item)
+    return h
+
+  def make_models(self, data):
+    outdir = self.intervention.modelmod.replace('.', '/') + os.sep + 'balls'
+
+    for i, ball in enumerate(self):
+      ball.make_models(outdir, i, [d[i] for d in data if len(d) > i])
+    
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+      f.write("""import importlib
+from toybox.interventions.breakout import BallCollection
+import os
+
+def sample(*args, **kwargs):
+  balls = []
+  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
+  for balli in sorted(os.listdir('.')):
+    if balli.startswith('brick'):
+      mod = importlib.import_module(balli)
+      balls.append(mod.sample().encode())
+  return BallCollection.decode(intervention, balls, BallCollection)
+      """)
+
 
 class Ball(BaseMixin): 
 
   expected_keys = ['position', 'velocity']
+  eq_keys = expected_keys
 
   def __init__(self, intervention, position, velocity):
     super().__init__(intervention)
     self.position = Vec2D.decode(intervention, position, Vec2D)
     self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
     self._in_init = False  
-  
-  def __eq__(self, other) -> Either:
-    names = {
-        'position': (self.position, other.position),
-        'velocity': (self.velocity, other.velocity)
-    }
-    return eq_map(names)
-  
+    
   def __str__(self):
     return 'Ball(position: {}, velocity: {})'.format(self.position, self.velocity)
+
+  def make_models(self, outdir, i, data):
+    outdir = outdir + os.sep + 'ball{:04d}'.format(i)
+
+    self.position.make_models(outdir + os.sep + 'position', [d.position for d in data])
+    self.velocity.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
+
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+      module = outdir.replace(os.sep, '.')
+      f.write("""from . import * 
+import os
+import importlib
+from toybox.interventions.base import BaseMixin
+from toybox.interventions.breakout import Ball
+
+def sample(*args, **kwargs):
+  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
+  obj = dict()
+  features = [os.path.splitext(f)[0] for f in os.listdir(os.path.dirname(__file__)) if not f.startswith('__')]
+  for feature in features:
+    mod = importlib.import_module('{}.' + feature)
+    val = mod.sample()
+    obj[feature] = mod.sample().encode() if isinstance(val, BaseMixin) else val
+  return Ball.decode(intervention, obj, Ball)
+      """.format(module))
+
+
 
 
 class BreakoutIntervention(Intervention):
 
-    def __init__(self, tb: Toybox):
+    def __init__(self, tb: Toybox, modelmod=None, data=None):
         # check that the simulation in tb matches the game name.
-        Intervention.__init__(self, tb, 'breakout', Breakout)
+        Intervention.__init__(self, tb, 'breakout', Breakout, modelmod=modelmod, data=data)
 
     def num_bricks_remaining(self):
         return sum([int(brick.alive) for brick in self.game.bricks])
@@ -296,7 +500,7 @@ if __name__ == "__main__":
   import argparse 
   from ctoybox import Toybox, Input
 
-  parser = argparse.ArgumentParser(description='test Amidar interventions')
+  parser = argparse.ArgumentParser(description='test Breakout interventions')
   parser.add_argument('--partial_config', type=str, default="null")
   parser.add_argument('--save_json', type=bool, default=False)
   args = parser.parse_args()
@@ -318,6 +522,23 @@ if __name__ == "__main__":
 
         with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
             json.dump(config, outfile)
+
+    with BreakoutIntervention(tb) as intervention:
+        # test get property from core
+        first_brick_col = get_property(intervention.game, 'bricks[0].col')
+        assert first_brick_col == 0
+        #test set property from core 
+        first_brick_r = get_property(intervention.game, 'bricks[0].color.r', setval=72)
+        first_brick_g = get_property(intervention.game, 'bricks[0].color.g', setval=72)
+        first_brick_b = get_property(intervention.game, 'bricks[0].color.b', setval=72)
+        assert first_brick_r == 72
+
+        intervention.game.score = 1234
+
+    with BreakoutIntervention(tb):
+        assert first_brick_r == 72
+        assert first_brick_g == 72
+        assert first_brick_b == 72
 
     with BreakoutIntervention(tb) as intervention:
         try:
@@ -424,3 +645,42 @@ if __name__ == "__main__":
         pos.x = pos.x + 10
         pos_post = intervention.get_paddle_position()
         assert pos.x == pos_post.x
+
+  with Toybox('breakout') as tb:
+
+    fire = Input()
+    fire.button1 = True
+    noop = Input()
+    tb.apply_action(fire)
+
+
+    # load up some data and test sampling
+    # test for just one run
+    data = []
+    datadir = 'toybox/interventions/models/data/StayAlive'
+    for seed in os.listdir(datadir):
+      this_dir = datadir + os.sep + seed
+      for dat in os.listdir(this_dir):
+        this_file = this_dir + os.sep + dat
+        if this_file.endswith('json'):
+          with open(this_file, 'r') as f:
+            data.append(Breakout.decode(tb, json.load(f), Breakout))
+
+    with BreakoutIntervention(tb, modelmod='breakout_models', data=data) as intervention:
+        sample1 = intervention.game.sample('ball_radius')
+        sample2 = intervention.game.sample('ball_radius')
+        assert sample1.ball_radius != sample2.ball_radius
+        eq_check = sample1 == sample2
+        assert isinstance(eq_check, Error)
+        assert eq_check.name == 'ball_radius'
+        sample3 = intervention.game.sample('paddle_speed', 'paddle_width')
+        assert isinstance(sample3 == intervention.game, Error)
+        sample4 = intervention.game.sample('paddle')
+        assert isinstance(sample4 == intervention.game, Error)
+        sample5 = intervention.game.sample('bricks')
+        tb.write_state_json(sample5.encode())
+        tb.save_frame_image('reset_bricks.png')
+        for i in range (10):
+            js = intervention.game.sample().encode()
+            tb.write_state_json(js)
+            tb.save_frame_image('sample{}'.format(i+1))

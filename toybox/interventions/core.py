@@ -1,42 +1,51 @@
 from toybox.interventions.base import * 
-import typing
+from typing import Any
 import math
 import random
-from pymonad.Either import *
+import re
+import sys
+from sklearn.neighbors import KernelDensity
+from numpy import array
+try:
+  import cPickle as pickle
+except:
+  import pickle
 
-# Result
-Right.__and__ = lambda a, b: b
 
-# Error
-Left.__and__ = lambda a, b: a 
+def distr(fname, data):
+  # select bandwidth according to scotts rule
+  # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html
+  bandwidth = len(data)**(-1./5)
+  kde = KernelDensity(bandwidth=bandwidth, kernel='epanechnikov')
+  kde.fit(array(data).reshape(-1, 1))
+  os.makedirs(os.path.dirname(fname), exist_ok=True)
+  with open(fname + '.pck', 'wb') as f:
+    pickle.dump(kde, f)
+  with open(fname + '.py', 'w') as f:
+    f.write("""try:
+  import cPickle as pickle
+except:
+  import pickle
 
+with open('{0}', 'rb') as f:
+  kde = pickle.load(f)
 
-def eq(v1, v2, name='unknown'):
-  assert type(v1) == type(v2)
-  eqfn = math.isclose if type(v1) == float or type(v2) == float else (lambda x, y: x == y)
-  if eqfn(v1, v2):
-      return Result(True)
-  e = Error('error in {}: {} not equal to {}'.format(name, v1, v2))
-  e.name = name
-  return e
-
-def eq_map(fieldmap):
-  names = list(fieldmap.keys())
-  random.shuffle(names)
-  retval = Result(True)
-
-  for name in names:
-    v1, v2 = fieldmap[name]
-    retval = eq(v1, v2, name=name)
-    if isinstance(retval, Error): return retval
-  return retval
+def sample(*args, **kwargs):
+  return float(kde.sample()[0][0])
+      """.format(fname + '.pck'))
 
 
 class Game(BaseMixin):
   """Base class for games. Supertype that contains common elements."""
 
   expected_keys = ['score', 'lives', 'rand', 'level']
-  immutable_fields = BaseMixin.immutable_fields + ['rand']
+  immutable_fields = BaseMixin.immutable_fields + ['rand', 'reset']
+  coersions={
+      'score' : lambda x : int(x),
+      'lives' : lambda x : int(x),
+      'level' : lambda x : int(x),
+      'reset' : lambda x : bool(x)
+  }
 
   def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
     super().__init__(intervention)
@@ -49,6 +58,14 @@ class Game(BaseMixin):
     # Game is an abstract class and should never be terminal
     # Python doesn't do great with multiple inheritence, which is 
     # what a truly abstract version of this class would look like.
+
+  def make_models(self, data):
+    outdir = self.modelmod.replace('.', '/') + os.sep
+    print('Creating models in {}'.format(outdir))
+
+    distr(outdir + 'score', [d.score for d in data])
+    distr(outdir + 'lives', [d.lives for d in data])
+    distr(outdir + 'level', [d.level for d in data])
 
 
 class Direction(BaseMixin):
@@ -78,13 +95,11 @@ class Direction(BaseMixin):
   def __str__(self):
     return self.direction
 
-  def __eq__(self, other):
-    return eq(self.direction, other.direction, 'direction')
-
 
 class Vec2D(BaseMixin):
 
   expected_keys = ['y', 'x']
+  eq_keys = expected_keys
   immutable_fields = BaseMixin.immutable_fields
 
   def __init__(self, intervention, x, y):
@@ -96,17 +111,31 @@ class Vec2D(BaseMixin):
   def __str__(self):
     return '({}, {})'.format(self.x, self.y)
 
-  def __eq__(self, other):
-    names = {
-      'x': (self.x, other.x),
-      'y': (self.y, other.y)
-    }
-    return eq_map(names)
+  def make_models(self, outdir, data):
+    distr(outdir + os.sep + 'x', [d.x for d in data])
+    distr(outdir + os.sep + 'y', [d.y for d in data])
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+      f.write("""from . import x, y
+from toybox.interventions.core import Vec2D
 
+def sample(*args, **kwargs):
+  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
+  obj = { 'x' : x.sample(*args, **kwargs), 'y' : y.sample(*args, **kwargs)}
+  return Vec2D.decode(intervention, obj, Vec2D)
+""")
+    
+  
 class Color(BaseMixin):
 
   expected_keys = ['r', 'g', 'b', 'a']
+  eq_keys = expected_keys
   immutable_fields = BaseMixin.immutable_fields
+  coersions = {
+    'r': lambda x : max(0, min(255, int(x))),
+    'g': lambda x : max(0, min(255, int(x))),
+    'b': lambda x : max(0, min(255, int(x))),
+    'a': lambda x : max(0, min(255, int(x)))
+  }
   
   def __init__(self, intervention, r, g, b, a):
     super().__init__(intervention)
@@ -119,99 +148,32 @@ class Color(BaseMixin):
   def __str__(self):
     return "({}, {}, {}, {})".format(self.r, self.g, self.b, self.a)
 
-  def __eq__(self, other):
-    names = {
-      'r' : (self.r, other.r), 
-      'g' : (self.g, other.g),
-      'b' : (self.b, other.b), 
-      'a' : (self.a, other.a)
-    }
-    return eq_map(names)
+  def make_models(self, outdir, data): 
+    distr(outdir + os.sep + 'r', [d.r for d in data])
+    distr(outdir + os.sep + 'g', [d.g for d in data])
+    distr(outdir + os.sep + 'b', [d.b for d in data])
+    distr(outdir + os.sep + 'a', [d.a for d in data])
+    with open(outdir + os.sep + '__init__.py', 'w') as f:
+      f.write("""from . import r, g, b, a
+from toybox.interventions.core import Color
 
+def sample(*args, **kwargs):
+  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
+  obj = {
+    'r' : r.sample(*args, **kwargs),
+    'g' : g.sample(*args, **kwargs),
+    'b' : b.sample(*args, **kwargs),
+    'a' : a.sample(*args, **kwargs)
+  }
+  return Color.decode(intervention, obj, Color)
+      """)
 
-class Collection(BaseMixin):
-
-  expected_keys = []
-  immutable_fields = BaseMixin.immutable_fields + ['coll']
-
-  def __init__(self, intervention, coll, elt_clz):
-    super().__init__(intervention)
-    self.elt_clz = elt_clz
-    self.coll = [elt_clz.decode(intervention, elt, elt_clz) for elt in coll]
-    # SAME DEAL AS GAME - THIS SHOULD ALWAYS BE ABSTRACT, HENCE NO RESET OF IN_INIT
-
-  def __eq__(self, other):
-      retval = Result(None)
-      for i in range(len(self)):
-          retval = eq(self[i], other[i], '{}[{}]'.format(self.elt_clz, i))
-          if isinstance(retval, Error):
-              return retval
-      return retval
-
-
-  def __str__(self):
-    return '[{}]'.format(', '.join([str(c) for c in self.coll]))
-      
-  def __iter__(self): return self.coll.__iter__()
-
-  def __getitem__(self, key): return self.coll.__getitem__(key)
-
-  def __len__(self): return self.coll.__len__()
-
-  def append(self, obj):
-    assert isinstance(obj, self.elt_clz), '%s must be of type %s' % (obj, self.elt_clz)
-    self.coll.append(obj)
-    # Since this doesn't trigger the superclass' __setattr__, we need to     sdirty_state manuall
-    self.intervention.dirty_state = True
-
-  def extend(self, obj):
-    self.coll.extend(obj)
-    self.intervention.dirty_state = True
-
-  def insert(self, i, x):
-    self.coll.insert(i, x)
-    self.intervention.dirty_state = True
-
-  def remove(self, obj):
-    self.coll.remove(obj)
-    # Since this doesn't trigger the superclass' __setattr__, we need to setdirty_state manuall
-    self.intervention.dirty_state = True
-
-  def pop(self, i=-1):
-    self.intervention.dirty_state = True
-    return self.coll.pop(i)
-
-  def clear(self):
-    self.coll.clear()
-    self.intervention.dirty_state = True
-
-  def index(self, x, *args):
-    return self.coll.index(x, *args)
-
-  def count(self, x):
-    return self.coll.count(x)
-
-  def sort(self, key=None, reverse=False):
-    self.intervention.dirty_state = True
-    self.coll.sort(key=key, reverse=reverse)
-
-  def reverse(self):
-    self.intervention.dirty_state = True
-    self.coll.reverse()
-
-  def copy(self):
-    return Collection(self.intervention, self.coll.copy(), self.elt_clz)
-    
-  def encode(self):
-    return [elt.encode() for elt in self.coll]
-
-  def decode(intervention, coll, clz): 
-    return clz(intervention, coll)
 
 
 class SpriteData(BaseMixin):
   
   expected_keys = ['x', 'y', 'data']
+  eq_keys = expected_keys
   immutable_fields = BaseMixin.immutable_fields + ['data']
 
   def __init__(self, intervention, x=None, y=None, data=None):
@@ -220,14 +182,6 @@ class SpriteData(BaseMixin):
     self.y = y
     self.data = ColorCollectionCollection.decode(intervention, data, None)
     self._in_init = False
-
-  def __eq__(self, other):
-    names = {
-      'x': eq(self.x, other.x),
-      'y': eq(self.y, other.y),
-      'data': eq(self.data, other.data)
-    } 
-    return eq_map(names)
 
   def __str__(self):
     return 'Sprite at {}, {}'.format(self.x, self.y)
@@ -263,3 +217,27 @@ class ColorCollectionCollection(BaseMixin):
     for colors in self.coll:
       retval.append([c.encode() for c in colors])
     return retval
+
+
+def get_property(s: Game, prop: str, setval=None) -> Any:
+  """Gets or sets object property expressed as a string in the format
+  that is returned by the generate_mutation_points function."""
+  indexpat = re.compile('\[.*?\]')
+  levels = prop.split('.')
+  obj = s
+  set_index = len(levels) - 1 # the index of the containing object of the property
+  for level, prop in enumerate(levels):
+    indices = indexpat.findall(prop)
+    if indices:
+      # get the index of the first index
+      i = prop.index('[')
+      # get the indexable object
+      obj = obj.__getattribute__(prop[:i])
+      for j, i in enumerate(indices): 
+        obj = obj[int(i[1:-1])]
+    else:
+      if setval and level == set_index:
+        obj.__setattr__(prop, setval)
+      obj = obj.__getattribute__(prop)
+      
+  return obj
