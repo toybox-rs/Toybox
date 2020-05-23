@@ -7,4 +7,4 @@ python -m toybox.interventions.amidar
 python -m toybox.interventions.breakout
 python -m toybox.interventions.space_invaders
 
-python -m unittest test.interventions.test_equality
+python -m unittest discover test.interventions

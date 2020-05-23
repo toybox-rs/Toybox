@@ -61,7 +61,6 @@ class BreakoutGetProperty(TestCase):
         old_brick = game.bricks[1]
         self.assertNotEqual(new_brick, old_brick)
         foo = get_property(game, 'bricks[1]', setval=new_brick)
-        print(str(new_brick))
         self.assertIsInstance(foo, Brick)
         
         self.assertNotEqual(old_brick, foo) # not setting foo to be new?

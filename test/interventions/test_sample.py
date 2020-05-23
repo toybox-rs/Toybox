@@ -93,8 +93,6 @@ class BreakoutSample(TestCase):
       varname1, new1, old1 = eq_check1.differ
       varname2, new2, old2 = eq_check2.differ
       self.assertNotEqual(len(sample6.bricks), 1)
-      print('differ at {}: {} vs {}'.format(*eq_check1.differ))
-      print('differ at {}: {} vs {}'.format(*eq_check2.differ))
       self.assertIsInstance(eq_check1, ProbEq)
       self.assertNotEqual(varname1, varname2)
       self.assertNotAlmostEqual(new1, old1)

@@ -73,7 +73,6 @@ class ProbEq(Eq):
           cmp = eq(v1[i], v2[i])
           if found_differ(cmp):
             key = '{}[{}].{}'.format(key, i, cmp.differ[0])
-            print(i, key)
             self.differ = (key, cmp.differ[1], cmp.differ[2]) if isinstance(cmp, ProbEq) else (key, v1, v2)
             return self
           else:

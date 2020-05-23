@@ -259,15 +259,15 @@ class Brick(BaseMixin):
     
   def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
     super().__init__(intervention)
-    self.destructible = destructible
-    self.depth = depth
+    self.destructible = Brick.coersions['destructible'](destructible)
+    self.depth = Brick.coersions['depth'](depth)
     self.color = Color.decode(intervention, color, Color)
-    self.alive = alive
-    self.points = points
+    self.alive = Brick.coersions['alive'](alive)
+    self.points = Brick.coersions['points'](points)
     self.size = Vec2D.decode(intervention, size, Vec2D)
     self.position = Vec2D.decode(intervention, position, Vec2D)
-    self.row = row
-    self.col = col
+    self.row = Brick.coersions['row'](row)
+    self.col = Brick.coersions['col'](col)
     self._in_init = False
 
   def __repr__(self):
