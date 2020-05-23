@@ -1,5 +1,5 @@
 from toybox.interventions.base import * 
-from typing import Any
+from typing import List, Any, Union
 import math
 import random
 import re
@@ -16,7 +16,9 @@ def distr(fname, data):
   # select bandwidth according to scotts rule
   # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html
   bandwidth = len(data)**(-1./5)
-  kde = KernelDensity(bandwidth=bandwidth, kernel='epanechnikov')
+  # Epanechnikov not implemented1(!!!!!!!!)
+  # kde = KernelDensity(bandwidth=bandwidth, kernel='epanechnikov')
+  kde = KernelDensity(bandwidth=bandwidth, kernel='gaussian')
   kde.fit(array(data).reshape(-1, 1))
   os.makedirs(os.path.dirname(fname), exist_ok=True)
   with open(fname + '.pck', 'wb') as f:
@@ -43,8 +45,7 @@ class Game(BaseMixin):
   coersions={
       'score' : lambda x : int(x),
       'lives' : lambda x : int(x),
-      'level' : lambda x : int(x),
-      'reset' : lambda x : bool(x)
+      'level' : lambda x : int(x)
   }
 
   def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
@@ -61,7 +62,7 @@ class Game(BaseMixin):
 
   def make_models(self, data):
     outdir = self.modelmod.replace('.', '/') + os.sep
-    print('Creating models in {}'.format(outdir))
+    logging.info('Creating models in {}'.format(outdir))
 
     distr(outdir + 'score', [d.score for d in data])
     distr(outdir + 'lives', [d.lives for d in data])
@@ -71,6 +72,7 @@ class Game(BaseMixin):
 class Direction(BaseMixin):
 
   expected_keys = []
+  eq_keys = ['direction']
   immutable_fields = BaseMixin.immutable_fields
 
   Up    = 'Up'
@@ -95,17 +97,23 @@ class Direction(BaseMixin):
   def __str__(self):
     return self.direction
 
+  def make_models(self, data): assert False
+
 
 class Vec2D(BaseMixin):
 
   expected_keys = ['y', 'x']
   eq_keys = expected_keys
   immutable_fields = BaseMixin.immutable_fields
+  coersions = {
+    'x' : lambda x: float(x),
+    'y' : lambda y: float(y)
+  }
 
   def __init__(self, intervention, x, y):
     super().__init__(intervention)
-    self.x = x
-    self.y = y
+    self.x = Vec2D.coersions['x'](x)
+    self.y = Vec2D.coersions['y'](y)
     self._in_init = False
 
   def __str__(self):
@@ -218,26 +226,37 @@ class ColorCollectionCollection(BaseMixin):
       retval.append([c.encode() for c in colors])
     return retval
 
+_PROP_OR_NUM = re.compile(r'(\[\d+\])|(\.?\w+\.?)')
+def parse_property_access(query: str) -> List[Union[str,int]]:
+  output = []
+  for group in _PROP_OR_NUM.findall(query):
+    (num_pat, word_pat) = group
+    if num_pat:
+      assert num_pat[0] == '['
+      output.append(int(num_pat[1:-1]))
+    else:
+      word_pat = word_pat.replace('.', '')
+      output.append(word_pat)
+  return output
 
-def get_property(s: Game, prop: str, setval=None) -> Any:
+def get_property(s: Game, prop: str, setval=None, get_container=False) -> Any:
   """Gets or sets object property expressed as a string in the format
   that is returned by the generate_mutation_points function."""
-  indexpat = re.compile('\[.*?\]')
-  levels = prop.split('.')
+  levels = parse_property_access(prop)
+  
+  parent = None
   obj = s
   set_index = len(levels) - 1 # the index of the containing object of the property
   for level, prop in enumerate(levels):
-    indices = indexpat.findall(prop)
-    if indices:
-      # get the index of the first index
-      i = prop.index('[')
-      # get the indexable object
-      obj = obj.__getattribute__(prop[:i])
-      for j, i in enumerate(indices): 
-        obj = obj[int(i[1:-1])]
-    else:
-      if setval and level == set_index:
+    if setval and level == set_index:
+      if type(prop) is int:
+        obj.__setitem__(prop, setval)
+      else:
         obj.__setattr__(prop, setval)
+    parent = obj
+    if type(prop) is int:
+      obj = obj.__getitem__(prop)
+    else:
       obj = obj.__getattribute__(prop)
-      
-  return obj
+
+  return parent if get_container else obj

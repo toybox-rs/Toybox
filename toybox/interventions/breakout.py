@@ -1,13 +1,37 @@
 from toybox.interventions.base import *
 from toybox.interventions.core import * 
+
+import copy
 try:
   import ujson as json
 except:
   import json
+import re
 import sys
-import copy
+
 from enum import Enum
 """An API for interventions on Breakout."""
+
+def query_hack(query):
+  # need replace all coll[i] with coll.collitem%04d.format(i)
+  # can iterate over these, but will need to figure out string
+  # interpolation for regex objects first
+  if 'bricks' in query:
+    search = re.search(r'bricks\[[0-9]+\]', query)
+    if search is not None:
+      before = search.group(0)
+      i = int(re.search(r'[0-9]+', before).group(0))
+      query = query.replace(before, 'bricks.brick{:04}'.format(i))
+  
+  if 'balls' in query:
+    search = re.search(r'balls\[[0-9]+\]', query)
+    if search is not None:
+      before = search.group(0)
+      i = int(re.search(r'[0-9]+', before).group(0))
+      query = query.replace(before, 'balls.ball{:04}'.format(i))
+
+  return query
+  
 
 class Breakout(Game):
 
@@ -26,25 +50,26 @@ class Breakout(Game):
              'is_dead'     ]
 
   coersions = { **Game.coersions, 
-    'is_dead' : lambda x : x > 0.5
+    'is_dead' : lambda x : x > 0.5,
+    'reset' : lambda x : False if x is None else x > 0.5
   }
 
-  def __init__(self, intervention, 
-    score=None, lives=None, rand=None, level=None,
+  def __init__(self, intervention : Intervention, 
+    score=None, lives=None, rand=None, level=None, 
     paddle=None, paddle_width=None, paddle_speed=None,
     ball_radius=None, balls=None,
     bricks=None,
     reset=None, is_dead=None):
 
       super().__init__(intervention, score, lives, rand, level)
+      self.reset = Breakout.coersions['reset'](reset)
       self.paddle = Paddle.decode(intervention, paddle, Paddle)
-      self.reset = reset
       self.ball_radius = ball_radius
       self.bricks = BrickCollection.decode(intervention, bricks, BrickCollection)
       self.balls = BallCollection.decode(intervention, balls, BallCollection)
       self.paddle_speed = paddle_speed
       self.paddle_width = paddle_width
-      self.is_dead = is_dead
+      self.is_dead = Breakout.coersions['is_dead'](is_dead)
       self._in_init = False  
 
   def __copy__(self):
@@ -66,7 +91,7 @@ class Breakout(Game):
   def sample(self, *queries):
     """Requires a seed state, hence an instance method"""
     if not self.intervention.modelmod: 
-      print('WARNING: no models for sampling')
+      log.warn('WARNING: no models for sampling')
       return 
     modelmod = self.intervention.modelmod
     mod = importlib.import_module(modelmod)
@@ -77,21 +102,19 @@ class Breakout(Game):
     for query in queries:
       # this should work with the package argument, but right not it isn't
       # mod = importlib.import_module(query, package=modelmod)
-      mod = importlib.import_module(modelmod + '.' + query)
+      mod = importlib.import_module(modelmod + '.' + query_hack(query))
       val = mod.sample(intervention=self.intervention)
       if query in self.coersions: val = self.coersions[query](val)
-      if __debug__:
-        before = get_property(new, query)
       try:
+        before = get_property(new, query)
         after = get_property(new, query, setval=val)
-        if __debug__:
-          print('Set {} to {} (was {})'.format(query, after, before))
+        logging.debug('Set {} to {} (was {})'.format(query, after, before))
       except AttributeError:
         coll = get_property(new, query)
         coll.clear()
         for item in val:
           coll.append(item)
-        print('reset', query)
+        logging.info('reset', query)
     return new
 
   def make_models(self, data):
@@ -148,7 +171,7 @@ class Paddle(BaseMixin):
   }
   eq_keys = expected_keys
   
-  def __init__(self, intervention, velocity, position):
+  def __init__(self, intervention: Intervention, velocity, position):
     super().__init__(intervention)
     self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
     self.position = Vec2D.decode(intervention, position, Vec2D)
@@ -177,24 +200,22 @@ def sample(*args, **kwargs):
   def sample(self, *queries):
     """Requires a seed state"""
     if not self.intervention.modelmod: 
-      print('WARNING: no models for sampling')
+      logging.warn('WARNING: no models for sampling')
       return 
     new = copy.copy(self)
     for query in queries:
       mod = importlib.import_module('.models.breakout.' + query, package=__package__)
       val = mod.sample()
-      if __debug__:
-        before = get_property(new, query)
+      before = get_property(new, query)
       after = get_property(new, query, setval=val)
-      if __debug__:
-        print('Set {} to {} (was {})'.format(query, after, before))
+      logging.debug('Set {} to {} (was {})'.format(query, after, before))
     return new
     
 
 
 class BrickCollection(Collection):
 
-  def __init__(self, intervention, bricks):
+  def __init__(self, intervention : Intervention, bricks):
     super().__init__(intervention, bricks, Brick)
     self._in_init = False  
 
@@ -249,6 +270,12 @@ class Brick(BaseMixin):
     self.col = col
     self._in_init = False
 
+  def __repr__(self):
+    return 'Brick({})'.format(' '.join([str(self.__dict__[key]) for key in Brick.expected_keys]))
+
+  def __str__(self):
+    return self.__repr__()
+
   def make_models(self, outdir, i, data): 
     outdir = outdir + os.sep + 'brick{:04d}'.format(i)
 
@@ -294,15 +321,9 @@ class BallCollection(Collection):
     else:
       return '[{}]'.format(', '.join(str(b) for b in self))
 
-  def __hash__(self):
-    # let's see how many collisions this causes
-    h = 0
-    for item in self:
-      h += hash(item)
-    return h
-
   def make_models(self, data):
     outdir = self.intervention.modelmod.replace('.', '/') + os.sep + 'balls'
+    os.makedirs(outdir, exist_ok=True)
 
     for i, ball in enumerate(self):
       ball.make_models(outdir, i, [d[i] for d in data if len(d) > i])
@@ -497,13 +518,16 @@ class BreakoutIntervention(Intervention):
 
 
 if __name__ == "__main__":
-  import argparse 
+  import argparse , logging
   from ctoybox import Toybox, Input
+
+  logging.basicConfig(level=logging.DEBUG)
 
   parser = argparse.ArgumentParser(description='test Breakout interventions')
   parser.add_argument('--partial_config', type=str, default="null")
   parser.add_argument('--save_json', type=bool, default=False)
   args = parser.parse_args()
+
 
   with Toybox('breakout') as tb:
 
@@ -523,22 +547,6 @@ if __name__ == "__main__":
         with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
             json.dump(config, outfile)
 
-    with BreakoutIntervention(tb) as intervention:
-        # test get property from core
-        first_brick_col = get_property(intervention.game, 'bricks[0].col')
-        assert first_brick_col == 0
-        #test set property from core 
-        first_brick_r = get_property(intervention.game, 'bricks[0].color.r', setval=72)
-        first_brick_g = get_property(intervention.game, 'bricks[0].color.g', setval=72)
-        first_brick_b = get_property(intervention.game, 'bricks[0].color.b', setval=72)
-        assert first_brick_r == 72
-
-        intervention.game.score = 1234
-
-    with BreakoutIntervention(tb):
-        assert first_brick_r == 72
-        assert first_brick_g == 72
-        assert first_brick_b == 72
 
     with BreakoutIntervention(tb) as intervention:
         try:
@@ -646,41 +654,3 @@ if __name__ == "__main__":
         pos_post = intervention.get_paddle_position()
         assert pos.x == pos_post.x
 
-  with Toybox('breakout') as tb:
-
-    fire = Input()
-    fire.button1 = True
-    noop = Input()
-    tb.apply_action(fire)
-
-
-    # load up some data and test sampling
-    # test for just one run
-    data = []
-    datadir = 'toybox/interventions/models/data/StayAlive'
-    for seed in os.listdir(datadir):
-      this_dir = datadir + os.sep + seed
-      for dat in os.listdir(this_dir):
-        this_file = this_dir + os.sep + dat
-        if this_file.endswith('json'):
-          with open(this_file, 'r') as f:
-            data.append(Breakout.decode(tb, json.load(f), Breakout))
-
-    with BreakoutIntervention(tb, modelmod='breakout_models', data=data) as intervention:
-        sample1 = intervention.game.sample('ball_radius')
-        sample2 = intervention.game.sample('ball_radius')
-        assert sample1.ball_radius != sample2.ball_radius
-        eq_check = sample1 == sample2
-        assert isinstance(eq_check, Error)
-        assert eq_check.name == 'ball_radius'
-        sample3 = intervention.game.sample('paddle_speed', 'paddle_width')
-        assert isinstance(sample3 == intervention.game, Error)
-        sample4 = intervention.game.sample('paddle')
-        assert isinstance(sample4 == intervention.game, Error)
-        sample5 = intervention.game.sample('bricks')
-        tb.write_state_json(sample5.encode())
-        tb.save_frame_image('reset_bricks.png')
-        for i in range (10):
-            js = intervention.game.sample().encode()
-            tb.write_state_json(js)
-            tb.save_frame_image('sample{}'.format(i+1))

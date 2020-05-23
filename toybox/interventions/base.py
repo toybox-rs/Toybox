@@ -6,6 +6,7 @@ except:
   import json
 
 import importlib
+import logging
 import math
 import os
 import random
@@ -13,6 +14,13 @@ from typing import Union
 """ Contains the base class for interventions. 
 
 To make interventions for a new game, subclass Intervention."""
+
+
+class MutationError(AttributeError):
+
+  def __init__(self, attribute):
+    super().__init__('Trying to mutate immutable field %s' % attribute)
+    self.attribute = attribute
 
 class Eq(ABC): 
 
@@ -36,6 +44,9 @@ class ProbEq(Eq):
     super().__init__(obj)
     self.differ = None
     self.key_order = []
+
+  def __repr__(self) -> str:
+    return "ProbEq(differ={}, key_order={})".format(self.differ, self.key_order)
 
   def __eq__(self, other) -> Eq:
     assert type(self) == type(other)
@@ -62,6 +73,7 @@ class ProbEq(Eq):
           cmp = eq(v1[i], v2[i])
           if found_differ(cmp):
             key = '{}[{}].{}'.format(key, i, cmp.differ[0])
+            print(i, key)
             self.differ = (key, cmp.differ[1], cmp.differ[2]) if isinstance(cmp, ProbEq) else (key, v1, v2)
             return self
           else:
@@ -182,9 +194,9 @@ class BaseMixin(ABC):
     if self._in_init or name == '_in_init': return
     assert 'intervention' in existing_attrs
     if name in self.immutable_fields: # and not :
-      raise AttributeError('Trying mutate immutable field %s' % name)
+      raise MutationError('Trying mutate immutable field %s' % name)
     if adding_new:
-      raise AttributeError("Cannot add new field %s to %s" % (name, self.__class__.__name__))
+      raise MutationError("Cannot add new field %s to %s" % (name, self.__class__.__name__))
     self.intervention.dirty_state = True
     
   
@@ -233,8 +245,7 @@ class BaseMixin(ABC):
       if name == 'intervention': continue
       if name == '_in_init': continue
       if name not in self.expected_keys:
-        if __debug__:
-          print('skipping %s in %s; not in expected keys' % (name, type(self).__name__))
+        logging.debug('skipping %s in %s; not in expected keys' % (name, type(self).__name__))
         continue
       dat[name] = val.encode() if isinstance(val, BaseMixin) else val
       if name in self.coersions:
@@ -243,7 +254,7 @@ class BaseMixin(ABC):
 
 
   def sample(self, *queries):
-    if not self.intervention.modeldir:
+    if not self.intervention.modelmod:
       print('WARNING: no models for sampling.')
     assert False
 
@@ -304,6 +315,10 @@ class Collection(BaseMixin):
 
   def __getitem__(self, key): return self.coll.__getitem__(key)
 
+  def __setitem__(self, key, value): 
+    self.coll.__setitem__(key, value)
+    self.intervention.dirty_state = True
+    
   def __len__(self): return self.coll.__len__()
 
   def append(self, obj):
@@ -404,11 +419,11 @@ class Intervention(ABC):
 
     if os.path.isfile(fname): 
       with open(fname) as f:
-          data = json.load(f)
-          for k in data.keys(): 
-            if k in self.config.keys():
-              self.config[k] = data[k]
-              self.dirty_config = True
+        data = json.load(f)
+        for k in data.keys(): 
+          if k in self.config.keys():
+            self.config[k] = data[k]
+            self.dirty_config = True
 
 
   def load_models(self):

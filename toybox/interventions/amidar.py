@@ -16,6 +16,15 @@ class Amidar(Game):
 
   expected_keys = Game.expected_keys + ['enemies', 'player', 'jumps', 'jump_timer', 'chase_timer', 'board']
   immutable_fields = Game.immutable_fields + ['enemies']
+  eq_keys = ['score'      ,
+             'lives'      ,
+             'level'      ,
+             'enemies'    ,
+             'jumps'      ,
+             'jump_timer' ,
+             'chase_timer',
+             'board'      ,
+             'player'     ]
   
   def __init__(self, intervention, 
     score=None, player=None, lives=None, rand=None, level=None,
@@ -31,17 +40,6 @@ class Amidar(Game):
     self.player = Player.decode(intervention, player, Player)
     self._in_init = False
 
-  def __eq__(self, other) -> Either:
-    names = {
-      'enemies'    : (self.enemies,     other.enemies),
-      'jumps'      : (self.jumps,       other.jumps),
-      'jump_timer' : (self.jump_timer,  other.jump),
-      'chase_timer': (self.chase_timer, other.chase_timer),
-      'board'      : (self.board,       other.board),
-      'player'     : (self.player,      other.player)
-    }
-    return eq_map(names)
-
 
 class EnemyCollection(Collection):
 
@@ -53,6 +51,8 @@ class EnemyCollection(Collection):
 
     def decode(intervention, enemies, clz):
       return EnemyCollection(intervention, enemies)
+
+    def make_models(self, data): assert False
 
 
 class Tile(BaseMixin):
@@ -66,6 +66,7 @@ class Tile(BaseMixin):
     tags = [Empty, Unpainted, Painted, ChaseMarker]
     
     expected_keys = []
+    eq_keys = ['tag']
 
     def __init__(self, intervention, name):
       assert intervention
@@ -75,9 +76,6 @@ class Tile(BaseMixin):
       self.tag = name
       self._in_init = False
 
-    def __eq__(self, other) -> Either:
-      return Result(self.tag == other.tag)
-
     def decode(intervention, rustname, clz):
       assert type(rustname) == str
       assert intervention
@@ -86,10 +84,26 @@ class Tile(BaseMixin):
     def encode(self):
       return self.tag
 
+    def make_models(self, data): assert False
+
 
 class MovementAI(BaseMixin):
 
     expected_keys = []
+    eq_keys = [
+      'protocol'           ,       
+      'next'               ,
+      'default_route_index',
+      'start'              ,
+      'vert'               ,
+      'horiz'              ,
+      'start_vert'         ,
+      'start_horiz'        ,
+      'start_dir'          ,
+      'dir'                ,
+      'vision_distance'    ,
+      'player_seen'        ,
+    ]
 
     EnemyLookupAI     = 'EnemyLookupAI'
     EnemyPerimeterAI  = 'EnemyPerimeterAI' 
@@ -135,24 +149,6 @@ class MovementAI(BaseMixin):
       self.player_seen = player_seen
       self._in_init = False
 
-    def __eq__(self, other) -> Either:
-      names = {
-        'protocol'           : (self.protocol,            other.protocol),
-        'next'               : (self.next,                other.next),
-        'default_route_index': (self.default_route_index, other.default_route_index),
-        'start'              : (self.start,               other.start),
-        'vert'               : (self.vert,                other.vert),
-        'horiz'              : (self.horiz,               other.horiz),
-        'start_vert'         : (self.start_vert,          other.start_vert),
-        'start_horiz'        : (self.start_horiz,         other.start_horiz),
-        'start_dir'          : (self.start_dir,           other.start_dir),
-        'dir'                : (self.dir,                 other.dir),
-        'vision_distance'    : (self.vision_distance,     other.vision_distance),
-        'player_seen'        : (self.player_seen,         other.player_seen)
-      }
-      return eq_map(names)
-
-
     def decode(intervention, ai, clz):
       ai_name = list(ai.keys())[0]
       ai_kwds = ai[ai_name]
@@ -165,11 +161,14 @@ class MovementAI(BaseMixin):
           args[k] = v.encode() if isinstance(v, BaseMixin) else v
       return { self.protocol: args }
 
+    def make_models(self, data): assert False
+
 
 class Enemy(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
     immutable_fields = BaseMixin.immutable_fields + ['ai']
+    eq_keys = expected_keys
 
     def __init__(self, intervention, history, step, position, caught, speed, ai):
       super().__init__(intervention)
@@ -181,10 +180,13 @@ class Enemy(BaseMixin):
       self.ai = MovementAI.decode(intervention, ai, MovementAI)
       self._in_init = False
 
+    def make_models(self, data): assert False
+
 class Player(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
-
+    eq_keys = expected_keys
+    
     def __init__(self, intervention, history, step, position, caught, speed, ai):
         super().__init__(intervention)
         self.history = history
@@ -195,17 +197,17 @@ class Player(BaseMixin):
         self.ai = ai
         self._in_init = False
 
-    # def set_position(self, x, y):
-    #     self.position = WorldPoint(self.intervention, x, y)
-
     def decode(intervention, js, clz):
         return Player(intervention, **js)
+
+    def make_models(self, data): assert False
 
 
 class Board(BaseMixin):
 
     expected_keys = ['boxes', 'tiles', 'height', 'chase_junctions', 'width', 'junctions']
     immutable_fields = BaseMixin.immutable_fields + ['boxes', 'tiles']
+    eq_keys = expected_keys
 
     def __init__(self, intervention, boxes, tiles, height, chase_junctions, width, junctions):
       assert intervention
@@ -217,6 +219,9 @@ class Board(BaseMixin):
       self.boxes = BoxCollection.decode(intervention, boxes,  BoxCollection)
       self.tiles = TileCollection.decode(intervention, tiles, TileCollection)
       self._in_init = False
+      
+    def make_models(self, data): assert False
+
 
 class TileCollection(Collection):
     # Convenience class to deal with the fact that the tiles blob is
@@ -248,9 +253,11 @@ class TileCollection(Collection):
     def encode(self):
       return [[t.encode() for t in row] for row in self.coll]
 
+
 class WorldPoint(BaseMixin):
 
     expected_keys = ['x', 'y']
+    eq_keys = expected_keys
   
     def __init__(self, intervention, x=None, y=None):
       super().__init__(intervention)
@@ -258,6 +265,9 @@ class WorldPoint(BaseMixin):
       self.x = x
       self.y = y
       self._in_init = False
+
+    def make_models(self, data): assert False
+
 
 class BoxCollection(Collection):
 
@@ -268,22 +278,27 @@ class BoxCollection(Collection):
     def decode(intervention, boxes, clz):
         return BoxCollection(intervention, boxes)
 
+
 class Box(BaseMixin):
 
-    expected_keys = ['triggers_chase', 'top_left', 'bottom_right', 'painted']
+  expected_keys = ['triggers_chase', 'top_left', 'bottom_right', 'painted']
+  eq_keys = expected_keys
 
-    def __init__(self, intervention, triggers_chase, top_left, bottom_right, painted):
-        super().__init__(intervention)
-        self.triggers_chase = triggers_chase
-        self.top_left = TilePoint(intervention, **top_left)
-        self.bottom_right = TilePoint(intervention, **bottom_right)
-        self.painted = painted
-        self._in_init = False
+  def __init__(self, intervention, triggers_chase, top_left, bottom_right, painted):
+      super().__init__(intervention)
+      self.triggers_chase = triggers_chase
+      self.top_left = TilePoint(intervention, **top_left)
+      self.bottom_right = TilePoint(intervention, **bottom_right)
+      self.painted = painted
+      self._in_init = False
+
+  def make_models(self, data): assert False
 
 
 class TilePoint(BaseMixin):
 
     expected_keys = ['tx', 'ty']
+    eq_keys = expected_keys
 
     def __init__(self, intervention, tx, ty):
         super().__init__(intervention)
@@ -293,6 +308,9 @@ class TilePoint(BaseMixin):
 
     def __str__(self):
         return 'TilePoint {tx: %d, ty: %d}' % (self.tx, self.ty)
+
+    def make_models(self, data): assert False
+
 
 class AmidarIntervention(Intervention):
 
