@@ -126,9 +126,9 @@ class SetEq(Eq):
 
         for i in indices:
           cmp = eq(v1[i], v2[i])
-          if (isinstance(cmp, SetEq) and cmp.differs) or cmp is False:
-            key = '{}[{}].{}'.format(key, i, cmp.differ[0])
-            self.differ = (key, cmp.differ[1], cmp.differ[2]) if isinstance(cmp, SetEq) else (key, v1, v2)
+          if (isinstance(cmp, SetEq) and len(cmp.differs) > 1) or cmp is False:
+            key = '{}[{}].{}'.format(key, i, cmp.differs[0])
+            self.differs = (key, cmp.differs[1], cmp.differs[2]) if isinstance(cmp, SetEq) else (key, v1, v2)
             return self
 
       else:
@@ -150,6 +150,9 @@ class SetEq(Eq):
 
   def __str__(self):
     return '{' + ';'.join(['({}, {}, {})'.format(*t) for t in self.differs]) + '}'
+
+  def __len__(self):
+    return self.differs.__len__()
   
 
 class BaseMixin(ABC):
@@ -188,7 +191,8 @@ class BaseMixin(ABC):
   def __setattr__(self, name, value):
     existing_attrs = self.__dict__.keys()
     adding_new = name not in existing_attrs
-    super().__setattr__(name, value)
+    super().__setattr__(name, self.coersions[name](value) if name in self.coersions else value)
+
     # Prohibit adding fields outside object instantiation/initialization
     if self._in_init or name == '_in_init': return
     assert 'intervention' in existing_attrs
@@ -247,8 +251,10 @@ class BaseMixin(ABC):
         logging.debug('skipping %s in %s; not in expected keys' % (name, type(self).__name__))
         continue
       dat[name] = val.encode() if isinstance(val, BaseMixin) else val
-      if name in self.coersions:
-        dat[name] = self.coersions[name](dat[name])
+      # Shouldn't need this anymore now that we call coersions in the 
+      # overridden __getattribute__
+      # if name in self.coersions:
+      #   dat[name] = self.coersions[name](dat[name])
     return dat
 
 

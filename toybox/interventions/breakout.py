@@ -167,7 +167,7 @@ class Paddle(BaseMixin):
   expected_keys = ['velocity', 'position']
   coersions = {
     # Otherwise, we get a wandering paddle...
-    'velocity' : lambda v : {'x' : v['x'], 'y': 0}
+    'velocity' : lambda v : Vec2D.decode(v.intervention, {'x': v.x, 'y': 0}, Vec2D)
   }
   eq_keys = expected_keys
   
