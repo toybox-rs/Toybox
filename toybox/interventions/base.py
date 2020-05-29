@@ -108,52 +108,63 @@ class SetEq(Eq):
     super().__init__(obj)
     self.differs = []
 
+  def _float_eq(this, that):
+    return math.isclose(this, that)
+
+  def _basemixin_eq(this, that):
+    return this == that
+
+  def _coll_eq(this, that, collname='COLLECTION'):
+    retval = SetEq(this)
+    if len(this) != len(that):
+      retval.differs.append(('len({})'.format(collname), len(this), len(that)))
+      return retval
+    
+    for i, (item1, item2) in enumerate(zip(this, that)):
+      for key, v1, v2 in (item1 == item2).differs:
+        retval.differs.append(('{}[{}].{}'.format(collname, i, key), v1, v2))
+
+    return retval
+
   def __eq__(self, other) -> Eq:
+    if isinstance(self.obj, Collection):
+      self.differs.extend(SetEq._coll_eq(self.obj, other.obj).differs)
+      return self
+
     for key in self.clz.eq_keys:
       v1 = self.obj.__getattribute__(key) 
       v2 = other.obj.__getattribute__(key)
       assert type(v1) == type(v2), '{} vs {} for {}'.format(type(v1), type(v2), key)
 
-      eq = math.isclose if type(v1) == float else lambda a, b: a == b
       with_prefix = lambda x : key + '.' + x 
 
       if isinstance(v1, Collection):
-        indices = list(range(len(v1)))
-        random.shuffle(indices)
+        self.differs.extend(SetEq._coll_eq(v1, v2, key).differs)
 
-        if len(v1) != len(v2):
-          self.differs = (key, len(v1), len(v2))
+      elif isinstance(v1, BaseMixin):
+        for k, v1_, v2_ in SetEq._basemixin_eq(v1, v2).differs:
+          self.differs.append((with_prefix(k), v1_, v2_))
 
-        for i in indices:
-          cmp = eq(v1[i], v2[i])
-          if (isinstance(cmp, SetEq) and len(cmp.differs) > 1) or cmp is False:
-            key = '{}[{}].{}'.format(key, i, cmp.differs[0])
-            self.differs = (key, cmp.differs[1], cmp.differs[2]) if isinstance(cmp, SetEq) else (key, v1, v2)
-            return self
-
+      elif type(v1) is float:
+        if SetEq._float_eq(v1, v2) is False:
+          self.differs.append((key, v2, v2))
+      
       else:
-
-        cmp = eq(v1, v2)
-
-        if isinstance(cmp, SetEq):
-          if cmp.differs:
-            self.differs.extend([(with_prefix(t[0]), t[1], t[2]) for t in cmp.differs])
-            return self
-        elif cmp is False:
+        if v1 != v2:
           self.differs.append((key, v1, v2))
-          return self
-    
+
     return self
 
   def __bool__(self):
     return len(self.differs) == 0
 
   def __str__(self):
-    return '{' + ';'.join(['({}, {}, {})'.format(*t) for t in self.differs]) + '}'
+    return 'SetEq{' + ';'.join(['({}, {}, {})'.format(*t) for t in self.differs]) + '}'
 
   def __len__(self):
     return self.differs.__len__()
   
+
 
 class BaseMixin(ABC):
   """Base class for game objects. Registers mutation so JSON can be pushed via context manager."""
@@ -286,33 +297,6 @@ class Collection(BaseMixin):
     self.coll = [elt_clz.decode(intervention, elt, elt_clz) for elt in coll]
     # SAME DEAL AS GAME - THIS SHOULD ALWAYS BE ABSTRACT, HENCE NO RESET OF IN_INIT
 
-  def __eq__(self, other) -> Union[bool, Eq]:
-    retval = None
-    for i in range(len(self)):
-      cmp = self.eq_mode(self[i]) == other.eq_mode(other[i])
-      if isinstance(cmp, bool): 
-        return cmp
-      elif isinstance(cmp, ProbEq):
-        # update names on key order
-        keys = ['{}[{}].{}'.format(self.elt_clz, i, k) for k in cmp.key_order]
-        cmp.key_order = keys
-        if retval is None:
-          if cmp.differ is None:
-            retval = cmp
-          else: return cmp
-        elif retval.differ is None: 
-          retval.key_order.extend(keys)
-        else:
-          return cmp
-      elif isinstance(cmp, SetEq):
-        keys = ['{}[{}].{}'.format(self.elt_clz, i, k) for k in cmp.differs]
-        cmp.differs = keys   
-        if retval is None:
-          retval = cmp
-        else:
-          retval.differs.extend(keys)
-    return retval
-
   def __str__(self):
     return '[{}]'.format(', '.join([str(c) for c in self.coll]))
     
@@ -381,7 +365,7 @@ class Collection(BaseMixin):
         
 class Intervention(ABC):
 
-  def __init__(self, tb: Toybox, game_name: str, clz: type, modelmod=None, data=None):
+  def __init__(self, tb: Toybox, game_name: str, clz: type, modelmod=None, data=None, eq_mode=StandardEq):
     assert tb.game_name == game_name
     self.game_name = game_name
     self.toybox = tb
@@ -393,7 +377,7 @@ class Intervention(ABC):
 
     self.modelmod = modelmod 
     self.data = data
-    self.eq_mode = StandardEq
+    self.eq_mode = eq_mode
 
   def __enter__(self):
     # grab the JSON to be manipulated

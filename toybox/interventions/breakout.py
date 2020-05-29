@@ -388,9 +388,9 @@ def sample(*args, **kwargs):
 
 class BreakoutIntervention(Intervention):
 
-    def __init__(self, tb: Toybox, modelmod=None, data=None):
+    def __init__(self, tb: Toybox, modelmod=None, data=None, eq_mode=StandardEq):
         # check that the simulation in tb matches the game name.
-        Intervention.__init__(self, tb, 'breakout', Breakout, modelmod=modelmod, data=data)
+        Intervention.__init__(self, tb, 'breakout', Breakout, modelmod=modelmod, data=data, eq_mode=eq_mode)
 
     def num_bricks_remaining(self):
         return sum([int(brick.alive) for brick in self.game.bricks])

@@ -1,7 +1,7 @@
 from unittest import TestCase
 from ctoybox import Toybox
 from toybox.interventions.breakout import *
-from toybox.interventions.core import get_property, Color
+from toybox.interventions.core import get_property, Color, parse_property_access
 
 class BreakoutGetProperty(TestCase):
 
@@ -35,6 +35,13 @@ class BreakoutGetProperty(TestCase):
         self.assertNotEqual(game.bricks[1].color.r, 72)
         self.assertNotEqual(game.bricks[1].color.g, 72)
         self.assertNotEqual(game.bricks[1].color.b, 72)
+
+  def test_set_property_zero(self):
+    with Toybox('breakout') as tb:
+      with BreakoutIntervention(tb) as intervention:
+        game = intervention.game
+        v = get_property(game, 'bricks[107].points', setval=0)
+        self.assertEqual(v, 0)
         
 
   def test_get_parent(self):

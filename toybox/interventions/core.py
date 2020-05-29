@@ -248,7 +248,7 @@ def get_property(s: Game, prop: str, setval=None, get_container=False) -> Any:
   obj = s
   set_index = len(levels) - 1 # the index of the containing object of the property
   for level, prop in enumerate(levels):
-    if setval and level == set_index:
+    if setval is not None and level == set_index:
       if type(prop) is int:
         obj.__setitem__(prop, setval)
       else:
