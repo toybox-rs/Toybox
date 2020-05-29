@@ -164,7 +164,18 @@ class SetEq(Eq):
   def __len__(self):
     return self.differs.__len__()
   
-
+  def difference(self, other):
+    # tuples are weird
+    differs = []
+    for k, v1, v2 in self.differs:
+      # try to find k in other.differs
+      found = False
+      for k_, v1_, v2_ in other.differs:
+        if k == k_ and v1 == v1_ and v2 == v2_: 
+          found = True
+          break
+      if not found: differs.append((k, v1, v2))
+    return differs
 
 class BaseMixin(ABC):
   """Base class for game objects. Registers mutation so JSON can be pushed via context manager."""
@@ -179,7 +190,7 @@ class BaseMixin(ABC):
   @abstractmethod
   def eq_keys(clz): pass
 
-  immutable_fields = ['intervention', '_in_init']
+  immutable_fields = ['intervention']
   coersions = {}
 
   def __init__(self, intervention):
@@ -202,13 +213,18 @@ class BaseMixin(ABC):
   def __setattr__(self, name, value):
     existing_attrs = self.__dict__.keys()
     adding_new = name not in existing_attrs
+    
+    # Need to force monotonicity of _in_init
+    if name == '_in_init' and name in self.__dict__ and value is True:
+      raise MutationError(name)
     super().__setattr__(name, self.coersions[name](value) if name in self.coersions else value)
 
     # Prohibit adding fields outside object instantiation/initialization
-    if self._in_init or name == '_in_init': return
+    if self._in_init: return
     assert 'intervention' in existing_attrs
+
     if name in self.immutable_fields: # and not :
-      raise MutationError('Trying mutate immutable field %s' % name)
+      raise MutationError(name)
     if adding_new:
       raise MutationError("Cannot add new field %s to %s" % (name, self.__class__.__name__))
     self.intervention.dirty_state = True
