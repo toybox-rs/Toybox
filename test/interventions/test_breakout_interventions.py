@@ -2,7 +2,7 @@ from unittest import TestCase
 from ctoybox import Toybox, Input
 import toybox.interventions.breakout as breakout
 from toybox.interventions.breakout import BreakoutIntervention, Breakout
-from toybox.interventions.base import MutationError
+from toybox.interventions.base import MutationError, InterventionNoneError
 
 class BreakoutInterventionTests(TestCase):
 
@@ -16,8 +16,11 @@ class BreakoutInterventionTests(TestCase):
 
   def test_allowable_interventions(self):
     with BreakoutIntervention(self.tb) as intervention:
-      with self.assertRaises(MutationError):
+      with self.assertRaises(InterventionNoneError):
         intervention.game.paddle.intervention = None
+
+      with self.assertRaises(MutationError):
+        intervention.game.paddle.intervention = Breakout
 
       with self.assertRaises(MutationError):
         intervention.game.paddle._in_init = True

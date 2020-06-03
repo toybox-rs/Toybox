@@ -20,4 +20,5 @@ def get_state_object(game_name):
 
 def state_from_toybox(toybox: Toybox):
   state_obj = get_state_object(toybox.game_name)
-  return state_obj.decode(None, toybox.state_to_json(), state_obj)
+  with get_intervener(toybox.game_name)(toybox) as intervention:
+    return state_obj.decode(intervention, toybox.state_to_json(), state_obj)

@@ -117,9 +117,9 @@ class Breakout(Game):
         logging.info('reset', query)
     return new
 
-  def make_models(self, data):
-    Game.make_models(self, data)
-    outdir = self.modelmod.replace('.', '/') + os.sep
+  def make_models(modelmod, data):
+    Game.make_models(modelmod, data)
+    outdir = modelmod.replace('.', '/') + os.sep
 
     distr(outdir + 'ball_radius', [d.ball_radius for d in   data])
     distr(outdir + 'paddle_speed', [d.paddle_speed for d in data])
@@ -128,9 +128,9 @@ class Breakout(Game):
     distr(outdir + 'reset', [d.reset for d in   data])
     distr(outdir + 'is_dead', [d.reset for d in data])
 
-    self.game.paddle.make_models([d.paddle for d in data])
-    self.game.bricks.make_models([d.bricks for d in data])
-    self.game.balls.make_models([d.balls for d in data])
+    Paddle.make_models(modelmod, [d.paddle for d in data])
+    BrickCollection.make_models(modelmod, [d.bricks for d in data])
+    BallCollection.make_models(modelmod, [d.balls for d in data])
 
     with open(outdir + os.sep + '__init__.py', 'w') as f:
       f.write("""from ctoybox import Toybox
@@ -180,10 +180,10 @@ class Paddle(BaseMixin):
   def __str__(self):
     return '<position: {}, velocity: {}>'.format(self.position, self.velocity)
 
-  def make_models(self, data):
-    outdir = self.intervention.modelmod.replace('.', '/') + os.sep + 'paddle'
-    self.velocity.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
-    self.position.make_models(outdir + os.sep + 'position', [d.position for d in data])
+  def make_models(modelmod, data):
+    outdir = modelmod.replace('.', '/') + os.sep + 'paddle'
+    Vec2D.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
+    Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
 
     with open(outdir + os.sep + '__init__.py', 'w') as f:
       f.write("""from . import velocity as v
@@ -205,7 +205,7 @@ def sample(*args, **kwargs):
     new = copy.copy(self)
     for query in queries:
       mod = importlib.import_module('.models.breakout.' + query, package=__package__)
-      val = mod.sample()
+      val = mod.sample(intervention=self.intervention)
       before = get_property(new, query)
       after = get_property(new, query, setval=val)
       logging.debug('Set {} to {} (was {})'.format(query, after, before))
@@ -222,11 +222,13 @@ class BrickCollection(Collection):
   def decode(intervention, bricks, clz):
     return BrickCollection(intervention, bricks)
 
-  def make_models(self, data):
-    outdir = self.intervention.modelmod.replace('.', '/') + os.sep + 'bricks'
+  def make_models(modelmod, data):
+    outdir = modelmod.replace('.', '/') + os.sep + 'bricks'
 
-    for i, brick in enumerate(self):
-        brick.make_models(outdir, i, [d[i] for d in data])
+    max_bricks = max([len(d) for d in data])
+
+    for i in range(max_bricks):
+      Brick.make_models(outdir, i, [d[i] for d in data if len(d) > i])
 
     with open(outdir + os.sep + '__init__.py', 'w') as f:
         f.write("""import importlib
@@ -239,9 +241,9 @@ def sample(*args, **kwargs):
   for bricki in sorted(os.listdir(os.path.dirname(__file__))):
     if bricki.startswith('brick'):
       mod = importlib.import_module('{}.' + bricki)
-      bricks.append(mod.sample().encode())
+      bricks.append(mod.sample(*args, **kwargs).encode())
   return BrickCollection.decode(intervention, bricks, BrickCollection)
-        """.format(self.intervention.modelmod + '.bricks'))
+        """.format(modelmod + '.bricks'))
 
 
 class Brick(BaseMixin):
@@ -276,16 +278,16 @@ class Brick(BaseMixin):
   def __str__(self):
     return self.__repr__()
 
-  def make_models(self, outdir, i, data): 
+  def make_models(outdir, i, data): 
     outdir = outdir + os.sep + 'brick{:04d}'.format(i)
 
     distr(outdir + os.sep + 'destructible', [d.destructible for d in data])
     distr(outdir + os.sep + 'depth', [d.depth for d in data])
-    self.color.make_models(outdir + os.sep + 'color', [d.color for d in data])
+    Color.make_models(outdir + os.sep + 'color', [d.color for d in data])
     distr(outdir + os.sep + 'alive', [d.alive for d in data])
     distr(outdir + os.sep + 'points', [d.points for d in data])
-    self.size.make_models(outdir + os.sep + 'size', [d.size for d in data])
-    self.position.make_models(outdir + os.sep + 'position', [d.position for d in data])
+    Vec2D.make_models(outdir + os.sep + 'size', [d.size for d in data])
+    Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
     distr(outdir + os.sep + 'row', [d.row for d in data])
     distr(outdir + os.sep + 'col', [d.col for d in data])
 
@@ -303,8 +305,8 @@ def sample(*args, **kwargs):
   features = [os.path.splitext(f)[0] for f in os.listdir(os.path.dirname(__file__)) if not f.startswith('__')]
   for feature in features:
     mod = importlib.import_module('{}.' + feature)
-    val = mod.sample()
-    obj[feature] = mod.sample().encode() if isinstance(val, BaseMixin) else val
+    val = mod.sample(*args, **kwargs)
+    obj[feature] = mod.sample(*args, **kwargs).encode() if isinstance(val, BaseMixin) else val
   return Brick.decode(intervention, obj, Brick)
       """.format(module))
 
@@ -321,12 +323,14 @@ class BallCollection(Collection):
     else:
       return '[{}]'.format(', '.join(str(b) for b in self))
 
-  def make_models(self, data):
-    outdir = self.intervention.modelmod.replace('.', '/') + os.sep + 'balls'
+  def make_models(modelmod, data):
+    outdir = modelmod.replace('.', '/') + os.sep + 'balls'
     os.makedirs(outdir, exist_ok=True)
 
-    for i, ball in enumerate(self):
-      ball.make_models(outdir, i, [d[i] for d in data if len(d) > i])
+    max_balls = max([len(d) for d in data])
+
+    for i in range(max_balls):
+      Ball.make_models(outdir, i, [d[i] for d in data if len(d) > i])
     
     with open(outdir + os.sep + '__init__.py', 'w') as f:
       f.write("""import importlib
@@ -336,12 +340,12 @@ import os
 def sample(*args, **kwargs):
   balls = []
   intervention = kwargs['intervention'] if 'intervention' in kwargs else None
-  for balli in sorted(os.listdir('.')):
-    if balli.startswith('brick'):
-      mod = importlib.import_module(balli)
-      balls.append(mod.sample().encode())
+  for balli in sorted(os.listdir(os.path.dirname(__file__))):
+    if balli.startswith('ball'):
+      mod = importlib.import_module('{}.' + balli)
+      balls.append(mod.sample(*args, **kwargs).encode())
   return BallCollection.decode(intervention, balls, BallCollection)
-      """)
+      """.format(modelmod + '.balls'))
 
 
 class Ball(BaseMixin): 
@@ -358,11 +362,12 @@ class Ball(BaseMixin):
   def __str__(self):
     return 'Ball(position: {}, velocity: {})'.format(self.position, self.velocity)
 
-  def make_models(self, outdir, i, data):
+  def make_models(outdir, i, data):
     outdir = outdir + os.sep + 'ball{:04d}'.format(i)
+    os.makedirs(outdir, exist_ok=True)
 
-    self.position.make_models(outdir + os.sep + 'position', [d.position for d in data])
-    self.velocity.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
+    Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
+    Vec2D.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
 
     with open(outdir + os.sep + '__init__.py', 'w') as f:
       module = outdir.replace(os.sep, '.')
@@ -378,12 +383,10 @@ def sample(*args, **kwargs):
   features = [os.path.splitext(f)[0] for f in os.listdir(os.path.dirname(__file__)) if not f.startswith('__')]
   for feature in features:
     mod = importlib.import_module('{}.' + feature)
-    val = mod.sample()
-    obj[feature] = mod.sample().encode() if isinstance(val, BaseMixin) else val
+    val = mod.sample(*args, **kwargs)
+    obj[feature] = mod.sample(*args, **kwargs).encode() if isinstance(val, BaseMixin) else val
   return Ball.decode(intervention, obj, Ball)
       """.format(module))
-
-
 
 
 class BreakoutIntervention(Intervention):

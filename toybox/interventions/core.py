@@ -60,8 +60,8 @@ class Game(BaseMixin):
     # Python doesn't do great with multiple inheritence, which is 
     # what a truly abstract version of this class would look like.
 
-  def make_models(self, data):
-    outdir = self.modelmod.replace('.', '/') + os.sep
+  def make_models(modelmod, data):
+    outdir = modelmod.replace('.', '/') + os.sep
     logging.info('Creating models in {}'.format(outdir))
 
     distr(outdir + 'score', [d.score for d in data])
@@ -119,7 +119,7 @@ class Vec2D(BaseMixin):
   def __str__(self):
     return '({}, {})'.format(self.x, self.y)
 
-  def make_models(self, outdir, data):
+  def make_models(outdir, data):
     distr(outdir + os.sep + 'x', [d.x for d in data])
     distr(outdir + os.sep + 'y', [d.y for d in data])
     with open(outdir + os.sep + '__init__.py', 'w') as f:
@@ -156,7 +156,7 @@ class Color(BaseMixin):
   def __str__(self):
     return "({}, {}, {}, {})".format(self.r, self.g, self.b, self.a)
 
-  def make_models(self, outdir, data): 
+  def make_models(outdir, data): 
     distr(outdir + os.sep + 'r', [d.r for d in data])
     distr(outdir + os.sep + 'g', [d.g for d in data])
     distr(outdir + os.sep + 'b', [d.b for d in data])

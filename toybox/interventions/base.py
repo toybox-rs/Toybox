@@ -22,6 +22,12 @@ class MutationError(AttributeError):
     super().__init__('Trying to mutate immutable field %s' % attribute)
     self.attribute = attribute
 
+
+class InterventionNoneError(AttributeError):
+
+  def __init__(self):
+    super().__init__('intervention cannot be None')
+
 class Eq(ABC): 
 
   def __init__(self, obj):
@@ -147,7 +153,7 @@ class SetEq(Eq):
 
       elif type(v1) is float:
         if SetEq._float_eq(v1, v2) is False:
-          self.differs.append((key, v2, v2))
+          self.differs.append((key, v1, v2))
       
       else:
         if v1 != v2:
@@ -215,13 +221,14 @@ class BaseMixin(ABC):
     adding_new = name not in existing_attrs
     
     # Need to force monotonicity of _in_init
-    if name == '_in_init' and name in self.__dict__ and value is True:
+    if name == '_in_init' and value is True and name in existing_attrs:
       raise MutationError(name)
     super().__setattr__(name, self.coersions[name](value) if name in self.coersions else value)
 
-    # Prohibit adding fields outside object instantiation/initialization
+    # Only okay to add fields during initialization.
     if self._in_init: return
-    assert 'intervention' in existing_attrs
+    if self.intervention is None: raise InterventionNoneError()
+    assert isinstance(self.intervention, Intervention), type(self.intervention)
 
     if name in self.immutable_fields: # and not :
       raise MutationError(name)
@@ -435,7 +442,7 @@ class Intervention(ABC):
     return importlib.import_module(self.modelmod, package=__package__)
 
   def make_models(self): 
-    self.clz.make_models(self, self.data)
+    self.clz.make_models(self.modelmod, self.data)
 
 if __name__ == "__main__":
   with Toybox('amidar') as tb:

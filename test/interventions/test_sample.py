@@ -30,7 +30,7 @@ class BreakoutSample(TestCase):
           this_file = this_dir + os.sep + dat
           if this_file.endswith('json'):
             with open(this_file, 'r') as f:
-              data.append(Breakout.decode(self.tb, json.load(f), Breakout))
+              data.append(Breakout.decode(BreakoutIntervention(self.tb), json.load(f), Breakout))
       self.data = data
       print('Finished setUp!')
 
@@ -97,3 +97,10 @@ class BreakoutSample(TestCase):
       self.assertNotEqual(varname1, varname2)
       self.assertNotAlmostEqual(new1, old1)
       self.assertNotAlmostEqual(new2, old2)
+
+  def test_sample_ball(self):
+    with BreakoutIntervention(self.tb, modelmod='breakout_models', data=self.data) as intervention:
+      ball = intervention.game.balls[0]
+      vx_old = ball.velocity.x
+      vx_new = intervention.game.sample('balls[0].velocity.x').balls[0].velocity.x
+      self.assertNotAlmostEqual(vx_old, vx_new)
