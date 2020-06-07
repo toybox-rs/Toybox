@@ -106,9 +106,12 @@ class Vec2D(BaseMixin):
   eq_keys = expected_keys
   immutable_fields = BaseMixin.immutable_fields
   coersions = {
-    'x' : lambda x: float(x),
-    'y' : lambda y: float(y)
+    'x' : lambda x: int(x),
+    'y' : lambda y: int(y)
   }
+
+  # def to_int(v2d):
+  #   return Vec2D.decode(v2d.intervention, {'x' : int(v2d.x), 'y' : int(v2d.y)}, Vec2D)
 
   def __init__(self, intervention, x, y):
     super().__init__(intervention)

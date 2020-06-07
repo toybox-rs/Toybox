@@ -251,12 +251,14 @@ class Brick(BaseMixin):
   expected_keys = ['destructible', 'depth', 'color', 'alive', 'points', 'size', 'position', 'row', 'col']
   eq_keys = expected_keys
   coersions = {
-    'alive' : lambda x : x > 0.5,
+    'alive'        : lambda x : x > 0.5,
     'destructible' : lambda x : x > 0.5,
-    'depth'  : lambda x : max(0, int(x)),
-    'points' : lambda x : max(0, int(x)),
-    'row'    : lambda x : max(0, int(x)),
-    'col'    : lambda x : max(0, int(x))
+    'depth'        : lambda x : max(0, int(x)),
+    'points'       : lambda x : max(0, int(x)),
+    'row'          : lambda x : max(0, int(x)),
+    'col'          : lambda x : max(0, int(x)),
+    # 'size'         : lambda v2d : Vec2D.to_int(v2d),
+    # 'position'     : lambda v2d : Vec2D.to_int(v2d)
   }
     
   def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
@@ -266,7 +268,7 @@ class Brick(BaseMixin):
     self.color = Color.decode(intervention, color, Color)
     self.alive = Brick.coersions['alive'](alive)
     self.points = Brick.coersions['points'](points)
-    self.size = Vec2D.decode(intervention, size, Vec2D)
+    self.size     = Vec2D.decode(intervention, size, Vec2D)
     self.position = Vec2D.decode(intervention, position, Vec2D)
     self.row = Brick.coersions['row'](row)
     self.col = Brick.coersions['col'](col)
@@ -352,6 +354,9 @@ class Ball(BaseMixin):
 
   expected_keys = ['position', 'velocity']
   eq_keys = expected_keys
+  # coersions = {
+  #   'position' : lambda p: Vec2D.decode(p.intervention, {'x' : int(p.x), 'y': int(p.y)}, Vec2D)
+  # }
 
   def __init__(self, intervention, position, velocity):
     super().__init__(intervention)
