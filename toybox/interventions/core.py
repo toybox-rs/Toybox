@@ -106,8 +106,8 @@ class Vec2D(BaseMixin):
   eq_keys = expected_keys
   immutable_fields = BaseMixin.immutable_fields
   coersions = {
-    'x' : lambda x: int(x),
-    'y' : lambda y: int(y)
+    'x' : lambda x: float(x),
+    'y' : lambda y: float(y)
   }
 
   # def to_int(v2d):

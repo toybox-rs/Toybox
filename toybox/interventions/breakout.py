@@ -204,6 +204,7 @@ def sample(*args, **kwargs):
       return 
     new = copy.copy(self)
     for query in queries:
+      print('WARN: this might not work?')
       mod = importlib.import_module('.models.breakout.' + query, package=__package__)
       val = mod.sample(intervention=self.intervention)
       before = get_property(new, query)
