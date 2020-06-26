@@ -355,9 +355,6 @@ class Ball(BaseMixin):
 
   expected_keys = ['position', 'velocity']
   eq_keys = expected_keys
-  # coersions = {
-  #   'position' : lambda p: Vec2D.decode(p.intervention, {'x' : int(p.x), 'y': int(p.y)}, Vec2D)
-  # }
 
   def __init__(self, intervention, position, velocity):
     super().__init__(intervention)

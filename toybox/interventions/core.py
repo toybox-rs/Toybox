@@ -110,9 +110,6 @@ class Vec2D(BaseMixin):
     'y' : lambda y: float(y)
   }
 
-  # def to_int(v2d):
-  #   return Vec2D.decode(v2d.intervention, {'x' : int(v2d.x), 'y' : int(v2d.y)}, Vec2D)
-
   def __init__(self, intervention, x, y):
     super().__init__(intervention)
     self.x = Vec2D.coersions['x'](x)
