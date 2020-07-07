@@ -462,6 +462,10 @@ class BreakoutIntervention(Intervention):
             if brick.col == i:
                 bricks.append(brick)
         return bricks
+
+    def get_row(self, i):
+      """Returns the ith column of bricks."""
+      return [b for b in self.game.bricks if b.row == 1]
     
     def channel_count(self):
         count = 0
