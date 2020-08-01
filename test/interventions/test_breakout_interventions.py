@@ -20,7 +20,7 @@ class BreakoutInterventionTests(TestCase):
         intervention.game.paddle.intervention = None
 
       with self.assertRaises(MutationError):
-        intervention.game.paddle.intervention = Breakout
+        intervention.game.paddle.intervention = intervention
 
       with self.assertRaises(MutationError):
         intervention.game.paddle._in_init = True

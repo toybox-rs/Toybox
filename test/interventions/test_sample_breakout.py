@@ -23,8 +23,8 @@ class BreakoutSample(TestCase):
       # load up some data and test sampling
       # test for just one run
       data = []
-      datadir = 'toybox/interventions/models/data/StayAlive'
-      for seed in os.listdir(datadir):
+      datadir = 'toybox/interventions/models/data/Target'
+      for seed in os.listdir(datadir)[:5]:
         this_dir = datadir + os.sep + seed
         for dat in os.listdir(this_dir)[:100]:
           this_file = this_dir + os.sep + dat

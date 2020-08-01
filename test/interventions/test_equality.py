@@ -1,6 +1,5 @@
 from unittest import TestCase
 from ctoybox import Toybox, Input
-import toybox.interventions.breakout as breakout
 from toybox.interventions.breakout import BreakoutIntervention, Breakout
 from toybox.interventions.base import ProbEq, SetEq
 

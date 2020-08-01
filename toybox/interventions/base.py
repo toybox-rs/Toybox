@@ -228,7 +228,7 @@ class BaseMixin(ABC):
     # Only okay to add fields during initialization.
     if self._in_init: return
     if self.intervention is None: raise InterventionNoneError()
-    assert isinstance(self.intervention, Intervention), type(self.intervention)
+    assert isinstance(self.intervention, Intervention), '{}\t{}'.format(type(self.intervention), self.intervention)
 
     if name in self.immutable_fields: # and not :
       raise MutationError(name)
@@ -297,8 +297,18 @@ class BaseMixin(ABC):
       print('WARNING: no models for sampling.')
     assert False
 
-  @abstractmethod
-  def make_models(self): pass
+  #@abstractmethod
+  def make_models(modelmod, data, game, objclassname, *attributes): 
+    outdir = modelmod.replace('.', os.sep) #+ os.sep + objclassname.lower()
+    os.makedirs(outdir, exist_ok=True)
+    with open('resources/basemixin_template.py', 'r') as inf:
+      with open(outdir + os.sep + '__init__.py', 'w') as outf:
+        outf.write(inf.read().format(
+          attribute_names= ', '.join(attributes), 
+          game=game, 
+          obj=objclassname))
+      
+
 
   def __eq__(self, other) -> Union[bool, Eq]:
     return self.eq_mode(self) == other.eq_mode(other)
@@ -383,7 +393,30 @@ class Collection(BaseMixin):
   def decode(intervention, coll, clz): 
     return clz(intervention, coll)
 
-  def make_models(self, data): assert False
+  def make_models(modelmod, data, 
+    game_name=None, 
+    collmod_name=None, 
+    coll_name=None, 
+    coll_class=None, 
+    elt_name=None):
+    
+    assert game_name,    'Argument {} is required for make_models on a collection object'.format(game_name)
+    assert collmod_name, 'Argument {} is required for make_models on a collection object'.format(collmod_name)
+    assert coll_name,    'Argument {} is required for make_models on a collection object'.format(coll_name)
+    assert coll_class,   'Argument {} is required for make_models on a collection object'.format(coll_class)
+    assert elt_name,     'Argument {} is required for make_models on a collection object'.format(elt_name)
+
+    outdir = modelmod.replace('.', os.sep) + os.sep + coll_name
+    os.makedirs(outdir, exist_ok=True)
+    with open(outdir + os.sep + '__init__.py', 'w') as fout:
+      with open('resources/collection_template.py', 'r') as fin:
+        fout.write(fin.read().format(
+          game_name=game_name, 
+          collmod_name=collmod_name,
+          coll_name=coll_name,
+          coll_class=coll_class, 
+          elt_name=elt_name))
+
 
         
 class Intervention(ABC):

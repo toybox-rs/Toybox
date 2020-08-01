@@ -118,49 +118,20 @@ class Breakout(Game):
     return new
 
   def make_models(modelmod, data):
-    Game.make_models(modelmod, data)
-    outdir = modelmod.replace('.', '/') + os.sep
+    Game.make_models(modelmod, data, 'breakout', 'BreakoutIntervention')
+    outdir = modelmod.replace('.', os.sep) + os.sep
 
-    distr(outdir + 'ball_radius', [d.ball_radius for d in   data])
-    distr(outdir + 'paddle_speed', [d.paddle_speed for d in data])
-    distr(outdir + 'paddle_width', [d.paddle_width for d in data])
+    distr(outdir + 'ball_radius', [d.ball_radius for d in   data], 'num')
+    distr(outdir + 'paddle_speed', [d.paddle_speed for d in data], 'num')
+    distr(outdir + 'paddle_width', [d.paddle_width for d in data], 'num')
 
-    distr(outdir + 'reset', [d.reset for d in   data])
-    distr(outdir + 'is_dead', [d.reset for d in data])
+    distr(outdir + 'reset', [d.reset for d in   data], 'bool')
+    distr(outdir + 'is_dead', [d.reset for d in data], 'bool')
 
     Paddle.make_models(modelmod, [d.paddle for d in data])
     BrickCollection.make_models(modelmod, [d.bricks for d in data])
     BallCollection.make_models(modelmod, [d.balls for d in data])
 
-    with open(outdir + os.sep + '__init__.py', 'w') as f:
-      f.write("""from ctoybox import Toybox
-from toybox.interventions.breakout import BreakoutIntervention
-from toybox.interventions.core import get_property, Collection
-from . import * 
-import importlib
-
-def sample(*args, **kwargs):
-  with Toybox('breakout') as tb:
-    with BreakoutIntervention(tb) as intervention:
-      game = intervention.game
-      for key, v in vars(game).items():
-        if key in game.immutable_fields and not isinstance(v, Collection): continue
-
-        mod = importlib.import_module(kwargs['modelmod'] + '.' + key)
-        val = mod.sample(**kwargs)
-        if key in game.coersions: val = game.coersions[key](val)
-        if __debug__: 
-          before = get_property(game, key)
-
-        if key in game.immutable_fields:
-          v.clear()
-          for item in val:
-            v.append(item)
-        else: 
-          after = get_property(game, key, setval=val)
-          if __debug__:
-            print('Set {} to {} (was {})'.format(key, after, before))
-      return game""")
 
 class Paddle(BaseMixin):
 
@@ -181,21 +152,10 @@ class Paddle(BaseMixin):
     return '<position: {}, velocity: {}>'.format(self.position, self.velocity)
 
   def make_models(modelmod, data):
-    outdir = modelmod.replace('.', '/') + os.sep + 'paddle'
+    BaseMixin.make_models(modelmod + '.paddle', data, 'breakout', 'Paddle', 'velocity', 'position')
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'paddle'
     Vec2D.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
     Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
-
-    with open(outdir + os.sep + '__init__.py', 'w') as f:
-      f.write("""from . import velocity as v
-from . import position as p
-from toybox.interventions.breakout import Paddle
-
-def sample(*args, **kwargs):
-  obj = {'velocity' : v.sample(*args, **kwargs).encode(),
-         'position' : p.sample(*args, **kwargs).encode()}
-  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
-  return Paddle.decode(intervention, obj, Paddle)""")
-
 
   def sample(self, *queries):
     """Requires a seed state"""
@@ -224,27 +184,19 @@ class BrickCollection(Collection):
     return BrickCollection(intervention, bricks)
 
   def make_models(modelmod, data):
-    outdir = modelmod.replace('.', '/') + os.sep + 'bricks'
+    collname = 'bricks'
+    Collection.make_models(modelmod, data, 
+      game_name='breakout',
+      collmod_name=modelmod + '.' + collname,
+      coll_name=collname,
+      coll_class='BrickCollection',
+      elt_name='brick'
+      )
 
     max_bricks = max([len(d) for d in data])
 
     for i in range(max_bricks):
-      Brick.make_models(outdir, i, [d[i] for d in data if len(d) > i])
-
-    with open(outdir + os.sep + '__init__.py', 'w') as f:
-        f.write("""import importlib
-import os
-from toybox.interventions.breakout import BrickCollection
-
-def sample(*args, **kwargs):
-  bricks = []
-  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
-  for bricki in sorted(os.listdir(os.path.dirname(__file__))):
-    if bricki.startswith('brick'):
-      mod = importlib.import_module('{}.' + bricki)
-      bricks.append(mod.sample(*args, **kwargs).encode())
-  return BrickCollection.decode(intervention, bricks, BrickCollection)
-        """.format(modelmod + '.bricks'))
+      Brick.make_models(modelmod + '.' + collname, i, [d[i] for d in data if len(d) > i])
 
 
 class Brick(BaseMixin):
@@ -281,38 +233,20 @@ class Brick(BaseMixin):
   def __str__(self):
     return self.__repr__()
 
-  def make_models(outdir, i, data): 
-    outdir = outdir + os.sep + 'brick{:04d}'.format(i)
+  def make_models(modelmod, i, data): 
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'brick{:04d}'.format(i)
+    modelmod = modelmod + '.' + 'brick{:04d}'.format(i)
+    BaseMixin.make_models(modelmod, data, 'breakout', 'Brick', *Brick.expected_keys) 
 
-    distr(outdir + os.sep + 'destructible', [d.destructible for d in data])
-    distr(outdir + os.sep + 'depth', [d.depth for d in data])
+    distr(outdir + os.sep + 'destructible', [d.destructible for d in data], 'bool')
+    distr(outdir + os.sep + 'depth', [d.depth for d in data], 'num')
     Color.make_models(outdir + os.sep + 'color', [d.color for d in data])
-    distr(outdir + os.sep + 'alive', [d.alive for d in data])
-    distr(outdir + os.sep + 'points', [d.points for d in data])
+    distr(outdir + os.sep + 'alive', [d.alive for d in data], 'bool')
+    distr(outdir + os.sep + 'points', [d.points for d in data], 'num')
     Vec2D.make_models(outdir + os.sep + 'size', [d.size for d in data])
     Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
-    distr(outdir + os.sep + 'row', [d.row for d in data])
-    distr(outdir + os.sep + 'col', [d.col for d in data])
-
-    with open(outdir + os.sep + '__init__.py', 'w') as f:
-      module = outdir.replace(os.sep, '.')
-      f.write("""from . import * 
-import os
-import importlib
-from toybox.interventions.base import BaseMixin
-from toybox.interventions.breakout import Brick
-
-def sample(*args, **kwargs):
-  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
-  obj = dict()
-  features = [os.path.splitext(f)[0] for f in os.listdir(os.path.dirname(__file__)) if not f.startswith('__')]
-  for feature in features:
-    mod = importlib.import_module('{}.' + feature)
-    val = mod.sample(*args, **kwargs)
-    obj[feature] = mod.sample(*args, **kwargs).encode() if isinstance(val, BaseMixin) else val
-  return Brick.decode(intervention, obj, Brick)
-      """.format(module))
-
+    distr(outdir + os.sep + 'row', [d.row for d in data], 'num')
+    distr(outdir + os.sep + 'col', [d.col for d in data], 'num')
 
 class BallCollection(Collection):
 
@@ -327,29 +261,21 @@ class BallCollection(Collection):
       return '[{}]'.format(', '.join(str(b) for b in self))
 
   def make_models(modelmod, data):
-    outdir = modelmod.replace('.', '/') + os.sep + 'balls'
-    os.makedirs(outdir, exist_ok=True)
+    collname = 'balls'
+    Collection.make_models(modelmod, data,
+      game_name='breakout',
+      collmod_name=modelmod + '.' + collname,
+      coll_name=collname,
+      coll_class='BallCollection',
+      elt_name='ball'
+    )
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'balls'
+    # os.makedirs(outdir, exist_ok=True)
 
     max_balls = max([len(d) for d in data])
 
     for i in range(max_balls):
-      Ball.make_models(outdir, i, [d[i] for d in data if len(d) > i])
-    
-    with open(outdir + os.sep + '__init__.py', 'w') as f:
-      f.write("""import importlib
-from toybox.interventions.breakout import BallCollection
-import os
-
-def sample(*args, **kwargs):
-  balls = []
-  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
-  for balli in sorted(os.listdir(os.path.dirname(__file__))):
-    if balli.startswith('ball'):
-      mod = importlib.import_module('{}.' + balli)
-      balls.append(mod.sample(*args, **kwargs).encode())
-  return BallCollection.decode(intervention, balls, BallCollection)
-      """.format(modelmod + '.balls'))
-
+      Ball.make_models(modelmod + '.' + collname, i, [d[i] for d in data if len(d) > i])
 
 class Ball(BaseMixin): 
 
@@ -365,31 +291,13 @@ class Ball(BaseMixin):
   def __str__(self):
     return 'Ball(position: {}, velocity: {})'.format(self.position, self.velocity)
 
-  def make_models(outdir, i, data):
-    outdir = outdir + os.sep + 'ball{:04d}'.format(i)
-    os.makedirs(outdir, exist_ok=True)
+  def make_models(modelmod, i, data):
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'ball{:04d}'.format(i)
+    modelmod = modelmod + '.' + 'ball{:04d}'.format(i)
+    BaseMixin.make_models(modelmod, data, 'breakout', 'Ball', *Ball.expected_keys)
 
     Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
     Vec2D.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
-
-    with open(outdir + os.sep + '__init__.py', 'w') as f:
-      module = outdir.replace(os.sep, '.')
-      f.write("""from . import * 
-import os
-import importlib
-from toybox.interventions.base import BaseMixin
-from toybox.interventions.breakout import Ball
-
-def sample(*args, **kwargs):
-  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
-  obj = dict()
-  features = [os.path.splitext(f)[0] for f in os.listdir(os.path.dirname(__file__)) if not f.startswith('__')]
-  for feature in features:
-    mod = importlib.import_module('{}.' + feature)
-    val = mod.sample(*args, **kwargs)
-    obj[feature] = mod.sample(*args, **kwargs).encode() if isinstance(val, BaseMixin) else val
-  return Ball.decode(intervention, obj, Ball)
-      """.format(module))
 
 
 class BreakoutIntervention(Intervention):
@@ -537,7 +445,3 @@ if __name__ == "__main__":
   parser.add_argument('--partial_config', type=str, default="null")
   parser.add_argument('--save_json', type=bool, default=False)
   args = parser.parse_args()
-
-
-
-

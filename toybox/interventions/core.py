@@ -12,7 +12,27 @@ except:
   import pickle
 
 
-def distr(fname, data):
+def distr(fname, data, datatype, cat=None):
+  if datatype == 'num':
+    inf_support(fname, data)
+  elif datatype == 'bool':
+    bool_support(fname, data)
+  else: assert False
+
+
+def bool_support(fname, data):
+  # sample from a beta someday?
+  assert type(data[0]) == bool
+  p = len([t for t in data if t]) / len(data)
+  p = min(1.0, p + (0.001 * random.random()))
+  p = max(0.0, p - (0.001 * random.random()))
+  with open(fname + '.py', 'w') as f:
+    f.write(
+      "from random import random\n\ndef sample(*args, **kwargs):\n\treturn random() < {}".format(p)
+    )
+  
+
+def inf_support(fname, data):
   # select bandwidth according to scotts rule
   # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html
   bandwidth = len(data)**(-1./5)
@@ -60,13 +80,17 @@ class Game(BaseMixin):
     # Python doesn't do great with multiple inheritence, which is 
     # what a truly abstract version of this class would look like.
 
-  def make_models(modelmod, data):
+  def make_models(modelmod, data, game_name, intervention_name):
     outdir = modelmod.replace('.', '/') + os.sep
     logging.info('Creating models in {}'.format(outdir))
 
-    distr(outdir + 'score', [d.score for d in data])
-    distr(outdir + 'lives', [d.lives for d in data])
-    distr(outdir + 'level', [d.level for d in data])
+    distr(outdir + 'score', [d.score for d in data], 'num')
+    distr(outdir + 'lives', [d.lives for d in data], 'num')
+    distr(outdir + 'level', [d.level for d in data], 'num')
+
+    with open(outdir + os.sep + '__init__.py', 'w') as outf:
+      with open('resources/game_template.py', 'r') as inf:
+        outf.write(inf.read().format(game=game_name, intervention=intervention_name))
 
 
 class Direction(BaseMixin):
@@ -120,18 +144,12 @@ class Vec2D(BaseMixin):
     return '({}, {})'.format(self.x, self.y)
 
   def make_models(outdir, data):
-    distr(outdir + os.sep + 'x', [d.x for d in data])
-    distr(outdir + os.sep + 'y', [d.y for d in data])
-    with open(outdir + os.sep + '__init__.py', 'w') as f:
-      f.write("""from . import x, y
-from toybox.interventions.core import Vec2D
+    distr(outdir + os.sep + 'x', [d.x for d in data], 'num')
+    distr(outdir + os.sep + 'y', [d.y for d in data], 'num')
+    with open(outdir + os.sep + '__init__.py', 'w') as outf:
+      with open('resources/vec2d_init.py', 'r') as inf:
+        outf.write(inf.read())
 
-def sample(*args, **kwargs):
-  intervention = kwargs['intervention'] if 'intervention' in kwargs else None
-  obj = { 'x' : x.sample(*args, **kwargs), 'y' : y.sample(*args, **kwargs)}
-  return Vec2D.decode(intervention, obj, Vec2D)
-""")
-    
   
 class Color(BaseMixin):
 
@@ -157,10 +175,10 @@ class Color(BaseMixin):
     return "({}, {}, {}, {})".format(self.r, self.g, self.b, self.a)
 
   def make_models(outdir, data): 
-    distr(outdir + os.sep + 'r', [d.r for d in data])
-    distr(outdir + os.sep + 'g', [d.g for d in data])
-    distr(outdir + os.sep + 'b', [d.b for d in data])
-    distr(outdir + os.sep + 'a', [d.a for d in data])
+    distr(outdir + os.sep + 'r', [d.r for d in data], 'num')
+    distr(outdir + os.sep + 'g', [d.g for d in data], 'num')
+    distr(outdir + os.sep + 'b', [d.b for d in data], 'num')
+    distr(outdir + os.sep + 'a', [d.a for d in data], 'num')
     with open(outdir + os.sep + '__init__.py', 'w') as f:
       f.write("""from . import r, g, b, a
 from toybox.interventions.core import Color
