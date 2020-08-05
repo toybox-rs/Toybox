@@ -37,4 +37,5 @@ ctoybox/toybox/toybox/sample_tests/models
 PyMonad
 build
 dist
+.idea
 toybox.egg-info
