@@ -5,7 +5,6 @@ try:
 except:
   import json
 import random
-from pymonad import Either
 from typing import Optional
 """An API for interventions on Amidar."""
 
@@ -131,7 +130,8 @@ class MovementAI(BaseMixin):
         start_dir           : Optional[Direction]=None, 
         dir                 : Optional[Direction]=None,
         vision_distance     : Optional[int]=None, 
-        player_seen         : Optional[bool]=None):
+        player_seen         : Optional[bool]=None,
+        **kwargs):
 
       super().__init__(intervention)
       assert protocol in MovementAI.mvmt_protocols, '%s not a recognized movement protocol' % protocol
@@ -552,83 +552,7 @@ class AmidarIntervention(Intervention):
 
 if __name__ == "__main__":
   with Toybox('amidar') as tb:
-
-    # This should all be moved to a testing framework
-
-    # random track position
-    with AmidarIntervention(tb) as intervention:
-      pos = intervention.get_random_track_position()
-
-    # player random start
-    with AmidarIntervention(tb) as intervention:
-      intervention.set_player_random_start()
-    
-    # test painting
-    with AmidarIntervention(tb) as intervention:
-      tile = intervention.get_tile_by_pos(tx=0, ty=0)
-      assert tile.intervention
-      intervention.set_tile_tag(tile, Tile.Painted)
-      assert intervention.dirty_state
-
-    with AmidarIntervention(tb) as intervention:
-      assert intervention.get_tile_by_pos(0, 0).tag == Tile.Painted
-      assert not intervention.dirty_state
-
-
-    # test unpainting
-    with AmidarIntervention(tb) as intervention:
-      tile = intervention.get_tile_by_pos(0, 0)
-      intervention.set_tile_tag(tile, Tile.ChaseMarker)
-      assert intervention.dirty_state
-    
-    with AmidarIntervention(tb) as intervention:
-      assert intervention.get_tile_by_pos(0, 0).tag == Tile.ChaseMarker
-      assert not intervention.dirty_state
-
-
-    # get number of enemies
-    with AmidarIntervention(tb) as intervention: 
-      assert len(intervention.game.enemies) == 5
-      assert not intervention.dirty_state
-
-    # remove enemy
-    with AmidarIntervention(tb) as intervention:
-      enemies = intervention.game.enemies
-      enemies.remove(enemies[4])
-      assert len(enemies) == len(intervention.game.enemies)
-      assert intervention.dirty_state
-    # check number of enemies
-    with AmidarIntervention(tb) as intervention: 
-      assert len(intervention.game.enemies) == 4
-      assert not intervention.dirty_state
-
-
-    # add enemy with 'EnemyLookupAI' protocol
-    with AmidarIntervention(tb) as intervention: 
-      enemies = intervention.game.enemies
-      # copy the second enemy
-      enemy = Enemy.decode(intervention, enemies[1].encode(), Enemy)
-      next = max([e.ai.next for e in enemies]) + 1
-      # Not sure what default route index refers to, so I am picking an arbitrary number
-      default_route_index = 10
-      intervention.set_enemy_protocol(enemy, MovementAI.EnemyLookupAI, 
-        next=next, default_route_index=default_route_index) 
-      enemies.append(enemy)
-      assert intervention.dirty_state
-
-    with AmidarIntervention(tb) as intervention: 
-      assert len(intervention.game.enemies) == 5
-      assert not intervention.dirty_state
-
     # change to 'EnemyPerimeterAI' protocol
-    with AmidarIntervention(tb) as intervention: 
-      enemy = intervention.game.enemies[-1]
-      intervention.set_enemy_protocol(enemy, MovementAI.EnemyPerimeterAI,
-        start=TilePoint(intervention, tx=0, ty=0))
-      assert intervention.dirty_state
-    with AmidarIntervention(tb) as intervention: 
-      assert intervention.game.enemies[-1].ai.protocol == MovementAI.EnemyPerimeterAI
-      assert not intervention.dirty_state
 
     # change to 'EnemyAmidarMvmt' protocol
     with AmidarIntervention(tb) as intervention: 

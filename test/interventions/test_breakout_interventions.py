@@ -32,8 +32,15 @@ class BreakoutInterventionTests(TestCase):
 
   def test_dirty_state(self):
     with BreakoutIntervention(self.tb) as intervention:
-        intervention.game.lives = 1
-        assert intervention.dirty_state
+      intervention.game.lives = 1
+      self.assertTrue(intervention.dirty_state)
+      self.assertFalse(intervention.dirty_config)
+
+  def test_not_dirty_state(self):
+    with BreakoutIntervention(self.tb) as intervention:
+      lives = intervention.game.lives
+      self.assertFalse(intervention.dirty_state)
+      self.assertFalse(intervention.dirty_config)
     
   def test_removal_from_collection(self):
     with BreakoutIntervention(self.tb) as intervention:

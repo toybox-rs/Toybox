@@ -234,7 +234,9 @@ class BaseMixin(ABC):
       raise MutationError(name)
     if adding_new:
       raise MutationError("Cannot add new field %s to %s" % (name, self.__class__.__name__))
-    self.intervention.dirty_state = True    
+    if name != '_in_init':
+      # Don't want to set dirty_state when we are flipping init
+      self.intervention.dirty_state = True    
     
   
   def decode(intervention, obj, clz):
