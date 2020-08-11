@@ -433,15 +433,3 @@ class BreakoutIntervention(Intervention):
         """Clears the board of all bricks"""
         for brick in self.game.bricks:
             brick.alive = False
-
-
-if __name__ == "__main__":
-  import argparse , logging
-  from ctoybox import Toybox, Input
-
-  logging.basicConfig(level=logging.DEBUG)
-
-  parser = argparse.ArgumentParser(description='test Breakout interventions')
-  parser.add_argument('--partial_config', type=str, default="null")
-  parser.add_argument('--save_json', type=bool, default=False)
-  args = parser.parse_args()
