@@ -10,7 +10,7 @@ pygame
 scipy 
 six 
 tensorboard
-tensorflow<2.0
+tensorflow<=2.2
 ctoybox==0.4.0
 ujson
 pymonad
