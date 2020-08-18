@@ -24,7 +24,8 @@ class EnemyRemovalTest(AmidarToyboxTestBase):
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
-      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      with ami.AmidarIntervention(self.getToybox()) as intervention:
+        game = ami.Amidar.decode(intervention, self.final_state, ami.Amidar)
       painted = sum([
           sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
                for row in game.board.tiles]) 
@@ -69,7 +70,8 @@ class OneEnemyTargetTest(AmidarToyboxTestBase):
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
-      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      with ami.AmidarIntervention(self.getToybox()) as intervention:
+        game = ami.Amidar.decode(intervention, self.final_state, ami.Amidar)
       painted = sum([
           sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
                for row in game.board.tiles]) 
@@ -119,7 +121,8 @@ class GangUpNoJumpRandomTest(AmidarToyboxTestBase):
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
-      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      with ami.AmidarIntervention(self.getToybox()) as intervention:
+        game = ami.Amidar.decode(intervention, self.final_state, ami.Amidar)
       painted = sum([
           sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
                for row in game.board.tiles]) 
@@ -188,7 +191,8 @@ class GangUpNoJumpTargetTest(AmidarToyboxTestBase):
 
     def onTrialEnd(self):
       self.assertIsNotNone(self.final_state)
-      game = ami.Amidar.decode(self, self.final_state, ami.Amidar)
+      with ami.AmidarIntervention(self.getToybox()) as intervention:
+        game = ami.Amidar.decode(intervention, self.final_state, ami.Amidar)
       painted = sum([
           sum([int(tile.tag == ami.Tile.Painted) for tile in row])\
                for row in game.board.tiles]) 

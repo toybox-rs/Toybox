@@ -202,6 +202,7 @@ class BaseMixin(ABC):
   def __init__(self, intervention):
     self._in_init = True
     self.intervention = intervention
+    self.schema = intervention.toybox.schema_for_state()
 
 
   # Refactor notes 4/17/2020 (EMT)

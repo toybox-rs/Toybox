@@ -8,7 +8,9 @@ except:
 
 class SpaceInvaders(Game):
 
-    expected_keys = Game.expected_keys + ['enemy_lasers', 'ufo', 'rand', 'shields', 'enemies_movement', 'life_display_timer', 'ship', 'lives', 'score', 'ship_laser', 'enemy_shot_delay', 'level', 'enemies']
+    with Toybox('space_invaders') as tb:
+        expected_keys = tb.schema_for_state()['required']
+        eq_keys = [k for k in expected_keys if k != 'rand']
     immutable_fields = Game.immutable_fields
 
     def __init__(self, intervention,
@@ -21,7 +23,7 @@ class SpaceInvaders(Game):
         self.ship_laser         =                Laser.decode(intervention, ship_laser,       Laser) if ship_laser else None
         self.shields            = SpriteDataCollection.decode(intervention, shields,          SpriteDataCollection)
         self.enemies            =      EnemyCollection.decode(intervention, enemies,          EnemyCollection)
-        self.enemies_movement  = EnemiesMovementState.decode(intervention, enemies_movement, EnemiesMovementState)
+        self.enemies_movement   = EnemiesMovementState.decode(intervention, enemies_movement, EnemiesMovementState)
         self.enemy_lasers       =      LaserCollection.decode(intervention, enemy_lasers,     LaserCollection)
         self.ufo                =                  Ufo.decode(intervention, ufo,              Ufo)
 
@@ -30,10 +32,12 @@ class SpaceInvaders(Game):
         self._in_init           = False
 
 
+
 class Player(BaseMixin):
 
     expected_keys = ['x', 'y', 'w', 'h', 'speed', 'color', 'alive', 'death_counter', 'death_hit_1']
     immutable_fields = []
+    eq_keys = expected_keys
 
     def __init__(self, intervention, 
         x=None, y=None, w=None, h=None, speed=None, color=None, 
@@ -96,6 +100,7 @@ class Ufo(BaseMixin):
 
     expected_keys = ['x', 'y', 'appearance_counter', 'death_counter']
     immutable_fields = []
+    eq_keys = expected_keys
 
     def __init__(self, intervention, x=None, y=None, appearance_counter=None, death_counter=None):
 
@@ -110,6 +115,7 @@ class Enemy(BaseMixin):
 
     expected_keys = ['x', 'y', 'row', 'col', 'id', 'alive', 'points', 'death_counter']
     immutable_fields = ['intervention']
+    eq_keys = [k for k in expected_keys if k != 'id']
 
     def __init__(self, intervention, x=None, y=None, row=None, col=None, id=None, alive=None, points=None, death_counter=None):
 
@@ -139,6 +145,7 @@ class EnemiesMovementState(BaseMixin):
 
     expected_keys = ['move_counter', 'move_dir', 'visual_orientation']
     immutable_fields = []
+    eq_keys = expected_keys
 
     def __init__(self, intervention, move_counter=None, move_dir=None, visual_orientation=None):
 

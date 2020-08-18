@@ -71,7 +71,6 @@ class LastBrick(BreakoutToyboxTestBase):
         path = 'models/BreakoutToyboxNoFrameskip-v4.regress.model'
         with brk.BreakoutIntervention(self.getToybox()) as intervention:
             bricks = intervention.game.bricks
-            intervention.game.reset = False
         with tf.Session(graph=tf.Graph()):
             model = oai.getModel(self.env, 'ppo2', seed, path)
             bricks = random.choice(bricks, 2)

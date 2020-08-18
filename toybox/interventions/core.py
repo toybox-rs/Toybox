@@ -1,22 +1,37 @@
 from toybox.interventions.base import * 
+
+from contextlib import AbstractContextManager
+from numpy import array
+from sklearn.neighbors import KernelDensity
 from typing import List, Any, Union
+
 import math
 import random
 import re
 import sys
-from sklearn.neighbors import KernelDensity
-from numpy import array
 try:
   import cPickle as pickle
 except:
   import pickle
 
+def distr(game, dname, objname, data, cat=None):
+  objdata = game.schema[objname]
+  datatype = objdata['type']
+  dataformat = objdata['format'] if 'format' in objdata else None
+  fname = dname + os.sep + objname
 
-def distr(fname, data, datatype, cat=None):
-  if datatype == 'num':
-    inf_support(fname, data)
-  elif datatype == 'bool':
+  if datatype == 'number':
+    if dataformat == 'double':
+      inf_support(fname, data)
+    else:
+      assert False, '{} {} {}'.format(objname, datatype, dataformat)
+
+  elif datatype == 'array': 
+    assert False, 'Need a custom sampling procedure for arrays'
+
+  elif datatype == 'boolean':
     bool_support(fname, data)
+    
   else: assert False
 
 
@@ -68,7 +83,14 @@ class Game(BaseMixin):
       'level' : lambda x : int(x)
   }
 
-  def __init__(self, intervention, score, lives, rand, level, *args, **kwargs):
+  def __init__(self, 
+    intervention : Intervention, 
+    score: int, 
+    lives: int, 
+    rand, 
+    level: int,
+    *args, **kwargs):
+
     super().__init__(intervention)
     self.score = score
     self.rand = rand
@@ -217,6 +239,7 @@ class ColorCollectionCollection(BaseMixin):
 
   expected_keys = []
   immutable_fields = BaseMixin.immutable_fields + ['coll']
+  eq_keys = []
 
   def __init__(self, intervention, sprites):
     super().__init__(intervention)

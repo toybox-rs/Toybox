@@ -35,19 +35,11 @@ def query_hack(query):
 
 class Breakout(Game):
 
-  expected_keys = Game.expected_keys + ['paddle', 'is_dead', 'balls', 'ball_radius', 'paddle_speed', 'reset', 'bricks', 'paddle_width']
+  with Toybox('breakout') as tb:
+    schema = tb.schema_for_state()
+    expected_keys = schema['required']
+    eq_keys = [k for k in expected_keys if k != 'rand']
   immutable_fields = Game.immutable_fields + ['balls', 'bricks', 'reset']
-  eq_keys = ['score'       ,
-             'lives'       ,
-             'level'       ,
-             'paddle'      ,
-             'reset'       ,
-             'ball_radius' ,
-             'bricks'      ,
-             'balls'       ,
-             'paddle_speed',
-             'paddle_width',
-             'is_dead'     ]
 
   coersions = { **Game.coersions, 
     'is_dead' : lambda x : x > 0.5,
@@ -62,15 +54,18 @@ class Breakout(Game):
     reset=None, is_dead=None):
 
       super().__init__(intervention, score, lives, rand, level)
-      self.reset = Breakout.coersions['reset'](reset)
-      self.paddle = Paddle.decode(intervention, paddle, Paddle)
-      self.ball_radius = ball_radius
-      self.bricks = BrickCollection.decode(intervention, bricks, BrickCollection)
-      self.balls = BallCollection.decode(intervention, balls, BallCollection)
+      # When we auto-generate this code, we'll make coersions a defaultdict
+      # and have the default be the identity function, and we will call 
+      # coersions on every attribute.
+      self.reset        = Breakout.coersions['reset'](reset)
+      self.paddle       = Paddle.decode(intervention, paddle, Paddle)
+      self.ball_radius  = ball_radius
+      self.bricks       = BrickCollection.decode(intervention, bricks, BrickCollection)
+      self.balls        = BallCollection.decode(intervention, balls, BallCollection)
       self.paddle_speed = paddle_speed
       self.paddle_width = paddle_width
-      self.is_dead = Breakout.coersions['is_dead'](is_dead)
-      self._in_init = False  
+      self.is_dead      = Breakout.coersions['is_dead'](is_dead)
+      self._in_init     = False
 
   def __copy__(self):
     return Breakout(
@@ -121,12 +116,11 @@ class Breakout(Game):
     Game.make_models(modelmod, data, 'breakout', 'BreakoutIntervention')
     outdir = modelmod.replace('.', os.sep) + os.sep
 
-    distr(outdir + 'ball_radius', [d.ball_radius for d in   data], 'num')
-    distr(outdir + 'paddle_speed', [d.paddle_speed for d in data], 'num')
-    distr(outdir + 'paddle_width', [d.paddle_width for d in data], 'num')
-
-    distr(outdir + 'reset', [d.reset for d in   data], 'bool')
-    distr(outdir + 'is_dead', [d.reset for d in data], 'bool')
+    distr(Breakout, outdir, 'ball_radius', [d.ball_radius for d in   data])
+    distr(Breakout, outdir, 'paddle_speed', [d.paddle_speed for d in data])
+    distr(Breakout, outdir, 'paddle_width', [d.paddle_width for d in data])
+    distr(Breakout, outdir, 'reset', [d.reset for d in   data])
+    distr(Breakout, outdir, 'is_dead', [d.reset for d in data])
 
     Paddle.make_models(modelmod, [d.paddle for d in data])
     BrickCollection.make_models(modelmod, [d.bricks for d in data])

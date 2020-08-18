@@ -13,17 +13,11 @@ from typing import Optional
 
 class Amidar(Game):
 
-  expected_keys = Game.expected_keys + ['enemies', 'player', 'jumps', 'jump_timer', 'chase_timer', 'board']
+  with Toybox('amidar') as tb:
+    expected_keys = tb.schema_for_state()['required']
+    eq_keys = [k for k in expected_keys if k != 'rand']
+  #expected_keys = Game.expected_keys + ['enemies', 'player', 'jumps', 'jump_timer', 'chase_timer', 'board']
   immutable_fields = Game.immutable_fields + ['enemies']
-  eq_keys = ['score'      ,
-             'lives'      ,
-             'level'      ,
-             'enemies'    ,
-             'jumps'      ,
-             'jump_timer' ,
-             'chase_timer',
-             'board'      ,
-             'player'     ]
   
   def __init__(self, intervention, 
     score=None, player=None, lives=None, rand=None, level=None,
