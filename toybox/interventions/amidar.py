@@ -143,6 +143,14 @@ class MovementAI(BaseMixin):
       self.player_seen = player_seen
       self._in_init = False
 
+    def __repr__(self):
+        return 'MovementAI(protocol: {}, next: {}, route_index: {})'.format(self.protocol, self.next, self.default_route_index)
+        #or, if you wanted everything....
+        #return 'MovementAI({})'.format(' '.join([key+str(self.__dict__[key]) for key in self.__dict__.keys()]))
+
+    def __str__(self):
+        return self.__repr__()
+
     def decode(intervention, ai, clz):
       ai_name = list(ai.keys())[0]
       ai_kwds = ai[ai_name]
@@ -174,13 +182,19 @@ class Enemy(BaseMixin):
       self.ai = MovementAI.decode(intervention, ai, MovementAI)
       self._in_init = False
 
+    def __repr__(self):
+        return 'Enemy({})'.format(' '.join([key+str(self.__dict__[key]) for key in Enemy.expected_keys]))
+
+    def __str__(self):
+        return self.__repr__()
+
     def make_models(self, data): assert False
 
 class Player(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
     eq_keys = expected_keys
-    
+
     def __init__(self, intervention, history, step, position, caught, speed, ai):
         super().__init__(intervention)
         self.history = history
@@ -213,9 +227,11 @@ class Board(BaseMixin):
       self.boxes = BoxCollection.decode(intervention, boxes,  BoxCollection)
       self.tiles = TileCollection.decode(intervention, tiles, TileCollection)
       self._in_init = False
-      
+
     def make_models(self, data): assert False
 
+    #def decode(intervention, js, clz):
+    #  return Board(intervention, **js)
 
 class TileCollection(Collection):
     # Convenience class to deal with the fact that the tiles blob is
@@ -259,6 +275,12 @@ class WorldPoint(BaseMixin):
       self.x = x
       self.y = y
       self._in_init = False
+
+    def __repr__(self):
+        return 'WorldPoint({})'.format(' '.join([key+str(self.__dict__[key]) for key in WorldPoint.expected_keys]))
+
+    def __str__(self):
+        return self.__repr__()
 
     def make_models(self, data): assert False
 
