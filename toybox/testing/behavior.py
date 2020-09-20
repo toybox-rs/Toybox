@@ -21,6 +21,7 @@ class BehavioralFixture(unittest.TestCase, ABC):
     pass
 
   def setUp(self, trials=30, timeout=5e6, record_period=10):
+    # todo handle kwargs
     self.obs = self.env.reset()
     self.trials = trials
     self.timeout = timeout
@@ -43,7 +44,7 @@ class BehavioralFixture(unittest.TestCase, ABC):
     assert False 
 
   @abstractmethod
-  def onTestEnd(self):
+  def onTestEnd(self, data=None):
     assert False
 
   @abstractmethod
@@ -69,6 +70,10 @@ class BehavioralFixture(unittest.TestCase, ABC):
   def resetEnv(self):
     assert False
 
+  @abstractmethod
+  def onTrialStart(self):
+    assert False
+
   def runTest(self, model, collection=['n/a']):
     import toybox.testing.envs.gym as gym
     trials_data = []
@@ -76,14 +81,15 @@ class BehavioralFixture(unittest.TestCase, ABC):
       with self.subTest(obj=obj):
         for trial in range(self.trials):
           print('Running trial %d of %s for %s...' % (trial+1, self.trials, obj))
+          self.onTrialStart()
           while not self.isDone():
             if self.shouldIntervene(obj=obj): self.intervene(obj=obj)
-            #self.env.render()
-            #time.sleep(1/30.)
+            self.env.render()
+            time.sleep(1/30.)
             self.takeAction(model)
             self.stepEnv()
           if self.toReset: self.resetConfig(self.toReset)
           trials_data.append(self.onTrialEnd()) 
           print('Resetting environment.\n')
           self.resetEnv()
-    self.onTestEnd()    
+    self.onTestEnd(trials_data)
