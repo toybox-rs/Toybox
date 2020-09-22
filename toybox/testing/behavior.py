@@ -20,8 +20,8 @@ class BehavioralFixture(unittest.TestCase, ABC):
   def tearDownEnv(cls):
     pass
 
-  def setUp(self, trials=30, timeout=5e6, record_period=10):
-    # todo handle kwargs
+  def setUp(self, trials=30, timeout=5e6, record_period=10, **kwargs):
+    # todo handle args
     self.obs = self.env.reset()
     self.trials = trials
     self.timeout = timeout
@@ -30,12 +30,15 @@ class BehavioralFixture(unittest.TestCase, ABC):
     self.lives = 10000
     self.tick = 0
     self.done = False
-    # Adding this because of problems with gym wrappers 
-    # resetting the environment before we have the chance to 
+
+    # todo handle kwargs
+
+    # Adding this because of problems with gym wrappers
+    # resetting the environment before we have the chance to
     # grab final state information
     self.final_state = None
 
-  
+
   def hasTimedOut(self):
     return self.tick > self.timeout
 
@@ -84,8 +87,8 @@ class BehavioralFixture(unittest.TestCase, ABC):
           self.onTrialStart()
           while not self.isDone():
             if self.shouldIntervene(obj=obj): self.intervene(obj=obj)
-            self.env.render()
-            time.sleep(1/30.)
+            #self.env.render()
+            #time.sleep(1/30.)
             self.takeAction(model)
             self.stepEnv()
           if self.toReset: self.resetConfig(self.toReset)
