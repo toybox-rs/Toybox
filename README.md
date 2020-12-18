@@ -23,6 +23,11 @@ We have a lenghtier paper on [ArXiV](https://arxiv.org/pdf/1905.02825.pdf) and c
 
 The rust implementations of the games have moved to a different repository: [toybox-rs/toybox-rs](https://github.com/toybox-rs/toybox-rs)
 
+## Installation
+
+    pip install ctoybox
+    pip install git+https://github.com/toybox-rs/Toybox
+
 ## Play the games (using pygame)
 
     pip install ctoybox pygame
