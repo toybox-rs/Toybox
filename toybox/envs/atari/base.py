@@ -48,7 +48,7 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.viewer = None
 
         # Required for compatability with OpenAI Gym's Atari wrappers
-        self.np_random = np_random
+        self._np_random = None
         self.ale = MockALE(toybox)
         utils.EzPickle.__init__(self, game, 'human', frameskip, repeat_action_probability)
         
@@ -72,12 +72,20 @@ class ToyboxBaseEnv(AtariEnv, ABC):
             high=self._pixel_high, 
             shape=self._dim, 
             dtype='uint8')
-    
+
+    @property
+    def np_random(self):
+        # Following openai/gym's implementation (see e.g. space.py)
+        # Make sure we have seeded the np_random
+        if self._np_random is None:
+            self.seed()
+        return self._np_random
+
     def seed(self, seed=None):
         """
         This is totally the implementation in AtariEnv in openai/gym.
         """
-        self.np_random, seed1 = seeding.np_random(seed)
+        self._np_random, seed1 = seeding.np_random(seed)
         # Derive a random seed. This gets passed as a uint, but gets
         # checked as an int elsewhere, so we need to keep it below
         # 2**31.
