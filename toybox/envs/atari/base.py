@@ -106,7 +106,11 @@ class ToyboxBaseEnv(AtariEnv, ABC):
     # From OpenAI Gym Baselines
     # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
     def _get_obs(self):
-        return self.toybox.get_state()
+        obs =  self.toybox.get_state()
+        # Fix observation for RGB image (we are still getting alpha channel)
+        if self._rgba == 3:
+            obs = obs[:, :, :-1]
+        return obs
 
     def step(self, action_index):
         obs = None
