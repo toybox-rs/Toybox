@@ -1,5 +1,5 @@
 from toybox.interventions.base import *
-from toybox.interventions.core import * 
+from toybox.interventions.core import *
 try:
   import ujson as json
 except:
@@ -327,6 +327,11 @@ class TilePoint(BaseMixin):
 
     def make_models(self, data): assert False
 
+    def manhattan(t_a, t_b):
+      delta_x = abs(t_a.tx - t_b.tx)
+      delta_y = abs(t_a.ty - t_b.ty)
+      return delta_x + delta_y
+
 
 class AmidarIntervention(Intervention):
 
@@ -349,9 +354,9 @@ class AmidarIntervention(Intervention):
     regular = 'regular'
     modes = [jump, chase, regular]
 
-    def __init__(self, tb, game_name='amidar'):
+    def __init__(self, tb, game_name='amidar', eq_mode=StandardEq):
       # check that the simulation in tb matches the game name.
-      Intervention.__init__(self, tb, game_name, Amidar)
+      Intervention.__init__(self, tb, game_name, Amidar, eq_mode=eq_mode)
 
     def get_random_tile(self, pred=lambda tile: True): 
       """Returns a random tile object, filtered by the input predicate.
@@ -475,7 +480,7 @@ class AmidarIntervention(Intervention):
 
     def is_tile_walkable(self, tile):
       # formerly check_tile_position(self, tdict)
-      return tile.tag != Tile.empty
+      return tile.tag != Tile.Empty
 
     def set_tile_tag(self, tile, tag):
       assert tag in Tile.tags, 'Unrecognized tile tag: %s' % tag
@@ -507,61 +512,127 @@ class AmidarIntervention(Intervention):
       return self.tilepoint_to_worldpoint(tp)   
 
     def worldpoint_to_tilepoint(self, wp):
-     return TilePoint(self, 
-       *self.toybox.query_state_json('world_to_tile', wp.encode()))   
+      return TilePoint(self,
+        *self.toybox.query_state_json('world_to_tile', wp.encode()))
+
+    def get_adjacent_tiles(self, tp: TilePoint, filter_fn = lambda t: t):
+      from resources.lookup_util import tile_to_route_id
+      tid = tile_to_route_id(self, tp.tx, tp.ty)
+      def adj(t):
+        if t.tx == tp.tx + 1 and t.ty == tp.ty:
+          return filter_fn(t)
+        if t.tx == tp.tx - 1 and t.ty == tp.ty:
+          return filter_fn(t)
+        if t.tx == tp.tx and t.ty == tp.ty + 1:
+          return filter_fn(t)
+        if t.tx == tp.tx and t.ty == tp.ty - 1:
+          return filter_fn(t)
+        return False
+      return self.filter_tiles(pred=adj)
+
+    def enemy_distances_from_tile(self, t, dist_fn=TilePoint.manhattan):
+      tp = self.tile_to_tilepoint(t)
+      etps = [self.worldpoint_to_tilepoint(e.position) for e in self.game.enemies]
+      e_dists = [dist_fn(etp, tp) for etp in etps]
+      return e_dists
 
     def set_player_random_start(self, min_enemy_distance=5):
+      from numpy import all
       def within_min_manhattan(t):
-        tp = self.tile_to_tilepoint(t)
-        for e in self.game.enemies:
-          etp = self.worldpoint_to_tilepoint(e.position)
-          delta_x = abs(etp.tx - tp.tx)
-          delta_y = abs(etp.ty - tp.ty)
-          if delta_x + delta_y < min_enemy_distance:
-            return False
-        return True
-          
+        manhattan_dists = self.enemy_distances_from_tile(t, TilePoint.manhattan)
+        safe_range = [d < min_enemy_distance for d in manhattan_dists]
+        return all(safe_range)
       pos = self.get_random_tile(pred=within_min_manhattan)
       self.game.player.position = self.tile_to_worldpoint(pos)
 
-    def get_random_dir_for_tile(self, tiles):
-        assert tile.tag != "Empty"
-        selected = False
-        dirs = ["Up", "Down", "Left", "Right"]
+    def get_random_dir_for_tile(self, tile):
+      assert tile.tag != "Empty"
+      selected = False
+      dirs = ["Up", "Down", "Left", "Right"]
 
-        d = None
-        while not selected: 
-            next_tid = {}
-            next_tid['tx'] = tile.tx
-            next_tid['ty'] = tile.ty
+      d = None
+      while not selected:
+        next_tid = {}
+        next_tid['tx'] = tile.tx
+        next_tid['ty'] = tile.ty
 
-            if d is not None: 
-                dirs.remove(d)
-                if not dirs: 
-                    d = None
+        if d is not None:
+          dirs.remove(d)
+        if not dirs:
+          d = None
 
-            d = random.choice(dirs)
-            if d == "Up":
-                next_tid['ty'] = next_tid['ty'] - 1
-            elif d == "Down": 
-                next_tid['ty'] = next_tid['ty'] + 1
-            elif d == "Left": 
-                next_tid['tx'] = next_tid['tx'] - 1
-            elif d == "Right":
-                next_tid['tx'] = next_tid['tx'] + 1
+        d = random.choice(dirs)
+        if d == "Up":
+          next_tid['ty'] = next_tid['ty'] - 1
+        elif d == "Down":
+            next_tid['ty'] = next_tid['ty'] + 1
+        elif d == "Left":
+            next_tid['tx'] = next_tid['tx'] - 1
+        elif d == "Right":
+            next_tid['tx'] = next_tid['tx'] + 1
 
-            if d is not None: 
-                selected = not selected and self.is_tile_walkable(Tile.decode(self, next_tid, Tile))
+        if d is not None:
+            selected = not selected and self.is_tile_walkable(Tile.decode(self, next_tid, Tile))
 
         if d is None:
-            raise Exception("No valid direction from this tile:\t\tTile tx:"+str(tid['tx'])+", ty"+str(tid['ty']))
-        return d
+          raise Exception("No valid direction from this tile:\t\tTile tx:"+str(tile.tx)+", ty"+str(tile.ty))
+      return d
+
+    ## feature oracles
+    def player_tile(self):
+      ptp = self.worldpoint_to_tilepoint(self.game.player.position)
+      ptile = self.get_tile_by_pos(ptp.tx, ptp.ty)
+      return ptile
+
+    # player on junction
+    def player_on_junction(self):
+      # convert player position to tile storage id
+      from resources.lookup_util import tile_to_route_id
+      pt = self.worldpoint_to_tilepoint(self.game.player.position)
+      player_tid = tile_to_route_id(self, pt.tx, pt.ty)
+      return player_tid in self.game.board.junctions
+
+    # player enemy distances
+    def player_enemy_distances(self, distmeas=TilePoint.manhattan):
+      pt = self.worldpoint_to_tilepoint(self.game.player.position)
+      tile = self.get_tile_by_pos(pt.tx, pt.ty)
+      e_dists = self.enemy_distances_from_tile(tile, distmeas)
+      return e_dists
+
+    # player recently painted a tile
+
+    # player on painted segment
+    def player_on_painted(self):
+      pt = self.worldpoint_to_tilepoint(self.game.player.position)
+      tile = self.get_tile_by_pos(pt.tx, pt.ty)
+      return tile.tag == Tile.Painted
+
+    # player near unpainted tile; radius in tilepoint units
+    def player_near_unpainted(self, radius=5):
+      # get walkable tiles within radius
+      ptp = self.worldpoint_to_tilepoint(self.game.player.position)
+      def tile_in_radius(t):
+        tp = self.tile_to_tilepoint(t)
+        mdist = TilePoint.manhattan(ptp, tp)
+        return mdist < radius
+      near_tiles = self.filter_tiles(pred=tile_in_radius)
+      near_tiles = [t for t in near_tiles if self.is_tile_walkable(t)]
+      total_painted = sum([t.tag == Tile.Painted for t in near_tiles])
+      # return if all are painted
+      return not total_painted == len(near_tiles)
+
+    # player in enemy path
+    # compute heading of each enemy
+    # compute tiles covered by path + speed + current position + num_steps
+    # determine if player position within radius of tiles covered
+
+    # player on nearly complete box
+    # get boxes associated with current tile
+    # compute painting completion of each box
+    # return if any within threshold
 
 
-
-
-### difficult interventions ###
+    ### difficult interventions ###
     # random start state?
     # enemy perimeter direction 
-    # tie random selections to Toybox environment seed?
 
