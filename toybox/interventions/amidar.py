@@ -584,22 +584,12 @@ class AmidarIntervention(Intervention):
       ptile = self.get_tile_by_pos(ptp.tx, ptp.ty)
       return ptile
 
-    # player on junction
-    def player_on_junction(self):
-      # convert player position to tile storage id
-      from resources.lookup_util import tile_to_route_id
-      pt = self.worldpoint_to_tilepoint(self.game.player.position)
-      player_tid = tile_to_route_id(self, pt.tx, pt.ty)
-      return player_tid in self.game.board.junctions
-
     # player enemy distances
     def player_enemy_distances(self, distmeas=TilePoint.manhattan):
       pt = self.worldpoint_to_tilepoint(self.game.player.position)
       tile = self.get_tile_by_pos(pt.tx, pt.ty)
       e_dists = self.enemy_distances_from_tile(tile, distmeas)
       return e_dists
-
-    # player recently painted a tile
 
     # player on painted segment
     def player_on_painted(self):
@@ -621,18 +611,5 @@ class AmidarIntervention(Intervention):
       # return if all are painted
       return not total_painted == len(near_tiles)
 
-    # player in enemy path
-    # compute heading of each enemy
-    # compute tiles covered by path + speed + current position + num_steps
-    # determine if player position within radius of tiles covered
 
-    # player on nearly complete box
-    # get boxes associated with current tile
-    # compute painting completion of each box
-    # return if any within threshold
-
-
-    ### difficult interventions ###
-    # random start state?
-    # enemy perimeter direction 
 
