@@ -57,7 +57,7 @@ If this does not work, the code will simply default back to the existing json li
 
 Tensorflow, OpenAI Gym, OpenCV, and other libraries may or may not break with various Python versions. We have confirmed that the code in this repository will work with the following Python versions:
 
-* 3.5
+* 3.6, 3.7
 
 ## Get starting images for reference from ALE / atari_py
 
