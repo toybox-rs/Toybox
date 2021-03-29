@@ -23,8 +23,5 @@ jobs:
         pip install -U --upgrade pip
         pip install -U --only-binary=numpy -r REQUIREMENTS.txt
         pip install -r REQUIREMENTS.txt  
-    - name: Install baselines
-      working-directory: baselines
-      run: python setup.py install 
     - name: Run "check.sh"
       run: ./check.sh

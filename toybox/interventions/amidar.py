@@ -332,7 +332,6 @@ class TilePoint(BaseMixin):
       delta_y = abs(t_a.ty - t_b.ty)
       return delta_x + delta_y
 
-
 class AmidarIntervention(Intervention):
 
     # Refactor notes (EMT 12/30/2019)
@@ -370,12 +369,15 @@ class AmidarIntervention(Intervention):
         away from other agents)
       """
       # formerly get_random_tile_id
-      while True:
+      i = 0
+      while i < (self.game.board.height*self.game.board.width)**2:
         i = random.randint(0, self.game.board.height - 1)
         j = random.randint(0, self.game.board.width - 1)
         tile = self.game.board.tiles[i][j]
         if pred(tile):
             return tile
+      # If you're seeing this, you should refactor to computing a list of valid tiles using your pred and then sampling from that.
+      raise ValueError("Random selection failed.")
 
     def get_random_track_position(self):
       """Utility function to get a random track tile."""
@@ -541,7 +543,7 @@ class AmidarIntervention(Intervention):
       def within_min_manhattan(t):
         manhattan_dists = self.enemy_distances_from_tile(t, TilePoint.manhattan)
         safe_range = [d < min_enemy_distance for d in manhattan_dists]
-        return all(safe_range)
+        return not(all(safe_range))
       pos = self.get_random_tile(pred=within_min_manhattan)
       self.game.player.position = self.tile_to_worldpoint(pos)
 
