@@ -1,6 +1,6 @@
 # The Reinforcement Learning Toybox ![CI](https://github.com/toybox-rs/Toybox/workflows/CI/badge.svg)
 
-A set of games designed for testing deep RL agents. This repo contains Python wrappers and an intervention API for Toybox games. Python wrappers for the Atari games are constructed to match the Arcade Learning Environment and subclass the gym.envs.atari.AtariEnv wrapper. [ToyboxBaseEnv](https://github.com/toybox-rs/Toybox/blob/main/toybox/envs/atari/base.py) may be a good entry point for the gym wrappers.
+A set of games designed for testing deep RL agents. This repo contains Python wrappers and an intervention API for Toybox games. Python wrappers for the Atari games are constructed to mock the Arcade Learning Environment and subclass the gym.envs.atari.AtariEnv wrapper. [ToyboxBaseEnv](https://github.com/toybox-rs/Toybox/blob/main/toybox/envs/atari/base.py) may be a good entry point for the gym wrappers.
 
 If you use this code, or otherwise are inspired by our white-box testing approach, please cite our [NeurIPS workshop paper](https://arxiv.org/abs/1812.02850):
 
