@@ -1,6 +1,6 @@
 # The Reinforcement Learning Toybox ![CI](https://github.com/toybox-rs/Toybox/workflows/CI/badge.svg)
 
-A set of games designed for testing deep RL agents.
+A set of games designed for testing deep RL agents. This repo contains Python wrappers and an intervention API for Toybox games. Python wrappers for the Atari games are constructed to mock the Arcade Learning Environment and subclass the gym.envs.atari.AtariEnv wrapper. [ToyboxBaseEnv](https://github.com/toybox-rs/Toybox/blob/main/toybox/envs/atari/base.py) may be a good entry point for the gym wrappers.
 
 If you use this code, or otherwise are inspired by our white-box testing approach, please cite our [NeurIPS workshop paper](https://arxiv.org/abs/1812.02850):
 
@@ -24,9 +24,19 @@ We have a lenghtier paper on [ArXiV](https://arxiv.org/pdf/1905.02825.pdf) and c
 The rust implementations of the games have moved to a different repository: [toybox-rs/toybox-rs](https://github.com/toybox-rs/toybox-rs)
 
 ## Installation
+1. Create a virtual environment using your python3 installation: `${python} -m venv .env`
+   * If you are on OSX, this is likely `python3`: thus, your command will be `python3 -m venv .env`
+   * If you are not sure of your version, run `python --version`
+2. Activate your virtual environment: `source .env/bin/activate`
+3. Install Toybox:
 
-    pip install ctoybox
-    pip install git+https://github.com/toybox-rs/Toybox
+```    
+pip install ctoybox
+pip install git+https://github.com/toybox-rs/Toybox
+```
+4. Install requirements: run `pip install -r REQUIREMENTS.txt`
+5. Run `python setup.py install`
+
 
 ## Play the games (using pygame)
 
@@ -37,20 +47,7 @@ The rust implementations of the games have moved to a different repository: [toy
 
 ## Run the tests
 
-1. Create a virtual environment using your python3 installation: `${python} -m venv .env`
-   * If you are on OSX, this is likely `python3`: thus, your command will be `python3 -m venv .env`
-   * If you are not sure of your version, run `python --version`
-1. Activate your virtual environment: `source .env/bin/activate`
-2. Run `pip install -r REQUIREMENTS.txt`
-3. Install baselines: `cd baselines && python setup.py isntall && cd ..`
-4. Run `python setup.py install`
-5. Run `python -m unittest toybox.sample_tests.test_${GAME}.${TEST_NAME}`
-
-We have observed installation issues on OSX Catalina; if you get a linker error for ujson library, you can try running with the CFLAGS argument:
-
-`CFLAGS=-stdlib=libc++ pip install ujson`
-
-If this does not work, the code will simply default back to the existing json library.
+Sample behavioral tests developed with Toybox are frozen and [available here](https://github.com/toybox-rs/openai-baselines-envs). These tests are featured with an OpenAI baselines integration to facilitate off-the-shelf model training.
 
 
 ## Python

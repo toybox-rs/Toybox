@@ -10,4 +10,4 @@ python -m toybox.interventions.space_invaders
 # unittest will discover test.interventions.test_amidar_interventions
 # and test.interventions.test_breakout_interventions
 # so we only request toybox.interventions.space_invaders above
-python -m unittest discover test.interventions
+python -m unittest discover test.interventions -v
