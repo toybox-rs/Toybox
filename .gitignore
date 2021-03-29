@@ -38,3 +38,4 @@ PyMonad
 build
 dist
 toybox.egg-info
+*.pyc

@@ -1,11 +1,10 @@
 from toybox.interventions.base import *
-from toybox.interventions.core import * 
+from toybox.interventions.core import *
 try:
   import ujson as json
 except:
   import json
 import random
-from pymonad import Either
 from typing import Optional
 """An API for interventions on Amidar."""
 
@@ -14,7 +13,10 @@ from typing import Optional
 
 class Amidar(Game):
 
-  expected_keys = Game.expected_keys + ['enemies', 'player', 'jumps', 'jump_timer', 'chase_timer', 'board']
+  with Toybox('amidar') as tb:
+    expected_keys = tb.schema_for_state()['required']
+    eq_keys = [k for k in expected_keys if k != 'rand']
+  #expected_keys = Game.expected_keys + ['enemies', 'player', 'jumps', 'jump_timer', 'chase_timer', 'board']
   immutable_fields = Game.immutable_fields + ['enemies']
   
   def __init__(self, intervention, 
@@ -31,22 +33,10 @@ class Amidar(Game):
     self.player = Player.decode(intervention, player, Player)
     self._in_init = False
 
-  def __eq__(self, other) -> Either:
-    names = {
-      'enemies'    : (self.enemies,     other.enemies),
-      'jumps'      : (self.jumps,       other.jumps),
-      'jump_timer' : (self.jump_timer,  other.jump),
-      'chase_timer': (self.chase_timer, other.chase_timer),
-      'board'      : (self.board,       other.board),
-      'player'     : (self.player,      other.player)
-    }
-    return eq_map(names)
-
 
 class EnemyCollection(Collection):
 
     expected_keys = []
-    immutable_fields = ['intervention']
 
     def __init__(self, intervention, enemies):
       super().__init__(intervention, enemies, Enemy)
@@ -54,6 +44,8 @@ class EnemyCollection(Collection):
 
     def decode(intervention, enemies, clz):
       return EnemyCollection(intervention, enemies)
+
+    def make_models(self, data): assert False
 
 
 class Tile(BaseMixin):
@@ -67,7 +59,7 @@ class Tile(BaseMixin):
     tags = [Empty, Unpainted, Painted, ChaseMarker]
     
     expected_keys = []
-    immutable_fields = ['intervention']
+    eq_keys = ['tag']
 
     def __init__(self, intervention, name):
       assert intervention
@@ -77,9 +69,6 @@ class Tile(BaseMixin):
       self.tag = name
       self._in_init = False
 
-    def __eq__(self, other) -> Either:
-      return Result(self.tag == other.tag)
-
     def decode(intervention, rustname, clz):
       assert type(rustname) == str
       assert intervention
@@ -88,11 +77,26 @@ class Tile(BaseMixin):
     def encode(self):
       return self.tag
 
+    def make_models(self, data): assert False
+
 
 class MovementAI(BaseMixin):
 
     expected_keys = []
-    immutable_fields = ['intervention', '_in_init']
+    eq_keys = [
+      'protocol'           ,       
+      'next'               ,
+      'default_route_index',
+      'start'              ,
+      'vert'               ,
+      'horiz'              ,
+      'start_vert'         ,
+      'start_horiz'        ,
+      'start_dir'          ,
+      'dir'                ,
+      'vision_distance'    ,
+      'player_seen'        ,
+    ]
 
     EnemyLookupAI     = 'EnemyLookupAI'
     EnemyPerimeterAI  = 'EnemyPerimeterAI' 
@@ -120,7 +124,8 @@ class MovementAI(BaseMixin):
         start_dir           : Optional[Direction]=None, 
         dir                 : Optional[Direction]=None,
         vision_distance     : Optional[int]=None, 
-        player_seen         : Optional[bool]=None):
+        player_seen         : Optional[bool]=None,
+        **kwargs):
 
       super().__init__(intervention)
       assert protocol in MovementAI.mvmt_protocols, '%s not a recognized movement protocol' % protocol
@@ -138,23 +143,13 @@ class MovementAI(BaseMixin):
       self.player_seen = player_seen
       self._in_init = False
 
-    def __eq__(self, other) -> Either:
-      names = {
-        'protocol'           : (self.protocol,            other.protocol),
-        'next'               : (self.next,                other.next),
-        'default_route_index': (self.default_route_index, other.default_route_index),
-        'start'              : (self.start,               other.start),
-        'vert'               : (self.vert,                other.vert),
-        'horiz'              : (self.horiz,               other.horiz),
-        'start_vert'         : (self.start_vert,          other.start_vert),
-        'start_horiz'        : (self.start_horiz,         other.start_horiz),
-        'start_dir'          : (self.start_dir,           other.start_dir),
-        'dir'                : (self.dir,                 other.dir),
-        'vision_distance'    : (self.vision_distance,     other.vision_distance),
-        'player_seen'        : (self.player_seen,         other.player_seen)
-      }
-      return eq_map(names)
+    def __repr__(self):
+        return 'MovementAI(protocol: {}, next: {}, route_index: {})'.format(self.protocol, self.next, self.default_route_index)
+        #or, if you wanted everything....
+        #return 'MovementAI({})'.format(' '.join([key+str(self.__dict__[key]) for key in self.__dict__.keys()]))
 
+    def __str__(self):
+        return self.__repr__()
 
     def decode(intervention, ai, clz):
       ai_name = list(ai.keys())[0]
@@ -168,11 +163,14 @@ class MovementAI(BaseMixin):
           args[k] = v.encode() if isinstance(v, BaseMixin) else v
       return { self.protocol: args }
 
+    def make_models(self, data): assert False
+
 
 class Enemy(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
-    immutable_fields = ['ai', 'intervention']
+    immutable_fields = BaseMixin.immutable_fields + ['ai']
+    eq_keys = expected_keys
 
     def __init__(self, intervention, history, step, position, caught, speed, ai):
       super().__init__(intervention)
@@ -184,10 +182,18 @@ class Enemy(BaseMixin):
       self.ai = MovementAI.decode(intervention, ai, MovementAI)
       self._in_init = False
 
+    def __repr__(self):
+        return 'Enemy({})'.format(' '.join([key+str(self.__dict__[key]) for key in Enemy.expected_keys]))
+
+    def __str__(self):
+        return self.__repr__()
+
+    def make_models(self, data): assert False
+
 class Player(BaseMixin):
 
     expected_keys = ['history', 'step', 'position', 'caught', 'speed', 'ai']
-    immutable_fields = ['intervention']
+    eq_keys = expected_keys
 
     def __init__(self, intervention, history, step, position, caught, speed, ai):
         super().__init__(intervention)
@@ -199,17 +205,17 @@ class Player(BaseMixin):
         self.ai = ai
         self._in_init = False
 
-    # def set_position(self, x, y):
-    #     self.position = WorldPoint(self.intervention, x, y)
-
     def decode(intervention, js, clz):
         return Player(intervention, **js)
+
+    def make_models(self, data): assert False
 
 
 class Board(BaseMixin):
 
     expected_keys = ['boxes', 'tiles', 'height', 'chase_junctions', 'width', 'junctions']
-    immutable_fields = ['boxes', 'tiles', 'intervention']
+    immutable_fields = BaseMixin.immutable_fields + ['boxes', 'tiles']
+    eq_keys = expected_keys
 
     def __init__(self, intervention, boxes, tiles, height, chase_junctions, width, junctions):
       assert intervention
@@ -222,11 +228,14 @@ class Board(BaseMixin):
       self.tiles = TileCollection.decode(intervention, tiles, TileCollection)
       self._in_init = False
 
+    def make_models(self, data): assert False
+
+    #def decode(intervention, js, clz):
+    #  return Board(intervention, **js)
+
 class TileCollection(Collection):
     # Convenience class to deal with the fact that the tiles blob is
     # an array of arrays, which messes up how our recursive decode calls
-
-    immutable_fields = Collection.immutable_fields + ['tiles']
 
     def __init__(self, intervention, tiles):
       # Instantiate with an empty list, since we are going to want to 
@@ -254,10 +263,11 @@ class TileCollection(Collection):
     def encode(self):
       return [[t.encode() for t in row] for row in self.coll]
 
+
 class WorldPoint(BaseMixin):
 
     expected_keys = ['x', 'y']
-    immutable_fields = ['intervention']
+    eq_keys = expected_keys
   
     def __init__(self, intervention, x=None, y=None):
       super().__init__(intervention)
@@ -265,6 +275,15 @@ class WorldPoint(BaseMixin):
       self.x = x
       self.y = y
       self._in_init = False
+
+    def __repr__(self):
+        return 'WorldPoint({})'.format(' '.join([key+str(self.__dict__[key]) for key in WorldPoint.expected_keys]))
+
+    def __str__(self):
+        return self.__repr__()
+
+    def make_models(self, data): assert False
+
 
 class BoxCollection(Collection):
 
@@ -275,24 +294,27 @@ class BoxCollection(Collection):
     def decode(intervention, boxes, clz):
         return BoxCollection(intervention, boxes)
 
+
 class Box(BaseMixin):
 
-    expected_keys = ['triggers_chase', 'top_left', 'bottom_right', 'painted']
-    immutable_fields = ['intervention']
+  expected_keys = ['triggers_chase', 'top_left', 'bottom_right', 'painted']
+  eq_keys = expected_keys
 
-    def __init__(self, intervention, triggers_chase, top_left, bottom_right, painted):
-        super().__init__(intervention)
-        self.triggers_chase = triggers_chase
-        self.top_left = TilePoint(intervention, **top_left)
-        self.bottom_right = TilePoint(intervention, **bottom_right)
-        self.painted = painted
-        self._in_init = False
+  def __init__(self, intervention, triggers_chase, top_left, bottom_right, painted):
+      super().__init__(intervention)
+      self.triggers_chase = triggers_chase
+      self.top_left = TilePoint(intervention, **top_left)
+      self.bottom_right = TilePoint(intervention, **bottom_right)
+      self.painted = painted
+      self._in_init = False
+
+  def make_models(self, data): assert False
 
 
 class TilePoint(BaseMixin):
 
     expected_keys = ['tx', 'ty']
-    immutable_fields = ['intervention']
+    eq_keys = expected_keys
 
     def __init__(self, intervention, tx, ty):
         super().__init__(intervention)
@@ -302,6 +324,13 @@ class TilePoint(BaseMixin):
 
     def __str__(self):
         return 'TilePoint {tx: %d, ty: %d}' % (self.tx, self.ty)
+
+    def make_models(self, data): assert False
+
+    def manhattan(t_a, t_b):
+      delta_x = abs(t_a.tx - t_b.tx)
+      delta_y = abs(t_a.ty - t_b.ty)
+      return delta_x + delta_y
 
 class AmidarIntervention(Intervention):
 
@@ -324,9 +353,9 @@ class AmidarIntervention(Intervention):
     regular = 'regular'
     modes = [jump, chase, regular]
 
-    def __init__(self, tb, game_name='amidar'):
+    def __init__(self, tb, game_name='amidar', eq_mode=StandardEq):
       # check that the simulation in tb matches the game name.
-      Intervention.__init__(self, tb, game_name, Amidar)
+      Intervention.__init__(self, tb, game_name, Amidar, eq_mode=eq_mode)
 
     def get_random_tile(self, pred=lambda tile: True): 
       """Returns a random tile object, filtered by the input predicate.
@@ -340,12 +369,15 @@ class AmidarIntervention(Intervention):
         away from other agents)
       """
       # formerly get_random_tile_id
-      while True:
+      i = 0
+      while i < (self.game.board.height*self.game.board.width)**2:
         i = random.randint(0, self.game.board.height - 1)
         j = random.randint(0, self.game.board.width - 1)
         tile = self.game.board.tiles[i][j]
         if pred(tile):
             return tile
+      # If you're seeing this, you should refactor to computing a list of valid tiles using your pred and then sampling from that.
+      raise ValueError("Random selection failed.")
 
     def get_random_track_position(self):
       """Utility function to get a random track tile."""
@@ -450,7 +482,7 @@ class AmidarIntervention(Intervention):
 
     def is_tile_walkable(self, tile):
       # formerly check_tile_position(self, tdict)
-      return tile.tag != Tile.empty
+      return tile.tag != Tile.Empty
 
     def set_tile_tag(self, tile, tag):
       assert tag in Tile.tags, 'Unrecognized tile tag: %s' % tag
@@ -482,212 +514,104 @@ class AmidarIntervention(Intervention):
       return self.tilepoint_to_worldpoint(tp)   
 
     def worldpoint_to_tilepoint(self, wp):
-     return TilePoint(self, 
-       *self.toybox.query_state_json('world_to_tile', wp.encode()))   
+      return TilePoint(self,
+        *self.toybox.query_state_json('world_to_tile', wp.encode()))
+
+    def get_adjacent_tiles(self, tp: TilePoint, filter_fn = lambda t: t):
+      from resources.lookup_util import tile_to_route_id
+      tid = tile_to_route_id(self, tp.tx, tp.ty)
+      def adj(t):
+        if t.tx == tp.tx + 1 and t.ty == tp.ty:
+          return filter_fn(t)
+        if t.tx == tp.tx - 1 and t.ty == tp.ty:
+          return filter_fn(t)
+        if t.tx == tp.tx and t.ty == tp.ty + 1:
+          return filter_fn(t)
+        if t.tx == tp.tx and t.ty == tp.ty - 1:
+          return filter_fn(t)
+        return False
+      return self.filter_tiles(pred=adj)
+
+    def enemy_distances_from_tile(self, t, dist_fn=TilePoint.manhattan):
+      tp = self.tile_to_tilepoint(t)
+      etps = [self.worldpoint_to_tilepoint(e.position) for e in self.game.enemies]
+      e_dists = [dist_fn(etp, tp) for etp in etps]
+      return e_dists
 
     def set_player_random_start(self, min_enemy_distance=5):
+      from numpy import all
       def within_min_manhattan(t):
-        tp = self.tile_to_tilepoint(t)
-        for e in self.game.enemies:
-          etp = self.worldpoint_to_tilepoint(e.position)
-          delta_x = abs(etp.tx - tp.tx)
-          delta_y = abs(etp.ty - tp.ty)
-          if delta_x + delta_y < min_enemy_distance:
-            return False
-        return True
-          
+        manhattan_dists = self.enemy_distances_from_tile(t, TilePoint.manhattan)
+        safe_range = [d < min_enemy_distance for d in manhattan_dists]
+        return not(all(safe_range))
       pos = self.get_random_tile(pred=within_min_manhattan)
       self.game.player.position = self.tile_to_worldpoint(pos)
 
-    def get_random_dir_for_tile(self, tiles):
-        assert tile.tag != "Empty"
-        selected = False
-        dirs = ["Up", "Down", "Left", "Right"]
+    def get_random_dir_for_tile(self, tile):
+      assert tile.tag != "Empty"
+      selected = False
+      dirs = ["Up", "Down", "Left", "Right"]
 
-        d = None
-        while not selected: 
-            next_tid = {}
-            next_tid['tx'] = tile.tx
-            next_tid['ty'] = tile.ty
+      d = None
+      while not selected:
+        next_tid = {}
+        next_tid['tx'] = tile.tx
+        next_tid['ty'] = tile.ty
 
-            if d is not None: 
-                dirs.remove(d)
-                if not dirs: 
-                    d = None
+        if d is not None:
+          dirs.remove(d)
+        if not dirs:
+          d = None
 
-            d = random.choice(dirs)
-            if d == "Up":
-                next_tid['ty'] = next_tid['ty'] - 1
-            elif d == "Down": 
-                next_tid['ty'] = next_tid['ty'] + 1
-            elif d == "Left": 
-                next_tid['tx'] = next_tid['tx'] - 1
-            elif d == "Right":
-                next_tid['tx'] = next_tid['tx'] + 1
+        d = random.choice(dirs)
+        if d == "Up":
+          next_tid['ty'] = next_tid['ty'] - 1
+        elif d == "Down":
+            next_tid['ty'] = next_tid['ty'] + 1
+        elif d == "Left":
+            next_tid['tx'] = next_tid['tx'] - 1
+        elif d == "Right":
+            next_tid['tx'] = next_tid['tx'] + 1
 
-            if d is not None: 
-                selected = not selected and self.is_tile_walkable(Tile.decode(self, next_tid, Tile))
+        if d is not None:
+            selected = not selected and self.is_tile_walkable(Tile.decode(self, next_tid, Tile))
 
         if d is None:
-            raise Exception("No valid direction from this tile:\t\tTile tx:"+str(tid['tx'])+", ty"+str(tid['ty']))
-        return d
+          raise Exception("No valid direction from this tile:\t\tTile tx:"+str(tile.tx)+", ty"+str(tile.ty))
+      return d
+
+    ## feature oracles
+    def player_tile(self):
+      ptp = self.worldpoint_to_tilepoint(self.game.player.position)
+      ptile = self.get_tile_by_pos(ptp.tx, ptp.ty)
+      return ptile
+
+    # player enemy distances
+    def player_enemy_distances(self, distmeas=TilePoint.manhattan):
+      pt = self.worldpoint_to_tilepoint(self.game.player.position)
+      tile = self.get_tile_by_pos(pt.tx, pt.ty)
+      e_dists = self.enemy_distances_from_tile(tile, distmeas)
+      return e_dists
+
+    # player on painted segment
+    def player_on_painted(self):
+      pt = self.worldpoint_to_tilepoint(self.game.player.position)
+      tile = self.get_tile_by_pos(pt.tx, pt.ty)
+      return tile.tag == Tile.Painted
+
+    # player near unpainted tile; radius in tilepoint units
+    def player_near_unpainted(self, radius=5):
+      # get walkable tiles within radius
+      ptp = self.worldpoint_to_tilepoint(self.game.player.position)
+      def tile_in_radius(t):
+        tp = self.tile_to_tilepoint(t)
+        mdist = TilePoint.manhattan(ptp, tp)
+        return mdist < radius
+      near_tiles = self.filter_tiles(pred=tile_in_radius)
+      near_tiles = [t for t in near_tiles if self.is_tile_walkable(t)]
+      total_painted = sum([t.tag == Tile.Painted for t in near_tiles])
+      # return if all are painted
+      return not total_painted == len(near_tiles)
 
 
-
-
-### difficult interventions ###
-    # random start state?
-    # enemy perimeter direction 
-    # tie random selections to Toybox environment seed?
-
-
-if __name__ == "__main__":
-  with Toybox('amidar') as tb:
-
-    # This should all be moved to a testing framework
-
-    # random track position
-    with AmidarIntervention(tb) as intervention:
-      pos = intervention.get_random_track_position()
-
-    # player random start
-    with AmidarIntervention(tb) as intervention:
-      intervention.set_player_random_start()
-    
-    # test painting
-    with AmidarIntervention(tb) as intervention:
-      tile = intervention.get_tile_by_pos(tx=0, ty=0)
-      assert tile.intervention
-      intervention.set_tile_tag(tile, Tile.Painted)
-      assert intervention.dirty_state
-
-    with AmidarIntervention(tb) as intervention:
-      assert intervention.get_tile_by_pos(0, 0).tag == Tile.Painted
-      assert not intervention.dirty_state
-
-
-    # test unpainting
-    with AmidarIntervention(tb) as intervention:
-      tile = intervention.get_tile_by_pos(0, 0)
-      intervention.set_tile_tag(tile, Tile.ChaseMarker)
-      assert intervention.dirty_state
-    
-    with AmidarIntervention(tb) as intervention:
-      assert intervention.get_tile_by_pos(0, 0).tag == Tile.ChaseMarker
-      assert not intervention.dirty_state
-
-
-    # get number of enemies
-    with AmidarIntervention(tb) as intervention: 
-      assert len(intervention.game.enemies) == 5
-      assert not intervention.dirty_state
-
-    # remove enemy
-    with AmidarIntervention(tb) as intervention:
-      enemies = intervention.game.enemies
-      enemies.remove(enemies[4])
-      assert len(enemies) == len(intervention.game.enemies)
-      assert intervention.dirty_state
-    # check number of enemies
-    with AmidarIntervention(tb) as intervention: 
-      assert len(intervention.game.enemies) == 4
-      assert not intervention.dirty_state
-
-
-    # add enemy with 'EnemyLookupAI' protocol
-    with AmidarIntervention(tb) as intervention: 
-      enemies = intervention.game.enemies
-      # copy the second enemy
-      enemy = Enemy.decode(intervention, enemies[1].encode(), Enemy)
-      next = max([e.ai.next for e in enemies]) + 1
-      # Not sure what default route index refers to, so I am picking an arbitrary number
-      default_route_index = 10
-      intervention.set_enemy_protocol(enemy, MovementAI.EnemyLookupAI, 
-        next=next, default_route_index=default_route_index) 
-      enemies.append(enemy)
-      assert intervention.dirty_state
-
-    with AmidarIntervention(tb) as intervention: 
-      assert len(intervention.game.enemies) == 5
-      assert not intervention.dirty_state
-
-    # change to 'EnemyPerimeterAI' protocol
-    with AmidarIntervention(tb) as intervention: 
-      enemy = intervention.game.enemies[-1]
-      intervention.set_enemy_protocol(enemy, MovementAI.EnemyPerimeterAI,
-        start=TilePoint(intervention, tx=0, ty=0))
-      assert intervention.dirty_state
-    with AmidarIntervention(tb) as intervention: 
-      assert intervention.game.enemies[-1].ai.protocol == MovementAI.EnemyPerimeterAI
-      assert not intervention.dirty_state
-
-    # change to 'EnemyAmidarMvmt' protocol
-    with AmidarIntervention(tb) as intervention: 
-      enemy = intervention.game.enemies[-1]
-      intervention.set_enemy_protocol(enemy, 'EnemyAmidarMvmt',
-        vert=Direction(intervention, random.choice(Direction.directions)),
-        horiz=Direction(intervention, random.choice(Direction.directions)),
-        start_vert=Direction(intervention, random.choice(Direction.directions)),
-        start_horiz=Direction(intervention, random.choice(Direction.directions)),
-        start=TilePoint.decode(intervention, enemy.ai.start, TilePoint)
-        )
-      assert intervention.dirty_state
-    with AmidarIntervention(tb) as intervention: 
-      assert intervention.game.enemies[-1].ai.protocol == MovementAI.EnemyAmidarMvmt
-      assert not intervention.dirty_state
-
-    # change to 'EnemyTargetPlayer' protocol
-    with AmidarIntervention(tb) as intervention: 
-      enemy = intervention.game.enemies[-1]
-      intervention.set_enemy_protocol(enemy, 'EnemyTargetPlayer',
-        start=TilePoint.decode(intervention, enemy.ai.start, TilePoint),
-        vision_distance=10,
-        player_seen=None,
-        start_dir=Direction(intervention, random.choice(Direction.directions)),
-        dir=Direction(intervention, random.choice(Direction.directions))
-      )
-      assert intervention.dirty_state
-    with AmidarIntervention(tb) as intervention: 
-      assert intervention.game.enemies[-1].ai.protocol == MovementAI.EnemyTargetPlayer
-      assert not intervention.dirty_state
-
-    # change to 'EnemyRandomAI' protocol
-    with AmidarIntervention(tb) as intervention: 
-      enemy = intervention.game.enemies[-1]
-      intervention.set_enemy_protocol(enemy, 'EnemyRandomMvmt',
-        start=TilePoint.decode(intervention, enemy.ai.start, TilePoint),
-        start_dir=Direction(intervention, random.choice(Direction.directions)),
-        dir=Direction(intervention, random.choice(Direction.directions)),
-      )
-      assert intervention.dirty_state
-    with AmidarIntervention(tb) as intervention: 
-      assert intervention.game.enemies[-1].ai.protocol == MovementAI.EnemyRandomMvmt
-      assert not intervention.dirty_state
-
-    # check number of jumps
-    with AmidarIntervention(tb) as intervention: 
-      assert intervention.game.jumps == 4
-      intervention.game.jumps = 5
-      assert intervention.dirty_state
-    with AmidarIntervention(tb) as intervention:            
-      assert intervention.game.jumps == 5
-      assert not intervention.dirty_state
- 
-    # check jump mode
-    with AmidarIntervention(tb) as intervention:
-      intervention.set_mode('jump')
-      assert intervention.dirty_state
-    with AmidarIntervention(tb) as intervention:
-      assert intervention.game.jump_timer > 0 
-      assert not intervention.dirty_state
-
-    # check random starts
-    with AmidarIntervention(tb) as intervention:
-      initial_start = intervention.game.player.position
-      assert not intervention.dirty_state
-    with AmidarIntervention(tb) as intervention:
-      intervention.set_player_random_start()
-      assert intervention.dirty_state
-      wp = intervention.game.player.position
-      assert wp.x != initial_start.x or wp.y != initial_start.y
 

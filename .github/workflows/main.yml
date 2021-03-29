@@ -17,14 +17,11 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.5
+        python-version: 3.6
     - name: Install dependencies
       run: |
         pip install -U --upgrade pip
         pip install -U --only-binary=numpy -r REQUIREMENTS.txt
         pip install -r REQUIREMENTS.txt  
-    - name: Install baselines
-      working-directory: baselines
-      run: python setup.py install 
     - name: Run "check.sh"
       run: ./check.sh
