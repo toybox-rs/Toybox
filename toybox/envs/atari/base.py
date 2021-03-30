@@ -48,7 +48,7 @@ class ToyboxBaseEnv(AtariEnv, ABC):
         self.viewer = None
 
         # Required for compatability with OpenAI Gym's Atari wrappers
-        self.np_random = np_random
+        self._np_random = None
         self.ale = MockALE(toybox)
         utils.EzPickle.__init__(self, game, 'human', frameskip, repeat_action_probability)
         
@@ -72,12 +72,20 @@ class ToyboxBaseEnv(AtariEnv, ABC):
             high=self._pixel_high, 
             shape=self._dim, 
             dtype='uint8')
-    
+
+    @property
+    def np_random(self):
+        # Following openai/gym's implementation (see e.g. space.py)
+        # Make sure we have seeded the np_random
+        if self._np_random is None:
+            self.seed()
+        return self._np_random
+
     def seed(self, seed=None):
         """
         This is totally the implementation in AtariEnv in openai/gym.
         """
-        self.np_random, seed1 = seeding.np_random(seed)
+        self._np_random, seed1 = seeding.np_random(seed)
         # Derive a random seed. This gets passed as a uint, but gets
         # checked as an int elsewhere, so we need to keep it below
         # 2**31.
@@ -98,7 +106,11 @@ class ToyboxBaseEnv(AtariEnv, ABC):
     # From OpenAI Gym Baselines
     # https://github.com/openai/baselines/blob/master/baselines/common/atari_wrappers.py
     def _get_obs(self):
-        return self.toybox.get_state()
+        obs =  self.toybox.get_state()
+        # Fix observation for RGB image (we are still getting alpha channel)
+        if self._rgba == 3:
+            obs = obs[:, :, :-1]
+        return obs
 
     def step(self, action_index):
         obs = None

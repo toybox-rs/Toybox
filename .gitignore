@@ -39,3 +39,4 @@ build
 dist
 .idea
 toybox.egg-info
+*.pyc

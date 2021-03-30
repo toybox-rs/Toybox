@@ -1,134 +1,246 @@
 from toybox.interventions.base import *
 from toybox.interventions.core import * 
+
+import copy
 try:
   import ujson as json
 except:
   import json
-import typing
+import re
+import sys
+
+from enum import Enum
 """An API for interventions on Breakout."""
+
+def query_hack(query):
+  # need replace all coll[i] with coll.collitem%04d.format(i)
+  # can iterate over these, but will need to figure out string
+  # interpolation for regex objects first
+  if 'bricks' in query:
+    search = re.search(r'bricks\[[0-9]+\]', query)
+    if search is not None:
+      before = search.group(0)
+      i = int(re.search(r'[0-9]+', before).group(0))
+      query = query.replace(before, 'bricks.brick{:04}'.format(i))
+  
+  if 'balls' in query:
+    search = re.search(r'balls\[[0-9]+\]', query)
+    if search is not None:
+      before = search.group(0)
+      i = int(re.search(r'[0-9]+', before).group(0))
+      query = query.replace(before, 'balls.ball{:04}'.format(i))
+
+  return query
+  
 
 class Breakout(Game):
 
-  expected_keys = Game.expected_keys + ['paddle', 'is_dead', 'balls', 'ball_radius', 'paddle_speed', 'reset', 'bricks', 'paddle_width']
+  with Toybox('breakout') as tb:
+    schema = tb.schema_for_state()
+    expected_keys = schema['required']
+    eq_keys = [k for k in expected_keys if k != 'rand']
+  immutable_fields = Game.immutable_fields + ['balls', 'bricks', 'reset']
 
-  immutable_fields = ['balls', 'bricks', 'intervention']
+  coersions = { **Game.coersions, 
+    'is_dead' : lambda x : x > 0.5,
+    'reset' : lambda x : False if x is None else x > 0.5
+  }
 
-  def __init__(self, intervention, 
-    score=None, lives=None, rand=None, level=None,
+  def __init__(self, intervention : Intervention, 
+    score=None, lives=None, rand=None, level=None, 
     paddle=None, paddle_width=None, paddle_speed=None,
     ball_radius=None, balls=None,
     bricks=None,
     reset=None, is_dead=None):
 
       super().__init__(intervention, score, lives, rand, level)
-      self.paddle = Paddle.decode(intervention, paddle, Paddle)
-      self.reset = reset
-      self.ball_radius = ball_radius
-      self.bricks = BrickCollection.decode(intervention, bricks, BrickCollection)
-      self.balls = BallCollection.decode(intervention, balls, BallCollection)
+      # When we auto-generate this code, we'll make coersions a defaultdict
+      # and have the default be the identity function, and we will call 
+      # coersions on every attribute.
+      self.reset        = Breakout.coersions['reset'](reset)
+      self.paddle       = Paddle.decode(intervention, paddle, Paddle)
+      self.ball_radius  = ball_radius
+      self.bricks       = BrickCollection.decode(intervention, bricks, BrickCollection)
+      self.balls        = BallCollection.decode(intervention, balls, BallCollection)
       self.paddle_speed = paddle_speed
       self.paddle_width = paddle_width
-      self.is_dead = is_dead
-      self._in_init = False  
+      self.is_dead      = Breakout.coersions['is_dead'](is_dead)
+      self._in_init     = False
 
-  def __eq__(self, other) -> Either:
-    names = {
-      'score'       : (self.score,        other.score), 
-      'lives'       : (self.lives,        other.lives), 
-      'level'       : (self.level,        other.level),
-      'paddle'      : (self.paddle,       other.paddle),
-      'reset'       : (self.reset,        other.reset),
-      'ball_radius' : (self.ball_radius,  other.ball_radius) ,
-      'bricks'      : (self.bricks,       other.bricks),
-      'balls'       : (self.balls,        other.balls),
-      'paddle_speed': (self.paddle_speed, other.paddle_speed),
-      'paddle_width': (self.paddle_width, other.paddle_width),
-      'is_dead'     : (self.is_dead,      other.is_dead)
-    }
-    return eq_map(names)
+  def __copy__(self):
+    return Breakout(
+      self.intervention,
+      score=self.score,
+      lives=self.lives,
+      rand=self.rand,
+      level=self.level,
+      paddle=self.paddle.encode(),
+      paddle_width=self.paddle_width,
+      paddle_speed=self.paddle_speed,
+      ball_radius=self.ball_radius,
+      bricks=self.bricks.encode(),
+      balls=self.balls.encode(),
+      is_dead=self.is_dead
+    )  
+  
+  def sample(self, *queries):
+    """Requires a seed state, hence an instance method"""
+    if not self.intervention.modelmod: 
+      log.warn('WARNING: no models for sampling')
+      return 
+    modelmod = self.intervention.modelmod
+    mod = importlib.import_module(modelmod)
+    if len(queries) == 0:
+      return mod.sample(modelmod=modelmod, intervention=self.intervention)
 
-    def __str__(self):
-        return """
-Breakout
-==========
-    score: {}
-    lives: {}
-    level: {}
-    paddle: {}
-    reset: {}
-    ball_radius: {}
-    bricks: {}
-    balls: {}
-    paddle_speed: {}
-    paddle_width: {}
-    is_dead: {}""".format(self.score, self.lives, self.level, str(self.paddle), 
-        self.reset, self.ball_radius, self.bricks.__str__(), self.balls.__str__(), self.paddle_speed,
-        self.paddle_width, self.is_dead)
+    new = copy.copy(self)
+    for query in queries:
+      # this should work with the package argument, but right not it isn't
+      # mod = importlib.import_module(query, package=modelmod)
+      mod = importlib.import_module(modelmod + '.' + query_hack(query))
+      val = mod.sample(intervention=self.intervention)
+      if query in self.coersions: val = self.coersions[query](val)
+      try:
+        before = get_property(new, query)
+        after = get_property(new, query, setval=val)
+        logging.debug('Set {} to {} (was {})'.format(query, after, before))
+      except AttributeError:
+        coll = get_property(new, query)
+        coll.clear()
+        for item in val:
+          coll.append(item)
+        logging.info('reset', query)
+    return new
+
+  def make_models(modelmod, data):
+    Game.make_models(modelmod, data, 'breakout', 'BreakoutIntervention')
+    outdir = modelmod.replace('.', os.sep) + os.sep
+
+    distr(Breakout, outdir, 'ball_radius', [d.ball_radius for d in   data])
+    distr(Breakout, outdir, 'paddle_speed', [d.paddle_speed for d in data])
+    distr(Breakout, outdir, 'paddle_width', [d.paddle_width for d in data])
+    distr(Breakout, outdir, 'reset', [d.reset for d in   data])
+    distr(Breakout, outdir, 'is_dead', [d.reset for d in data])
+
+    Paddle.make_models(modelmod, [d.paddle for d in data])
+    BrickCollection.make_models(modelmod, [d.bricks for d in data])
+    BallCollection.make_models(modelmod, [d.balls for d in data])
+
 
 class Paddle(BaseMixin):
 
   expected_keys = ['velocity', 'position']
-  immutable_fields = []  
+  coersions = {
+    # Otherwise, we get a wandering paddle...
+    'velocity' : lambda v : Vec2D.decode(v.intervention, {'x': v.x, 'y': 0}, Vec2D)
+  }
+  eq_keys = expected_keys
   
-  def __init__(self, intervention, velocity, position):
+  def __init__(self, intervention: Intervention, velocity, position):
     super().__init__(intervention)
     self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
     self.position = Vec2D.decode(intervention, position, Vec2D)
     self._in_init = False  
-  
-  def __eq__(self, other) -> Either:
-    names = {
-      'velocity': (self.velocity, other.velocity),
-      'position': (self.position, other.position)
-    }
-    return eq_map(names)   
-  
+    
   def __str__(self):
-      return '<position: {}, velocity: {}>'.format(self.position, self.velocity)
+    return '<position: {}, velocity: {}>'.format(self.position, self.velocity)
+
+  def make_models(modelmod, data):
+    BaseMixin.make_models(modelmod + '.paddle', data, 'breakout', 'Paddle', 'velocity', 'position')
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'paddle'
+    Vec2D.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
+    Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
+
+  def sample(self, *queries):
+    """Requires a seed state"""
+    if not self.intervention.modelmod: 
+      logging.warn('WARNING: no models for sampling')
+      return 
+    new = copy.copy(self)
+    for query in queries:
+      print('WARN: this might not work?')
+      mod = importlib.import_module('.models.breakout.' + query, package=__package__)
+      val = mod.sample(intervention=self.intervention)
+      before = get_property(new, query)
+      after = get_property(new, query, setval=val)
+      logging.debug('Set {} to {} (was {})'.format(query, after, before))
+    return new
+    
 
 
 class BrickCollection(Collection):
 
-  def __init__(self, intervention, bricks):
+  def __init__(self, intervention : Intervention, bricks):
     super().__init__(intervention, bricks, Brick)
     self._in_init = False  
 
   def decode(intervention, bricks, clz):
     return BrickCollection(intervention, bricks)
 
+  def make_models(modelmod, data):
+    collname = 'bricks'
+    Collection.make_models(modelmod, data, 
+      game_name='breakout',
+      collmod_name=modelmod + '.' + collname,
+      coll_name=collname,
+      coll_class='BrickCollection',
+      elt_name='brick'
+      )
+
+    max_bricks = max([len(d) for d in data])
+
+    for i in range(max_bricks):
+      Brick.make_models(modelmod + '.' + collname, i, [d[i] for d in data if len(d) > i])
+
 
 class Brick(BaseMixin):
 
   expected_keys = ['destructible', 'depth', 'color', 'alive', 'points', 'size', 'position', 'row', 'col']
-  immutable_fields = ['intervention']
+  eq_keys = expected_keys
+  coersions = {
+    'alive'        : lambda x : x > 0.5,
+    'destructible' : lambda x : x > 0.5,
+    'depth'        : lambda x : max(0, int(x)),
+    'points'       : lambda x : max(0, int(x)),
+    'row'          : lambda x : max(0, int(x)),
+    'col'          : lambda x : max(0, int(x)),
+    # 'size'         : lambda v2d : Vec2D.to_int(v2d),
+    # 'position'     : lambda v2d : Vec2D.to_int(v2d)
+  }
     
   def __init__(self, intervention, destructible, depth, color, alive, points, size, position, row, col):
     super().__init__(intervention)
-    self.destructible = destructible
-    self.depth = depth
+    self.destructible = Brick.coersions['destructible'](destructible)
+    self.depth = Brick.coersions['depth'](depth)
     self.color = Color.decode(intervention, color, Color)
-    self.alive = alive
-    self.points = points
-    self.size = Vec2D.decode(intervention, size, Vec2D)
+    self.alive = Brick.coersions['alive'](alive)
+    self.points = Brick.coersions['points'](points)
+    self.size     = Vec2D.decode(intervention, size, Vec2D)
     self.position = Vec2D.decode(intervention, position, Vec2D)
-    self.row = row
-    self.col = col
+    self.row = Brick.coersions['row'](row)
+    self.col = Brick.coersions['col'](col)
     self._in_init = False
 
-  def __eq__(self, other) -> Either:
-    names = {
-      'destructible': (self.destructible, other.destructible),
-      'depth':        (self.depth,    other.depth),
-      'color':        (self.color,    other.color),
-      'alive':        (self.alive,    other.alive),
-      'points':       (self.points,   other.points),
-      'size':         (self.size,     other.size),
-      'position':     (self.position, other.position),
-      'row':          (self.row,      other.row),
-      'col':          (self.col,      other.col)
-    }
-    return eq_map(names)
+  def __repr__(self):
+    return 'Brick({})'.format(' '.join([str(self.__dict__[key]) for key in Brick.expected_keys]))
 
+  def __str__(self):
+    return self.__repr__()
+
+  def make_models(modelmod, i, data): 
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'brick{:04d}'.format(i)
+    modelmod = modelmod + '.' + 'brick{:04d}'.format(i)
+    BaseMixin.make_models(modelmod, data, 'breakout', 'Brick', *Brick.expected_keys) 
+
+    distr(outdir + os.sep + 'destructible', [d.destructible for d in data], 'bool')
+    distr(outdir + os.sep + 'depth', [d.depth for d in data], 'num')
+    Color.make_models(outdir + os.sep + 'color', [d.color for d in data])
+    distr(outdir + os.sep + 'alive', [d.alive for d in data], 'bool')
+    distr(outdir + os.sep + 'points', [d.points for d in data], 'num')
+    Vec2D.make_models(outdir + os.sep + 'size', [d.size for d in data])
+    Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
+    distr(outdir + os.sep + 'row', [d.row for d in data], 'num')
+    distr(outdir + os.sep + 'col', [d.col for d in data], 'num')
 
 class BallCollection(Collection):
 
@@ -142,34 +254,51 @@ class BallCollection(Collection):
     else:
       return '[{}]'.format(', '.join(str(b) for b in self))
 
+  def make_models(modelmod, data):
+    collname = 'balls'
+    Collection.make_models(modelmod, data,
+      game_name='breakout',
+      collmod_name=modelmod + '.' + collname,
+      coll_name=collname,
+      coll_class='BallCollection',
+      elt_name='ball'
+    )
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'balls'
+    # os.makedirs(outdir, exist_ok=True)
+
+    max_balls = max([len(d) for d in data])
+
+    for i in range(max_balls):
+      Ball.make_models(modelmod + '.' + collname, i, [d[i] for d in data if len(d) > i])
 
 class Ball(BaseMixin): 
 
   expected_keys = ['position', 'velocity']
-  immutable_fields = ['intervention']  
+  eq_keys = expected_keys
 
   def __init__(self, intervention, position, velocity):
     super().__init__(intervention)
     self.position = Vec2D.decode(intervention, position, Vec2D)
     self.velocity = Vec2D.decode(intervention, velocity, Vec2D)
     self._in_init = False  
-  
-  def __eq__(self, other) -> Either:
-    names = {
-        'position': (self.position, other.position),
-        'velocity': (self.velocity, other.velocity)
-    }
-    return eq_map(names)
-  
+    
   def __str__(self):
     return 'Ball(position: {}, velocity: {})'.format(self.position, self.velocity)
+
+  def make_models(modelmod, i, data):
+    outdir = modelmod.replace('.', os.sep) + os.sep + 'ball{:04d}'.format(i)
+    modelmod = modelmod + '.' + 'ball{:04d}'.format(i)
+    BaseMixin.make_models(modelmod, data, 'breakout', 'Ball', *Ball.expected_keys)
+
+    Vec2D.make_models(outdir + os.sep + 'position', [d.position for d in data])
+    Vec2D.make_models(outdir + os.sep + 'velocity', [d.velocity for d in data])
 
 
 class BreakoutIntervention(Intervention):
 
-    def __init__(self, tb, game_name='breakout'):
+    def __init__(self, tb: Toybox, modelmod=None, data=None, eq_mode=StandardEq):
         # check that the simulation in tb matches the game name.
-        Intervention.__init__(self, tb, game_name, Breakout)
+        Intervention.__init__(self, tb, 'breakout', Breakout, modelmod=modelmod, data=data, eq_mode=eq_mode)
 
     def num_bricks_remaining(self):
         return sum([int(brick.alive) for brick in self.game.bricks])
@@ -235,6 +364,10 @@ class BreakoutIntervention(Intervention):
             if brick.col == i:
                 bricks.append(brick)
         return bricks
+
+    def get_row(self, i):
+      """Returns the ith column of bricks."""
+      return [b for b in self.game.bricks if b.row == 1]
     
     def channel_count(self):
         count = 0
@@ -294,123 +427,3 @@ class BreakoutIntervention(Intervention):
         """Clears the board of all bricks"""
         for brick in self.game.bricks:
             brick.alive = False
-
-
-if __name__ == "__main__":
-  import argparse 
-  from ctoybox import Toybox, Input
-
-  parser = argparse.ArgumentParser(description='test Amidar interventions')
-  parser.add_argument('--partial_config', type=str, default="null")
-  parser.add_argument('--save_json', type=bool, default=False)
-  args = parser.parse_args()
-
-  with Toybox('breakout') as tb:
-
-    fire = Input()
-    fire.button1 = True
-    noop = Input()
-    tb.apply_action(fire)
-
-    state = tb.to_state_json()
-    config = tb.config_to_json()
-
-    if args.save_json:
-        # save a sample starting state and config
-        with open('toybox/toybox/interventions/defaults/breakout_state_default.json', 'w') as outfile:
-            json.dump(state, outfile)
-
-        with open('toybox/toybox/interventions/defaults/breakout_config_default.json', 'w') as outfile:
-            json.dump(config, outfile)
-
-    with BreakoutIntervention(tb) as intervention:
-        intervention.game.lives = 1
-        assert intervention.dirty_state
-    
-    # remove and assert that the brick is gone
-    with BreakoutIntervention(tb) as intervention:
-        nbricks = intervention.num_bricks_remaining()
-        intervention.game.bricks[0].alive = False
-        nbricks_post = intervention.num_bricks_remaining()
-
-        assert nbricks - 1 == nbricks_post
-
-    # reset and assert that the brick is present
-    with BreakoutIntervention(tb) as intervention:
-        nbricks = intervention.num_bricks_remaining()
-        intervention.game.bricks[0].alive = True
-        nbricks_post = intervention.num_bricks_remaining()
-
-        assert nbricks + 1 == nbricks_post
-
-    # add a channel and assert that num_rows bricks have been removed
-    with BreakoutIntervention(tb) as intervention: 
-        nbricks = intervention.num_bricks_remaining()
-        intervention.add_channel(0)
-        nbricks_post = intervention.num_bricks_remaining()
-        assert nbricks_post == nbricks - intervention.num_rows()
-
-        col, channel = intervention.find_channel()
-        assert channel
-
-        assert intervention.channel_count() == 1
-
-    # remove a channel and assert that num_rows bricks have been added
-    with BreakoutIntervention(tb) as intervention: 
-        nbricks = intervention.num_bricks_remaining()
-        intervention.fill_column(0)
-        nbricks_post = intervention.num_bricks_remaining()
-        assert nbricks_post == nbricks + intervention.num_rows()
-
-    # get ball position, even when multiple balls present
-    with BreakoutIntervention(tb) as intervention: 
-        game = intervention.game
-        assert len(game.balls) > 0
-
-        ball = game.balls[0]
-        game.balls.append(ball)
-        ball_positions = intervention.get_ball_position()
-        assert len(ball_positions) == 2
-        ball_velocities = intervention.get_ball_velocity()
-        assert len(ball_velocities) == 2
-        game.balls.clear()
-        game.balls.append(ball)
-        # the line above should have triggered an error
-        ball_positions = intervention.get_ball_position()
-
-    # move ball diagonally by sqrt(2) pixels
-    with BreakoutIntervention(tb) as intervention: 
-        ball_pos = intervention.get_ball_position()
-        ball_pos.x = ball_pos.x + 1
-        ball_pos.y = ball_pos.y + 1
-    with BreakoutIntervention(tb) as intervention: 
-        ball_pos_post = intervention.get_ball_position()
-        assert ball_pos_post.x == ball_pos.x
-        ball_pos_post.x = ball_pos.x - 1
-        ball_pos_post.y = ball_pos.y - 1
-    with BreakoutIntervention(tb) as intervention: 
-        ball_pos_post_post = intervention.get_ball_position()
-        assert ball_pos_post.x == ball_pos_post_post.x
-
-
-    # change ball velocity
-    with BreakoutIntervention(tb) as intervention: 
-        ball_vel = intervention.get_ball_velocity()
-        ball_vel.x = ball_vel.x + 1
-        ball_vel.y = ball_vel.y + 1
-        ball_vel_post = intervention.get_ball_velocity()
-        assert ball_vel_post.x == ball_vel.x
-
-        ball_vel.x = ball_vel.x - 1
-        ball_vel.y = ball_vel.y - 1
-        ball_vel_post = intervention.get_ball_velocity()
-        assert ball_vel_post.x == ball_vel.x
-
-    # get paddle position and move
-    with BreakoutIntervention(tb) as intervention: 
-        pos = intervention.get_paddle_position()
-        assert pos.x == 120.0 and pos.y == 143.0
-
-        pos.x = pos.x + 10
-        pos_post = intervention.get_paddle_position()
-        assert pos.x == pos_post.x
