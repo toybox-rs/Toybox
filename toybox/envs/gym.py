@@ -1,6 +1,5 @@
-import toybox
-from toybox.envs.atari.base import ToyboxBaseEnv
 import gym
+from toybox.envs.atari.base import ToyboxBaseEnv
 
 
 # Get innermost gym.Env (skip all Wrapper)
