@@ -183,6 +183,15 @@ class SetEq(Eq):
       if not found: differs.append((k, v1, v2))
     return differs
 
+_CACHED_SCHEMA = {}
+def get_schema_caching(toybox: Toybox):
+  global _CACHED_SCHEMA
+  if toybox.game_name in _CACHED_SCHEMA:
+    return _CACHED_SCHEMA[toybox.game_name]
+  loaded = toybox.schema_for_state()
+  _CACHED_SCHEMA[toybox.game_name] = loaded
+  return loaded
+
 class BaseMixin(ABC):
   """Base class for game objects. Registers mutation so JSON can be pushed via context manager."""
 
@@ -202,6 +211,7 @@ class BaseMixin(ABC):
   def __init__(self, intervention):
     self._in_init = True
     self.intervention = intervention
+    self.schema = get_schema_caching(intervention.toybox)
     #self.schema = intervention.toybox.schema_for_state()
 
 
