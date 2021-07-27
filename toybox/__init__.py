@@ -23,8 +23,10 @@ try:
         nondeterministic=False
     )
 
-    print("Registered Toybox environments with gym.")
+    from gym import logger
+    logger.INFO("Registered Toybox environments with gym.")
 
 except:
+    import logging
     # ModuleNotFoundError only in 3.6 and above
-    print("Loaded Toybox environments.")
+    logging.log(logging.INFO, "Loaded Toybox environments.")

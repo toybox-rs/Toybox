@@ -2,7 +2,7 @@ from toybox.interventions.base import *
 
 from contextlib import AbstractContextManager
 from numpy import array
-from sklearn.neighbors import KernelDensity
+
 from typing import List, Any, Union
 
 import math
@@ -48,6 +48,7 @@ def bool_support(fname, data):
   
 
 def inf_support(fname, data):
+  from sklearn.neighbors import KernelDensity
   # select bandwidth according to scotts rule
   # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.gaussian_kde.html
   bandwidth = len(data)**(-1./5)
