@@ -1,8 +1,7 @@
 atari_py 
 cffi
-gym[atari]==0.10.5
+gym[atari]
 joblib 
-mpi4py 
 numpy
 opencv-python 
 pillow 

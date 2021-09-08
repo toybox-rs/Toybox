@@ -10,14 +10,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - name: apt install openmpi
-      run: sudo apt-get install -y libopenmpi-dev
     - name: Checkout Code
       uses: actions/checkout@v2
     - name: Setup Python
       uses: actions/setup-python@v2
       with:
-        python-version: 3.6
+        python-version: 3.8
     - name: Install dependencies
       run: |
         pip install -U --upgrade pip
