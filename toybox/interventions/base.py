@@ -42,71 +42,7 @@ class StandardEq(Eq):
       if self.obj.__getattribute__(key) != other.obj.__getattribute__(key):
         return False
     return True
-
-
-class ProbEq(Eq): 
-
-  def __init__(self, obj):
-    super().__init__(obj)
-    self.differ = None
-    self.key_order = []
-
-  def __repr__(self) -> str:
-    return "ProbEq(differ={}, key_order={})".format(self.differ, self.key_order)
-
-  def __eq__(self, other) -> Eq:
-    assert type(self) == type(other)
-    copy = self.clz.eq_keys[:]
-    random.shuffle(copy)
-
-    for key in copy:
-      v1 = self.obj.__getattribute__(key) 
-      v2 = other.obj.__getattribute__(key)
-      assert type(v1) == type(v2), '{} vs {} for {}'.format(type(v1), type(v2), key)
-
-      eq = math.isclose if type(v1) == float else lambda a, b: a == b
-      found_differ = lambda x : (x is False) or (isinstance(x, ProbEq) and x.differ is not None)
-      with_prefix = lambda x : key + '.' + x 
-
-      if isinstance(v1, Collection):
-        indices = list(range(len(v1)))
-        random.shuffle(indices)
-
-        if len(v1) != len(v2):
-          self.differ = (key, len(v1), len(v2))
-
-        for i in indices:
-          cmp = eq(v1[i], v2[i])
-          if found_differ(cmp):
-            key = '{}[{}].{}'.format(key, i, cmp.differ[0])
-            self.differ = (key, cmp.differ[1], cmp.differ[2]) if isinstance(cmp, ProbEq) else (key, v1, v2)
-            return self
-          else:
-            if type(v1) == ProbEq:
-              self.key_order.extend(v1.key_order, v2.key_order)
-
-      else:
-
-        cmp = eq(v1, v2)
-
-        if isinstance(cmp, ProbEq):
-          if cmp.differ:
-            _, a, b = cmp.differ
-            self.differ = (with_prefix(cmp.differ[0]), a, b)
-            return self
-          else: 
-            self.key_order.append(key)
-        elif cmp is True:
-          self.key_order.append(key)
-        elif cmp is False:
-          self.differ = (key, v1, v2)
-          return self
     
-    return self
-
-  def __bool__(self):
-    return not self.differ
-
 
 class SetEq(Eq):
 
