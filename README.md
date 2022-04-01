@@ -24,16 +24,22 @@ We have a lenghtier paper on [ArXiV](https://arxiv.org/pdf/1905.02825.pdf) and c
 The rust implementations of the games have moved to a different repository: [toybox-rs/toybox-rs](https://github.com/toybox-rs/toybox-rs)
 
 ## Installation
-1. Create a virtual environment using your python3 installation: `${python} -m venv .env`
-   * If you are on OSX, this is likely `python3`: thus, your command will be `python3 -m venv .env`
-   * If you are not sure of your version, run `python --version`
-2. Activate your virtual environment: `source .env/bin/activate`
-3. Install Toybox:
+1. Create a virtual environment using your python3 installation: `${python} -m venv venv`
+   * **OSX** 
+      * On OSX `${python}`, this is likely `python3`: thus, your command will be `python3 -m venv venv`
+      * If you are not sure of your version, run `python --version`
+   * **Windows** (_not fully tested!_)
+      * If you are on Windows, your command will likely be: `{python}`
+2. Activate your virtual environment:
+   * **BSD-ish**: `source venv/bin/activate`
+   * **Windows**: `venv/Scripts/activate`
+4. Install Toybox:
 
 ```    
 pip install ctoybox
 pip install git+https://github.com/toybox-rs/Toybox
 ```
+_Note: if you are trying to run from Windows, you will need to build from source. See instructions for [building](https://github.com/toybox-rs/toybox-rs/blob/main/docs/new-game-help.md) here._
 4. Install requirements: run `pip install -r REQUIREMENTS.txt`
 5. Run `python setup.py install`
 
